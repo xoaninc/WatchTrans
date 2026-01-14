@@ -77,16 +77,35 @@ struct HomeView: View {
                             .padding()
                     } else if let stop = currentStop {
                         // Stop info header
-                        VStack(spacing: 4) {
+                        VStack(spacing: 8) {
                             HStack {
                                 Text(stop.name)
                                     .font(.title3)
                                     .fontWeight(.bold)
 
-                                if let manager = favoritesManager, manager.isFavorite(stopId: stop.id) {
-                                    Image(systemName: "star.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.yellow)
+                                Spacer()
+
+                                // Favorite button
+                                if let manager = favoritesManager {
+                                    if manager.isFavorite(stopId: stop.id) {
+                                        Button {
+                                            manager.removeFavorite(stopId: stop.id)
+                                        } label: {
+                                            Image(systemName: "star.fill")
+                                                .foregroundStyle(.yellow)
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else if manager.favorites.count < manager.maxFavorites {
+                                        Button {
+                                            if manager.addFavorite(stop: stop) {
+                                                showAddedToFavorites = true
+                                            }
+                                        } label: {
+                                            Image(systemName: "star")
+                                                .foregroundStyle(.gray)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                             }
 
@@ -97,28 +116,6 @@ struct HomeView: View {
                             }
                         }
                         .padding(.top, 8)
-                        .contextMenu {
-                            if let manager = favoritesManager {
-                                if manager.isFavorite(stopId: stop.id) {
-                                    Button(role: .destructive) {
-                                        manager.removeFavorite(stopId: stop.id)
-                                    } label: {
-                                        Label("Remove from Favorites", systemImage: "star.slash")
-                                    }
-                                } else if manager.favorites.count < manager.maxFavorites {
-                                    Button {
-                                        if manager.addFavorite(stop: stop) {
-                                            showAddedToFavorites = true
-                                        }
-                                    } label: {
-                                        Label("Add to Favorites", systemImage: "star")
-                                    }
-                                } else {
-                                    Text("Favorites Full (\(manager.maxFavorites) max)")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
 
                         if showAddedToFavorites {
                             HStack {
