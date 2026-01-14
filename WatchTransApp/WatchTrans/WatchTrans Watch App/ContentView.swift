@@ -15,19 +15,17 @@ struct ContentView: View {
     @State private var locationService = LocationService()
     @State private var dataService = DataService()
     @State private var favoritesManager: FavoritesManager?
-    @State private var expandedStopId: String?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    // Favorites Section (max 3)
+                    // Favorites Section (max 5)
                     if let manager = favoritesManager, !manager.favorites.isEmpty {
                         FavoritesSectionView(
                             favoritesManager: manager,
                             dataService: dataService,
-                            locationService: locationService,
-                            expandedStopId: $expandedStopId
+                            locationService: locationService
                         )
                     }
 
@@ -35,8 +33,7 @@ struct ContentView: View {
                     RecommendedSectionView(
                         dataService: dataService,
                         locationService: locationService,
-                        favoritesManager: favoritesManager,
-                        expandedStopId: $expandedStopId
+                        favoritesManager: favoritesManager
                     )
 
                     // Check Lines Button
@@ -93,11 +90,10 @@ struct FavoritesSectionView: View {
     let favoritesManager: FavoritesManager
     let dataService: DataService
     let locationService: LocationService
-    @Binding var expandedStopId: String?
 
     var favoriteStops: [Stop] {
         let allFavorites = favoritesManager.getFavoriteStops(from: dataService.stops)
-        return Array(allFavorites.prefix(3)) // Max 3
+        return Array(allFavorites.prefix(5)) // Max 5
     }
 
     var body: some View {
@@ -110,7 +106,7 @@ struct FavoritesSectionView: View {
                 Text("Favorites")
                     .font(.headline)
                 Spacer()
-                Text("\(favoriteStops.count)/3")
+                Text("\(favoriteStops.count)/5")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -122,13 +118,7 @@ struct FavoritesSectionView: View {
                     stop: stop,
                     dataService: dataService,
                     locationService: locationService,
-                    favoritesManager: favoritesManager,
-                    isExpanded: expandedStopId == stop.id,
-                    onTap: {
-                        withAnimation {
-                            expandedStopId = expandedStopId == stop.id ? nil : stop.id
-                        }
-                    }
+                    favoritesManager: favoritesManager
                 )
             }
         }
@@ -141,7 +131,6 @@ struct RecommendedSectionView: View {
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
-    @Binding var expandedStopId: String?
 
     var recommendedStops: [Stop] {
         var stops: [Stop] = []
@@ -186,13 +175,7 @@ struct RecommendedSectionView: View {
                         stop: stop,
                         dataService: dataService,
                         locationService: locationService,
-                        favoritesManager: favoritesManager,
-                        isExpanded: expandedStopId == stop.id,
-                        onTap: {
-                            withAnimation {
-                                expandedStopId = expandedStopId == stop.id ? nil : stop.id
-                            }
-                        }
+                        favoritesManager: favoritesManager
                     )
                 }
             }
@@ -207,8 +190,6 @@ struct StopCardView: View {
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
-    let isExpanded: Bool
-    let onTap: () -> Void
 
     @State private var arrivals: [Arrival] = []
     @State private var isLoadingArrivals = false
@@ -216,87 +197,66 @@ struct StopCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Stop header
-            Button(action: onTap) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text(stop.name)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stop.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
 
-                            if let manager = favoritesManager, manager.isFavorite(stopId: stop.id) {
-                                Image(systemName: "star.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(.yellow)
-                            }
-                        }
-
-                        if let location = locationService.currentLocation {
-                            Text(stop.formattedDistance(from: location))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                    if let location = locationService.currentLocation {
+                        Text(stop.formattedDistance(from: location))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
+                }
 
-                    Spacer()
+                Spacer()
 
-                    // Add/Remove favorite button
-                    if let manager = favoritesManager {
-                        Button {
-                            if manager.isFavorite(stopId: stop.id) {
-                                manager.removeFavorite(stopId: stop.id)
-                            } else if manager.favorites.count < manager.maxFavorites {
-                                _ = manager.addFavorite(stop: stop)
-                            }
-                        } label: {
-                            Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
-                                .font(.caption)
-                                .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
+                // Add/Remove favorite button
+                if let manager = favoritesManager {
+                    Button {
+                        if manager.isFavorite(stopId: stop.id) {
+                            manager.removeFavorite(stopId: stop.id)
+                        } else if manager.favorites.count < manager.maxFavorites {
+                            _ = manager.addFavorite(stop: stop)
                         }
-                        .buttonStyle(.plain)
+                    } label: {
+                        Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
+                            .font(.caption)
+                            .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
                     }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.regularMaterial)
+            .cornerRadius(12)
 
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+            // Arrivals (always shown)
+            VStack(spacing: 8) {
+                if isLoadingArrivals {
+                    ProgressView()
+                        .padding()
+                } else if arrivals.isEmpty {
+                    Text("No arrivals available")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-                .padding(12)
-                .background(.regularMaterial)
-                .cornerRadius(12)
-            }
-            .buttonStyle(.plain)
-
-            // Arrivals (when expanded)
-            if isExpanded {
-                VStack(spacing: 8) {
-                    if isLoadingArrivals {
-                        ProgressView()
-                            .padding()
-                    } else if arrivals.isEmpty {
-                        Text("No arrivals available")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding()
-                    } else {
-                        ForEach(arrivals.prefix(3)) { arrival in
-                            if let line = dataService.getLine(by: arrival.lineId) {
-                                ArrivalCard(arrival: arrival, lineColor: line.color)
-                            } else {
-                                ArrivalCard(arrival: arrival, lineColor: .blue)
-                            }
+                        .padding(.vertical, 4)
+                } else {
+                    ForEach(arrivals.prefix(3)) { arrival in
+                        if let line = dataService.getLine(by: arrival.lineId) {
+                            ArrivalCard(arrival: arrival, lineColor: line.color)
+                        } else {
+                            ArrivalCard(arrival: arrival, lineColor: .blue)
                         }
                     }
                 }
-                .padding(.horizontal, 4)
-                .transition(.opacity)
             }
+            .padding(.horizontal, 4)
         }
-        .onChange(of: isExpanded) { _, expanded in
-            if expanded && arrivals.isEmpty {
-                Task {
-                    await loadArrivals()
-                }
-            }
+        .task {
+            await loadArrivals()
         }
     }
 
