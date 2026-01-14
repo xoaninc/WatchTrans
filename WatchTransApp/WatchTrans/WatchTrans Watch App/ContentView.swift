@@ -244,7 +244,7 @@ struct StopCardView: View {
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 4)
                 } else {
-                    ForEach(arrivals.prefix(3)) { arrival in
+                    ForEach(arrivals.prefix(2)) { arrival in
                         if let line = dataService.getLine(by: arrival.lineId) {
                             ArrivalCard(arrival: arrival, lineColor: line.color)
                         } else {
