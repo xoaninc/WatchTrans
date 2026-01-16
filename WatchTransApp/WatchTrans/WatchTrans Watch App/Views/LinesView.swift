@@ -265,14 +265,12 @@ struct LineRowView: View {
                         .fill(lineColor)
                 )
 
-            // Line info - abbreviated route
+            // Line info - nucleo name
             VStack(alignment: .leading, spacing: 2) {
-                if let firstStop = line.stops.first, let lastStop = line.stops.last {
-                    Text("\(abbreviateStation(firstStop.name)) - \(abbreviateStation(lastStop.name))")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                }
+                Text(line.nucleo.capitalized)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()

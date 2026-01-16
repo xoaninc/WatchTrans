@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Juan Macias Gomez on 14/1/26.
-//  Updated on 15/1/26 to use RenfeServer API (juanmacias.com:8002)
+//  Updated on 16/1/26 to use RedCercanías API (redcercanias.com)
 //
 
 import Foundation
@@ -12,8 +12,8 @@ import Foundation
 class GTFSRealtimeService {
     private let networkService: NetworkService
 
-    // RenfeServer API base URL
-    private let baseURL = "http://juanmacias.com:8002/api/v1/gtfs"
+    // RedCercanías API base URL (HTTPS)
+    private let baseURL = "https://redcercanias.com/api/v1/gtfs"
 
     var isLoading = false
     var lastFetchTime: Date?

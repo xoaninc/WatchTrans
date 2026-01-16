@@ -179,8 +179,7 @@ class DataService {
                         name: route.shortName,
                         type: .cercanias,
                         colorHex: route.color.map { "#\($0)" } ?? "#75B6E0",
-                        stops: [],
-                        city: nucleoName
+                        nucleo: nucleoName
                     )
                 }
             }

@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Juan Macias Gomez on 14/1/26.
-//  Shows all stops for a specific line
+//  Shows all stops for a specific line - loads stops from API
 //
 
 import SwiftUI
@@ -11,6 +11,9 @@ import SwiftUI
 struct LineDetailView: View {
     let line: Line
     let dataService: DataService
+
+    @State private var stops: [Stop] = []
+    @State private var isLoading = true
 
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
@@ -36,9 +39,14 @@ struct LineDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        Text("\(line.stops.count) stops")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                        if isLoading {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                        } else {
+                            Text("\(stops.count) stops")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
 
                     Spacer()
@@ -47,15 +55,25 @@ struct LineDetailView: View {
                 .padding(.bottom, 4)
 
                 // All stops
-                VStack(spacing: 0) {
-                    ForEach(Array(line.stops.enumerated()), id: \.element.id) { index, stop in
-                        StopRow(
-                            stop: stop,
-                            isFirst: index == 0,
-                            isLast: index == line.stops.count - 1,
-                            lineColor: lineColor,
-                            dataService: dataService
-                        )
+                if isLoading {
+                    ProgressView("Cargando paradas...")
+                        .padding()
+                } else if stops.isEmpty {
+                    Text("No hay paradas disponibles")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding()
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
+                            StopRow(
+                                stop: stop,
+                                isFirst: index == 0,
+                                isLast: index == stops.count - 1,
+                                lineColor: lineColor,
+                                dataService: dataService
+                            )
+                        }
                     }
                 }
             }
@@ -63,6 +81,16 @@ struct LineDetailView: View {
         }
         .navigationTitle(line.name)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadStops()
+        }
+    }
+
+    private func loadStops() async {
+        isLoading = true
+        // Fetch stops for this line from API using the line ID as route ID
+        stops = await dataService.fetchStopsForRoute(routeId: line.id)
+        isLoading = false
     }
 }
 
@@ -154,16 +182,11 @@ struct StopRow: View {
     NavigationStack {
         LineDetailView(
             line: Line(
-                id: "line1",
-                name: "L1",
-                type: .metro,
-                colorHex: "#2ca5dd",
-                stops: [
-                    Stop(id: "stop1", name: "Pinar de Chamartín", latitude: 40.4595, longitude: -3.6802, connectionLineIds: []),
-                    Stop(id: "stop2", name: "Chamartín", latitude: 40.4473, longitude: -3.6802, connectionLineIds: ["line10"]),
-                    Stop(id: "stop3", name: "Sol", latitude: 40.4169, longitude: -3.7033, connectionLineIds: ["line2", "line3"])
-                ],
-                city: "Madrid"
+                id: "c1",
+                name: "C1",
+                type: .cercanias,
+                colorHex: "#75B6E0",
+                nucleo: "madrid"
             ),
             dataService: DataService()
         )

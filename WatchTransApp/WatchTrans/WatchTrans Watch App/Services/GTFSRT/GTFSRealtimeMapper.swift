@@ -114,39 +114,24 @@ class GTFSRealtimeMapper {
     private func findLine(routeShortName: String, routeId: String, stopId: String, dataService: DataService) -> Line? {
         let normalizedName = routeShortName.uppercased()
 
-        // First try: find lines that serve this stop
-        let linesServingStop = dataService.lines.filter { line in
-            line.stops.contains { $0.id == stopId }
-        }
-
-        // Match by name
-        if let match = linesServingStop.first(where: { $0.name.uppercased() == normalizedName }) {
+        // Match by name (case-insensitive)
+        if let match = dataService.lines.first(where: { $0.name.uppercased() == normalizedName }) {
             return match
         }
 
-        // Match by ID suffix
-        if let match = linesServingStop.first(where: { $0.id.uppercased().hasSuffix(normalizedName) }) {
+        // Match by ID suffix (e.g., "C1" matches "madrid-c1")
+        if let match = dataService.lines.first(where: { $0.id.uppercased().hasSuffix(normalizedName) }) {
             return match
         }
 
-        // Fallback: any line with matching name
-        return dataService.lines.first { $0.name.uppercased() == normalizedName }
+        return nil
     }
 
-    /// Determine destination based on line and current stop position
+    /// Determine destination - now just returns "Unknown" since we rely on API headsign
     private func determineDestination(line: Line?, stopId: String) -> String {
-        guard let line = line else { return "Unknown" }
-
-        guard let currentIndex = line.stops.firstIndex(where: { $0.id == stopId }) else {
-            return line.stops.last?.name ?? "Unknown"
-        }
-
-        // Heuristic: if in first half, going to end; if in second half, going to start
-        if currentIndex < line.stops.count / 2 {
-            return line.stops.last?.name ?? "Unknown"
-        } else {
-            return line.stops.first?.name ?? "Unknown"
-        }
+        // The RenfeServer API provides headsign in DepartureResponse
+        // This is only a fallback if headsign is nil
+        return "Unknown"
     }
 
     /// Extract line info from trip ID (e.g., "3010X23522C1" → "C1")
