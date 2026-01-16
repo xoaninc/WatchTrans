@@ -9,6 +9,19 @@ import Foundation
 
 enum TransportType: String, Codable {
     case metro = "Metro"
+    case metroLigero = "Metro Ligero"
     case cercanias = "Cercanías"
     case tram = "Tram"
+
+    /// Get transport type from API agency_id
+    static func from(agencyId: String) -> TransportType {
+        switch agencyId {
+        case "METRO_MADRID":
+            return .metro
+        case "METRO_LIGERO":
+            return .metroLigero
+        default:
+            return .cercanias
+        }
+    }
 }

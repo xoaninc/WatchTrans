@@ -11,6 +11,7 @@ import SwiftUI
 struct Line: Identifiable, Codable {
     let id: String
     let name: String          // "C3", "L1", "ML1"
+    let longName: String      // "Chamartín - Aeropuerto T4"
     let type: TransportType   // .metro, .cercanias, .tram
     let colorHex: String      // Store as hex string for Codable
     let nucleo: String        // Nucleo name from API: "madrid", "sevilla", etc.

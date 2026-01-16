@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Claude on 15/1/26.
-//  Codable models for RenfeServer API responses (juanmacias.com:8002)
+//  Codable models for RenfeServer API responses (redcercanias.com)
 //
 
 import Foundation
@@ -21,11 +21,41 @@ struct DepartureResponse: Codable, Identifiable {
     let departureSeconds: Int      // Seconds since midnight
     let minutesUntil: Int
     let stopSequence: Int
+    let platform: String?          // Platform number (if available from API)
+    let platformEstimated: Bool?   // true if platform is estimated from historical data
+
+    // Realtime fields
+    let delaySeconds: Int?
+    let realtimeDepartureTime: String?
+    let realtimeMinutesUntil: Int?
+    let isDelayed: Bool
+    let trainPosition: TrainPositionResponse?
+
+    // Frequency-based departures (Metro)
+    let frequencyBased: Bool?
+    let headwaySecs: Int?
 
     var id: String { tripId }
 
+    /// Returns headway in minutes (for frequency-based services like Metro)
+    var headwayMinutes: Int? {
+        guard let secs = headwaySecs, secs > 0 else { return nil }
+        return secs / 60
+    }
+
+    /// Returns the best available minutes until departure (realtime if available, otherwise scheduled)
+    var effectiveMinutesUntil: Int {
+        realtimeMinutesUntil ?? minutesUntil
+    }
+
+    /// Returns delay in minutes (nil if no delay info)
+    var delayMinutes: Int? {
+        guard let seconds = delaySeconds, seconds > 0 else { return nil }
+        return seconds / 60
+    }
+
     enum CodingKeys: String, CodingKey {
-        case headsign
+        case headsign, platform
         case tripId = "trip_id"
         case routeId = "route_id"
         case routeShortName = "route_short_name"
@@ -34,6 +64,30 @@ struct DepartureResponse: Codable, Identifiable {
         case departureSeconds = "departure_seconds"
         case minutesUntil = "minutes_until"
         case stopSequence = "stop_sequence"
+        case platformEstimated = "platform_estimated"
+        case delaySeconds = "delay_seconds"
+        case realtimeDepartureTime = "realtime_departure_time"
+        case realtimeMinutesUntil = "realtime_minutes_until"
+        case isDelayed = "is_delayed"
+        case trainPosition = "train_position"
+        case frequencyBased = "frequency_based"
+        case headwaySecs = "headway_secs"
+    }
+}
+
+/// Train position info within departure
+struct TrainPositionResponse: Codable {
+    let latitude: Double
+    let longitude: Double
+    let currentStopName: String?
+    let status: String?
+    let progressPercent: Double?
+    let estimated: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case latitude, longitude, status, estimated
+        case currentStopName = "current_stop_name"
+        case progressPercent = "progress_percent"
     }
 }
 
@@ -240,13 +294,14 @@ struct StopResponse: Codable, Identifiable {
     let province: String?
     let nucleoId: Int?
     let nucleoName: String?
+    let lineas: String?  // Comma-separated line names: "C1,C10,C2,C3"
     let parkingBicis: String?
     let accesibilidad: String?
     let corBus: String?
     let corMetro: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, code, province, accesibilidad
+        case id, name, lat, lon, code, province, accesibilidad, lineas
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
@@ -255,6 +310,12 @@ struct StopResponse: Codable, Identifiable {
         case parkingBicis = "parking_bicis"
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
+    }
+
+    /// Parse lineas string into array of line IDs
+    var lineIds: [String] {
+        guard let lineas = lineas, !lineas.isEmpty else { return [] }
+        return lineas.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
     }
 }
 
@@ -360,6 +421,90 @@ struct NucleoResponse: Codable, Identifiable {
     func contains(latitude: Double, longitude: Double) -> Bool {
         return latitude >= boundingBoxMinLat && latitude <= boundingBoxMaxLat &&
                longitude >= boundingBoxMinLon && longitude <= boundingBoxMaxLon
+    }
+}
+
+// MARK: - Alert Response
+
+/// Response from GET /api/v1/gtfs/realtime/alerts
+struct AlertResponse: Codable, Identifiable {
+    let alertId: String
+    let cause: String
+    let effect: String
+    let headerText: String?
+    let descriptionText: String
+    let url: String?
+    let activePeriodStart: Date?
+    let activePeriodEnd: Date?
+    let isActive: Bool
+    let informedEntities: [InformedEntity]
+    let timestamp: Date
+    let updatedAt: Date?
+
+    var id: String { alertId }
+
+    enum CodingKeys: String, CodingKey {
+        case alertId = "alert_id"
+        case cause, effect, url, timestamp
+        case headerText = "header_text"
+        case descriptionText = "description_text"
+        case activePeriodStart = "active_period_start"
+        case activePeriodEnd = "active_period_end"
+        case isActive = "is_active"
+        case informedEntities = "informed_entities"
+        case updatedAt = "updated_at"
+    }
+}
+
+/// Entity affected by an alert
+struct InformedEntity: Codable {
+    let routeId: String?
+    let stopId: String?
+    let tripId: String?
+    let agencyId: String?
+    let routeType: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case routeId = "route_id"
+        case stopId = "stop_id"
+        case tripId = "trip_id"
+        case agencyId = "agency_id"
+        case routeType = "route_type"
+    }
+}
+
+// MARK: - Estimated Position Response
+
+/// Response from GET /api/v1/gtfs/realtime/estimated
+struct EstimatedPositionResponse: Codable, Identifiable {
+    let tripId: String
+    let routeId: String
+    let routeShortName: String
+    let routeColor: String?
+    let headsign: String?
+    let position: PositionSchema
+    let currentStatus: String
+    let currentStopId: String?
+    let currentStopName: String?
+    let nextStopId: String?
+    let nextStopName: String?
+    let progressPercent: Double?
+    let estimated: Bool
+
+    var id: String { tripId }
+
+    enum CodingKeys: String, CodingKey {
+        case tripId = "trip_id"
+        case routeId = "route_id"
+        case routeShortName = "route_short_name"
+        case routeColor = "route_color"
+        case headsign, position, estimated
+        case currentStatus = "current_status"
+        case currentStopId = "current_stop_id"
+        case currentStopName = "current_stop_name"
+        case nextStopId = "next_stop_id"
+        case nextStopName = "next_stop_name"
+        case progressPercent = "progress_percent"
     }
 }
 

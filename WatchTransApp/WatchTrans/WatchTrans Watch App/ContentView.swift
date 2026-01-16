@@ -12,10 +12,13 @@ import WatchKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var locationService = LocationService()
     @State private var dataService = DataService()
     @State private var favoritesManager: FavoritesManager?
+    @State private var refreshTimer: Timer?
+    @State private var refreshTrigger = UUID()  // Changes to trigger refresh
 
     var body: some View {
         NavigationStack {
@@ -26,7 +29,8 @@ struct ContentView: View {
                         FavoritesSectionView(
                             favoritesManager: manager,
                             dataService: dataService,
-                            locationService: locationService
+                            locationService: locationService,
+                            refreshTrigger: refreshTrigger
                         )
                     }
 
@@ -34,7 +38,8 @@ struct ContentView: View {
                     RecommendedSectionView(
                         dataService: dataService,
                         locationService: locationService,
-                        favoritesManager: favoritesManager
+                        favoritesManager: favoritesManager,
+                        refreshTrigger: refreshTrigger
                     )
 
                     // Check Lines Button
@@ -55,7 +60,7 @@ struct ContentView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 12)
             }
-            .navigationTitle("WatchTrans")
+            .navigationTitle(dataService.currentNucleo?.name ?? "WatchTrans")
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -72,7 +77,38 @@ struct ContentView: View {
             if favoritesManager == nil {
                 favoritesManager = FavoritesManager(modelContext: modelContext)
             }
+            startAutoRefresh()
         }
+        .onDisappear {
+            stopAutoRefresh()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                startAutoRefresh()
+            case .inactive, .background:
+                stopAutoRefresh()
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    // MARK: - Auto Refresh (every 50 seconds)
+
+    private func startAutoRefresh() {
+        stopAutoRefresh() // Cancel existing timer
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 50, repeats: true) { _ in
+            Task { @MainActor in
+                dataService.clearArrivalCache()
+                refreshTrigger = UUID()  // Trigger UI refresh
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
     }
 
     private func loadData() async {
@@ -86,6 +122,13 @@ struct ContentView: View {
         // Pass user's coordinates to load nearby stops
         let lat = locationService.currentLocation?.coordinate.latitude
         let lon = locationService.currentLocation?.coordinate.longitude
+
+        // Save location for Widget to use
+        if let lat = lat, let lon = lon {
+            UserDefaults.standard.set(lat, forKey: "lastLatitude")
+            UserDefaults.standard.set(lon, forKey: "lastLongitude")
+        }
+
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
     }
 }
@@ -96,6 +139,7 @@ struct FavoritesSectionView: View {
     let favoritesManager: FavoritesManager
     let dataService: DataService
     let locationService: LocationService
+    let refreshTrigger: UUID
 
     // Favorites now just show all saved favorites (stops are loaded by coordinates)
     var favoriteStops: [Stop] {
@@ -125,7 +169,8 @@ struct FavoritesSectionView: View {
                     stop: stop,
                     dataService: dataService,
                     locationService: locationService,
-                    favoritesManager: favoritesManager
+                    favoritesManager: favoritesManager,
+                    refreshTrigger: refreshTrigger
                 )
             }
         }
@@ -138,6 +183,7 @@ struct RecommendedSectionView: View {
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
+    let refreshTrigger: UUID
 
     // Stops are already filtered by coordinates from the API
     // They come from the user's province/nucleo automatically
@@ -193,7 +239,8 @@ struct RecommendedSectionView: View {
                         stop: stop,
                         dataService: dataService,
                         locationService: locationService,
-                        favoritesManager: favoritesManager
+                        favoritesManager: favoritesManager,
+                        refreshTrigger: refreshTrigger
                     )
                 }
             }
@@ -208,83 +255,170 @@ struct StopCardView: View {
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
+    let refreshTrigger: UUID
 
     @State private var arrivals: [Arrival] = []
+    @State private var alerts: [AlertResponse] = []
     @State private var isLoadingArrivals = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Stop header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(stop.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+        NavigationLink(destination: StopDetailView(
+            stop: stop,
+            dataService: dataService,
+            locationService: locationService,
+            favoritesManager: favoritesManager
+        )) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Stop header
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(stop.name)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
 
-                    if let location = locationService.currentLocation {
-                        Text(stop.formattedDistance(from: location))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            // Alert indicator
+                            if !alerts.isEmpty {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+
+                        if let location = locationService.currentLocation {
+                            Text(stop.formattedDistance(from: location))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+
+                    Spacer()
+
+                    // Add/Remove favorite button
+                    if let manager = favoritesManager {
+                        Button {
+                            // Haptic feedback for favorite action
+                            WKInterfaceDevice.current().play(.click)
+
+                            if manager.isFavorite(stopId: stop.id) {
+                                manager.removeFavorite(stopId: stop.id)
+                            } else if manager.favorites.count < manager.maxFavorites {
+                                _ = manager.addFavorite(stop: stop)
+                            }
+                        } label: {
+                            Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
+                                .font(.caption)
+                                .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Chevron to indicate it's tappable
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.regularMaterial)
+                .cornerRadius(12)
+
+                // Alert banner (if any)
+                if let firstAlert = alerts.first {
+                    AlertBannerView(alert: firstAlert, alertCount: alerts.count)
                 }
 
-                Spacer()
-
-                // Add/Remove favorite button
-                if let manager = favoritesManager {
-                    Button {
-                        // Haptic feedback for favorite action
-                        WKInterfaceDevice.current().play(.click)
-
-                        if manager.isFavorite(stopId: stop.id) {
-                            manager.removeFavorite(stopId: stop.id)
-                        } else if manager.favorites.count < manager.maxFavorites {
-                            _ = manager.addFavorite(stop: stop)
-                        }
-                    } label: {
-                        Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
+                // Arrivals preview (2 max)
+                VStack(spacing: 8) {
+                    if isLoadingArrivals {
+                        ProgressView()
+                            .padding()
+                    } else if arrivals.isEmpty {
+                        Text("No departures available")
                             .font(.caption)
-                            .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.regularMaterial)
-            .cornerRadius(12)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 4)
+                    } else {
+                        ForEach(arrivals.prefix(2)) { arrival in
+                            // Use routeColor from API, fallback to searching by lineId
+                            let lineColor: Color = {
+                                if let hex = arrival.routeColor {
+                                    return Color(hex: hex) ?? .blue
+                                }
+                                return dataService.getLine(by: arrival.lineId)?.color ?? .blue
+                            }()
+                            ArrivalCard(arrival: arrival, lineColor: lineColor)
+                        }
 
-            // Arrivals (always shown)
-            VStack(spacing: 8) {
-                if isLoadingArrivals {
-                    ProgressView()
-                        .padding()
-                } else if arrivals.isEmpty {
-                    Text("No arrivals available")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
-                } else {
-                    ForEach(arrivals.prefix(2)) { arrival in
-                        if let line = dataService.getLine(by: arrival.lineId) {
-                            ArrivalCard(arrival: arrival, lineColor: line.color)
-                        } else {
-                            ArrivalCard(arrival: arrival, lineColor: .blue)
+                        // Show "more" indicator if there are more departures
+                        if arrivals.count > 2 {
+                            Text("Tap for \(arrivals.count - 2) more...")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 4)
         }
-        .task {
-            await loadArrivals()
+        .buttonStyle(.plain)
+        .task(id: refreshTrigger) {
+            await loadData()
         }
     }
 
-    private func loadArrivals() async {
+    private func loadData() async {
         isLoadingArrivals = true
-        arrivals = await dataService.fetchArrivals(for: stop.id)
+        async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
+        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
+        arrivals = await arrivalsTask
+        alerts = await alertsTask
         isLoadingArrivals = false
+    }
+}
+
+// MARK: - Alert Banner View
+
+struct AlertBannerView: View {
+    let alert: AlertResponse
+    let alertCount: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption2)
+                .foregroundStyle(.orange)
+
+            Text(alertText)
+                .font(.caption2)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+
+            Spacer()
+
+            if alertCount > 1 {
+                Text("+\(alertCount - 1)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(8)
+    }
+
+    private var alertText: String {
+        // Use header if available, otherwise truncate description
+        if let header = alert.headerText, !header.isEmpty {
+            return header
+        }
+
+        let description = alert.descriptionText
+        if description.count > 60 {
+            return String(description.prefix(57)) + "..."
+        }
+        return description
     }
 }
 

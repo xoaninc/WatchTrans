@@ -11,18 +11,41 @@ struct Arrival: Identifiable, Codable {
     let id: String
     let lineId: String
     let lineName: String
-    let destination: String   // "Aranjuez"
+    let destination: String   // "Aranjuez" - headsign from API
     let scheduledTime: Date
     let expectedTime: Date    // May differ if delayed
     let platform: String?
+    let platformEstimated: Bool  // true if platform is estimated from historical data
+
+    // Train position info (from API train_position object)
+    let trainCurrentStop: String?      // "Alcalá de Henares"
+    let trainProgressPercent: Double?  // 77.5
+    let trainLatitude: Double?
+    let trainLongitude: Double?
+    let trainStatus: String?           // "IN_TRANSIT_TO", "STOPPED_AT"
+    let trainEstimated: Bool?          // true if position is estimated
+    let delaySeconds: Int?
+
+    // Route info for detail view
+    let routeColor: String?
+
+    // Frequency-based (Metro)
+    let frequencyBased: Bool
+    let headwayMinutes: Int?
 
     // Delay calculation
     var isDelayed: Bool {
-        expectedTime > scheduledTime
+        if let delay = delaySeconds, delay > 60 {
+            return true
+        }
+        return expectedTime > scheduledTime
     }
 
     var delayMinutes: Int {
-        guard isDelayed else { return 0 }
+        if let delay = delaySeconds {
+            return delay / 60
+        }
+        guard expectedTime > scheduledTime else { return 0 }
         return Int(expectedTime.timeIntervalSince(scheduledTime) / 60)
     }
 
@@ -51,5 +74,25 @@ struct Arrival: Identifiable, Codable {
         let minutes = Double(minutesUntilArrival)
         let maxMinutes = 30.0
         return max(0, min(1.0, 1.0 - (minutes / maxMinutes)))
+    }
+
+    /// Returns true if we have train position info to display
+    var hasTrainPosition: Bool {
+        return trainCurrentStop != nil || (trainLatitude != nil && trainLongitude != nil)
+    }
+
+    /// Returns human-readable train status
+    var trainStatusText: String? {
+        guard let status = trainStatus else { return nil }
+        switch status {
+        case "IN_TRANSIT_TO":
+            return "En camino"
+        case "STOPPED_AT":
+            return "Parado en"
+        case "INCOMING_AT":
+            return "Llegando a"
+        default:
+            return status
+        }
     }
 }

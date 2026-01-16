@@ -4,7 +4,7 @@
 //
 //  Created by Juan Macias Gomez on 14/1/26.
 //
-//  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (juanmacias.com:8002)
+//  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (redcercanias.com)
 //
 
 import Foundation
@@ -111,7 +111,7 @@ class DataService {
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: [],
+                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
                     nucleoName: response.nucleoName,
                     accesibilidad: response.accesibilidad,
@@ -141,7 +141,7 @@ class DataService {
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: [],
+                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
                     nucleoName: response.nucleoName,
                     accesibilidad: response.accesibilidad,
@@ -168,7 +168,7 @@ class DataService {
             let routeResponses = try await gtfsRealtimeService.fetchRoutesByNucleo(nucleoName: nucleoName)
 
             // Group routes by short name to create lines, collecting all route IDs
-            var lineDict: [String: (line: Line, routeIds: [String])] = [:]
+            var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
 
             // Get nucleo color for fallback (API returns "R,G,B" format)
             let nucleoColor = currentNucleo.map { nucleo -> String in
@@ -180,7 +180,9 @@ class DataService {
             } ?? "#75B6E0"
 
             for route in routeResponses {
-                let lineId = route.shortName.lowercased()
+                // Create unique ID per agency to separate Metro L1 from Cercanías C1
+                let transportType = TransportType.from(agencyId: route.agencyId)
+                let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
 
                 if var existing = lineDict[lineId] {
                     // Add route ID to existing line
@@ -191,15 +193,24 @@ class DataService {
                     // API now returns colors with # prefix
                     let color = route.color ?? nucleoColor
 
+                    // Format line name: Metro lines get "L" prefix (except R ramal)
+                    let displayName: String
+                    if transportType == .metro && route.shortName != "R" {
+                        displayName = "L\(route.shortName)"
+                    } else {
+                        displayName = route.shortName
+                    }
+
                     let line = Line(
                         id: lineId,
-                        name: route.shortName,
-                        type: .cercanias,
+                        name: displayName,
+                        longName: route.longName,
+                        type: transportType,
                         colorHex: color,
                         nucleo: nucleoName,
                         routeIds: [route.id]
                     )
-                    lineDict[lineId] = (line: line, routeIds: [route.id])
+                    lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName)
                 }
             }
 
@@ -208,6 +219,7 @@ class DataService {
                 Line(
                     id: value.line.id,
                     name: value.line.name,
+                    longName: value.longName,
                     type: value.line.type,
                     colorHex: value.line.colorHex,
                     nucleo: value.line.nucleo,
@@ -231,7 +243,7 @@ class DataService {
             return cached
         }
 
-        // 2. Fetch from RenfeServer API (juanmacias.com:8002)
+        // 2. Fetch from RenfeServer API (redcercanias.com)
         do {
             print("📡 [DataService] Cache miss, calling RenfeServer API...")
             let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 10)
@@ -303,9 +315,34 @@ class DataService {
         return stops.first { $0.id == id }
     }
 
-    // Get line by ID
+    // Get line by ID or name (case-insensitive)
+    // Handles API format variations: "1" -> "L1", "4" -> "L4", "ML1" -> "ML1", "C1" -> "C1"
     func getLine(by id: String) -> Line? {
-        return lines.first { $0.id == id }
+        let lowerId = id.lowercased().trimmingCharacters(in: .whitespaces)
+
+        // Try exact match first (by ID or name)
+        if let exact = lines.first(where: { $0.id.lowercased() == lowerId || $0.name.lowercased() == lowerId }) {
+            return exact
+        }
+
+        // For Metro: API returns "1", "2", etc. but line names are "L1", "L2"
+        // Check if it's a plain number (Metro line)
+        if let _ = Int(lowerId) {
+            let metroName = "l\(lowerId)"
+            if let metro = lines.first(where: { $0.name.lowercased() == metroName && $0.type == .metro }) {
+                return metro
+            }
+        }
+
+        // For Cercanías: try with "c" prefix if not already present
+        if !lowerId.hasPrefix("c") && !lowerId.hasPrefix("l") && !lowerId.hasPrefix("ml") {
+            let cercaniasName = "c\(lowerId)"
+            if let cercanias = lines.first(where: { $0.name.lowercased() == cercaniasName }) {
+                return cercanias
+            }
+        }
+
+        return nil
     }
 
     /// Search stops by name
@@ -318,7 +355,7 @@ class DataService {
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: [],
+                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
                     nucleoName: response.nucleoName,
                     accesibilidad: response.accesibilidad,
@@ -341,6 +378,116 @@ class DataService {
             print("⚠️ [DataService] Failed to fetch trip \(tripId): \(error)")
             return nil
         }
+    }
+
+    // MARK: - Alerts
+
+    /// Fetch alerts for a specific stop
+    func fetchAlertsForStop(stopId: String) async -> [AlertResponse] {
+        do {
+            let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
+            print("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
+            return alerts
+        } catch {
+            print("⚠️ [DataService] Failed to fetch alerts for stop \(stopId): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch alerts for a specific route
+    func fetchAlertsForRoute(routeId: String) async -> [AlertResponse] {
+        do {
+            let alerts = try await gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
+            print("✅ [DataService] Fetched \(alerts.count) alerts for route \(routeId)")
+            return alerts
+        } catch {
+            print("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch alerts for a line (checks all route IDs)
+    func fetchAlertsForLine(_ line: Line) async -> [AlertResponse] {
+        var allAlerts: [AlertResponse] = []
+        var seenIds = Set<String>()
+
+        for routeId in line.routeIds {
+            let alerts = await fetchAlertsForRoute(routeId: routeId)
+            for alert in alerts {
+                if !seenIds.contains(alert.id) {
+                    seenIds.insert(alert.id)
+                    allAlerts.append(alert)
+                }
+            }
+        }
+
+        return allAlerts
+    }
+
+    /// Fetch all alerts for the current nucleo
+    func fetchAlertsForCurrentNucleo() async -> [AlertResponse] {
+        do {
+            let allAlerts = try await gtfsRealtimeService.fetchAlerts()
+
+            // Filter to alerts that affect routes in our nucleo
+            guard currentNucleo != nil else { return allAlerts }
+
+            let nucleoRouteIds = Set(lines.flatMap { $0.routeIds })
+            let nucleoStopIds = Set(stops.map { $0.id })
+
+            return allAlerts.filter { alert in
+                alert.informedEntities.contains { entity in
+                    if let routeId = entity.routeId, nucleoRouteIds.contains(routeId) {
+                        return true
+                    }
+                    if let stopId = entity.stopId, nucleoStopIds.contains(stopId) {
+                        return true
+                    }
+                    return false
+                }
+            }
+        } catch {
+            print("⚠️ [DataService] Failed to fetch alerts: \(error)")
+            return []
+        }
+    }
+
+    // MARK: - Estimated Positions
+
+    /// Fetch estimated train positions for current nucleo
+    func fetchTrainPositions() async -> [EstimatedPositionResponse] {
+        guard let nucleo = currentNucleo else { return [] }
+
+        do {
+            let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForNucleo(nucleoId: nucleo.id)
+            print("✅ [DataService] Fetched \(positions.count) train positions for \(nucleo.name)")
+            return positions
+        } catch {
+            print("⚠️ [DataService] Failed to fetch train positions: \(error)")
+            return []
+        }
+    }
+
+    /// Fetch estimated train positions for a specific line
+    func fetchTrainPositionsForLine(_ line: Line) async -> [EstimatedPositionResponse] {
+        var allPositions: [EstimatedPositionResponse] = []
+        var seenIds = Set<String>()
+
+        for routeId in line.routeIds {
+            do {
+                let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForRoute(routeId: routeId)
+                for position in positions {
+                    if !seenIds.contains(position.id) {
+                        seenIds.insert(position.id)
+                        allPositions.append(position)
+                    }
+                }
+            } catch {
+                print("⚠️ [DataService] Failed to fetch positions for route \(routeId): \(error)")
+            }
+        }
+
+        return allPositions
     }
 
 }

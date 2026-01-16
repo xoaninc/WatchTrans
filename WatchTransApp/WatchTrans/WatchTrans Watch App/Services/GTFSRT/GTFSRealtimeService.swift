@@ -355,6 +355,70 @@ class GTFSRealtimeService {
         return routes
     }
 
+    // MARK: - Alerts
+
+    /// Fetch all active alerts
+    func fetchAlerts() async throws -> [AlertResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/alerts") else {
+            throw NetworkError.badResponse
+        }
+
+        let alerts: [AlertResponse] = try await networkService.fetch(url)
+        return alerts.filter { $0.isActive }
+    }
+
+    /// Fetch alerts for a specific stop
+    func fetchAlertsForStop(stopId: String) async throws -> [AlertResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/stops/\(stopId)/alerts") else {
+            throw NetworkError.badResponse
+        }
+
+        let alerts: [AlertResponse] = try await networkService.fetch(url)
+        return alerts.filter { $0.isActive }
+    }
+
+    /// Fetch alerts for a specific route
+    func fetchAlertsForRoute(routeId: String) async throws -> [AlertResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/routes/\(routeId)/alerts") else {
+            throw NetworkError.badResponse
+        }
+
+        let alerts: [AlertResponse] = try await networkService.fetch(url)
+        return alerts.filter { $0.isActive }
+    }
+
+    // MARK: - Estimated Positions
+
+    /// Fetch estimated train positions (all)
+    func fetchEstimatedPositions(limit: Int = 100) async throws -> [EstimatedPositionResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/estimated?limit=\(limit)") else {
+            throw NetworkError.badResponse
+        }
+
+        let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
+        return positions
+    }
+
+    /// Fetch estimated positions for a nucleo
+    func fetchEstimatedPositionsForNucleo(nucleoId: Int) async throws -> [EstimatedPositionResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/nucleos/\(nucleoId)/estimated") else {
+            throw NetworkError.badResponse
+        }
+
+        let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
+        return positions
+    }
+
+    /// Fetch estimated positions for a route
+    func fetchEstimatedPositionsForRoute(routeId: String) async throws -> [EstimatedPositionResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/routes/\(routeId)/estimated") else {
+            throw NetworkError.badResponse
+        }
+
+        let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
+        return positions
+    }
+
     // MARK: - Trigger Realtime Fetch
 
     /// Trigger a fetch of realtime data from Renfe API

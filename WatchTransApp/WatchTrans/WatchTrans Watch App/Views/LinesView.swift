@@ -23,17 +23,42 @@ struct LinesView: View {
             .sorted { lineNumber($0.name) < lineNumber($1.name) }
     }
 
-    // Extract numeric value from line name for proper sorting (C1, C2, C4a, C4b, C10)
+    // Get Metro lines for the current nucleo
+    var metroLines: [Line] {
+        guard let currentNucleo = dataService.currentNucleo else {
+            return []
+        }
+
+        return dataService.lines
+            .filter { $0.type == .metro && $0.nucleo.lowercased() == currentNucleo.name.lowercased() }
+            .sorted { lineNumber($0.name) < lineNumber($1.name) }
+    }
+
+    // Get Metro Ligero lines for the current nucleo
+    var metroLigeroLines: [Line] {
+        guard let currentNucleo = dataService.currentNucleo else {
+            return []
+        }
+
+        return dataService.lines
+            .filter { $0.type == .metroLigero && $0.nucleo.lowercased() == currentNucleo.name.lowercased() }
+            .sorted { lineNumber($0.name) < lineNumber($1.name) }
+    }
+
+    // Extract numeric value from line name for proper sorting (C1, C2, C4a, C4b, C10, ML1, etc.)
     private func lineNumber(_ name: String) -> Double {
-        let numericString = name.uppercased()
-            .replacingOccurrences(of: "C", with: "")
-            .replacingOccurrences(of: "R", with: "")  // For Rodalies
+        var numericString = name.lowercased()
+            .replacingOccurrences(of: "c", with: "")
+            .replacingOccurrences(of: "r", with: "")  // For Rodalies
+            .replacingOccurrences(of: "ml", with: "")  // For Metro Ligero
+            .replacingOccurrences(of: "l", with: "")   // For Metro L prefix
 
         // Handle suffixes like "4a", "4b"
         if let lastChar = numericString.last, lastChar.isLetter {
             let number = Double(numericString.dropLast()) ?? 0
-            let suffix = Double(lastChar.asciiValue ?? 97) - 96.9
-            return number + (suffix / 10.0)
+            // 'a' = 97, so 'a' -> 0.01, 'b' -> 0.02, etc.
+            let suffix = Double(lastChar.asciiValue ?? 97) - 96.0
+            return number + (suffix / 100.0)
         }
 
         return Double(numericString) ?? 0
@@ -41,13 +66,8 @@ struct LinesView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                // Show detected nucleo info
-                if let nucleo = dataService.currentNucleo {
-                    NucleoHeaderView(nucleo: nucleo)
-                }
-
-                // Cercanías Lines Section
+            VStack(alignment: .leading, spacing: 16) {
+                // 1. Cercanías Lines Section (first)
                 if !cercaniasLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
@@ -56,125 +76,129 @@ struct LinesView: View {
                                 .scaledToFit()
                                 .frame(height: 18)
 
-                            Text("Cercanías Renfe")
-                                .font(.system(size: 17, weight: .semibold))
+                            Text("Cercanías")
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
+                                .lineLimit(1)
                         }
                         .padding(.horizontal, 12)
                         .padding(.top, 8)
 
                         ForEach(cercaniasLines) { line in
-                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService)) {
+                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
                                 LineRowView(line: line)
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                } else if dataService.isLoading {
-                    ProgressView("Cargando líneas...")
-                        .padding()
-                } else {
-                    Text("No hay líneas disponibles")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding()
                 }
 
-                // Show all available nucleos for browsing
-                if dataService.nucleos.count > 1 {
+                // 2. Metro Lines Section
+                if !metroLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Otros núcleos")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.top, 16)
+                        HStack(spacing: 6) {
+                            Image("MetroLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 14)  // Smaller height for diamond shape
 
-                        ForEach(dataService.nucleos.filter { $0.id != dataService.currentNucleo?.id }) { nucleo in
-                            NucleoRowView(nucleo: nucleo)
+                            Text("Metro")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+
+                        ForEach(metroLines) { line in
+                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
+                                LineRowView(line: line)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
+
+                // 3. Metro Ligero Lines Section
+                if !metroLigeroLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image("MetroLigeroLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 14)  // Smaller height for diamond shape
+
+                            Text("Metro Ligero")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+
+                        ForEach(metroLigeroLines) { line in
+                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
+                                LineRowView(line: line)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                // Show loading or empty state
+                if metroLines.isEmpty && metroLigeroLines.isEmpty && cercaniasLines.isEmpty {
+                    if dataService.isLoading {
+                        ProgressView("Cargando líneas...")
+                            .padding()
+                    } else {
+                        Text("No hay líneas disponibles")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding()
+                    }
+                }
+
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 12)
         }
-        .navigationTitle("Líneas")
+        .navigationTitle(dataService.currentNucleo?.name ?? "Líneas")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Nucleo Header Component
+// MARK: - Lines Section Component
 
-struct NucleoHeaderView: View {
-    let nucleo: NucleoResponse
-
-    var nucleoColor: Color {
-        // Parse "R,G,B" format
-        let components = nucleo.color.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-        if components.count == 3 {
-            return Color(red: components[0]/255, green: components[1]/255, blue: components[2]/255)
-        }
-        return .blue
-    }
+struct LinesSectionView: View {
+    let title: String
+    let iconName: String
+    let iconColor: Color
+    let lines: [Line]
+    let dataService: DataService
+    let locationService: LocationService
 
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(nucleoColor)
-                .frame(width: 12, height: 12)
-            Text(nucleo.name)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text("\(nucleo.linesCount) líneas")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 4)
-    }
-}
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: iconName)
+                    .font(.system(size: 14))
+                    .foregroundStyle(iconColor)
 
-// MARK: - Nucleo Row Component
-
-struct NucleoRowView: View {
-    let nucleo: NucleoResponse
-
-    var nucleoColor: Color {
-        let components = nucleo.color.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-        if components.count == 3 {
-            return Color(red: components[0]/255, green: components[1]/255, blue: components[2]/255)
-        }
-        return .blue
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(nucleoColor)
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Text(String(nucleo.name.prefix(1)).uppercased())
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(nucleo.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("\(nucleo.stationsCount) estaciones - \(nucleo.linesCount) líneas")
-                    .font(.caption2)
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
 
-            Spacer()
+            ForEach(lines) { line in
+                NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
+                    LineRowView(line: line)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.regularMaterial)
-        .cornerRadius(10)
     }
 }
 
@@ -183,18 +207,59 @@ struct NucleoRowView: View {
 struct LineRowView: View {
     let line: Line
 
+    // Responsive font size that scales with watch size
+    @ScaledMetric(relativeTo: .caption2) private var descriptionFontSize: CGFloat = 11
+
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
     }
 
     // Adjust font size based on name length
     var badgeFontSize: CGFloat {
-        line.name.count > 3 ? 13 : 16
+        switch line.name.count {
+        case 1...2: return 16
+        case 3: return 14
+        default: return 12
+        }
     }
 
-    // Abbreviate station name for compact display
-    func abbreviateStation(_ name: String) -> String {
+    var badgeMinWidth: CGFloat {
+        switch line.name.count {
+        case 1...2: return 40
+        case 3: return 48
+        default: return 55
+        }
+    }
+
+    // Abbreviate line description for compact watchOS display
+    func abbreviateLine(_ name: String) -> String {
         var abbreviated = name
+
+        // Metro specific abbreviations
+        abbreviated = abbreviated.replacingOccurrences(of: "Pinar de Chamartín", with: "P. Chamartín")
+        abbreviated = abbreviated.replacingOccurrences(of: "Hospital Infanta Sofía", with: "H. Inf. Sofía")
+        abbreviated = abbreviated.replacingOccurrences(of: "Puerta del Sur", with: "Pta. Sur")
+        abbreviated = abbreviated.replacingOccurrences(of: "Plaza Elíptica", with: "Pza. Elíptica")
+        abbreviated = abbreviated.replacingOccurrences(of: "La Fortuna", with: "La Fortuna")
+        abbreviated = abbreviated.replacingOccurrences(of: "MetroSur (Circular)", with: "Circular")
+        abbreviated = abbreviated.replacingOccurrences(of: "Las Rosas", with: "Las Rosas")
+        abbreviated = abbreviated.replacingOccurrences(of: "Cuatro Caminos", with: "4 Caminos")
+        abbreviated = abbreviated.replacingOccurrences(of: "El Casar", with: "El Casar")
+        abbreviated = abbreviated.replacingOccurrences(of: "Alameda de Osuna", with: "Almd. Osuna")
+        abbreviated = abbreviated.replacingOccurrences(of: "Casa de Campo", with: "Casa Campo")
+        abbreviated = abbreviated.replacingOccurrences(of: "Hospital del Henares", with: "H. Henares")
+        abbreviated = abbreviated.replacingOccurrences(of: "Nuevos Ministerios", with: "Nvos. Minist.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Aeropuerto T4", with: "Aerp. T4")
+        abbreviated = abbreviated.replacingOccurrences(of: "Paco de Lucía", with: "Paco Lucía")
+        abbreviated = abbreviated.replacingOccurrences(of: "Arganda del Rey", with: "Arganda")
+        abbreviated = abbreviated.replacingOccurrences(of: "Príncipe Pío", with: "P. Pío")
+
+        // Metro Ligero specific abbreviations
+        abbreviated = abbreviated.replacingOccurrences(of: "Las Tablas", with: "Las Tablas")
+        abbreviated = abbreviated.replacingOccurrences(of: "Colonia Jardín", with: "Col. Jardín")
+        abbreviated = abbreviated.replacingOccurrences(of: "Estación de Aravaca", with: "Est. Aravaca")
+        abbreviated = abbreviated.replacingOccurrences(of: "Puerta de Boadilla", with: "Pta. Boadilla")
+        abbreviated = abbreviated.replacingOccurrences(of: "Tranvía de Parla (Circular)", with: "Parla Circular")
 
         // Remove city prefixes
         abbreviated = abbreviated.replacingOccurrences(of: "Madrid-", with: "")
@@ -204,55 +269,61 @@ struct LineRowView: View {
         abbreviated = abbreviated.replacingOccurrences(of: "Málaga-", with: "")
         abbreviated = abbreviated.replacingOccurrences(of: "Bilbao-", with: "")
 
-        // Shorten specific long station names first (most specific to least specific)
-        abbreviated = abbreviated.replacingOccurrences(of: "Bilbao-Intermod. Abando Indalecio Prieto", with: "Abando")
-        abbreviated = abbreviated.replacingOccurrences(of: "Alcobendas-San Sebastián De Los Reyes", with: "Alcobendas")
-        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona Estació De França", with: "Est. França")
-        abbreviated = abbreviated.replacingOccurrences(of: "València-Estació Del Nord", with: "Est. Nord")
-        abbreviated = abbreviated.replacingOccurrences(of: "Burriana-Alquerías Niño Perdido", with: "Burriana-Alq.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Estivella-Albalat Dels Tarongers", with: "Estivella-Alb.")
+        // Specific long station names (most specific first)
+        abbreviated = abbreviated.replacingOccurrences(of: "Chamartín-Clara Campoamor", with: "Chamartín")
+        abbreviated = abbreviated.replacingOccurrences(of: "Alcobendas-San Sebastián de los Reyes", with: "Alcobendas")
+        abbreviated = abbreviated.replacingOccurrences(of: "València Estació del Nord", with: "València Nord")
+        abbreviated = abbreviated.replacingOccurrences(of: "Castelló de la Plana", with: "Castelló")
+        abbreviated = abbreviated.replacingOccurrences(of: "Gijón Sanz Crespo", with: "Gijón")
+        abbreviated = abbreviated.replacingOccurrences(of: "Murcia del Carmen", with: "Murcia")
+        abbreviated = abbreviated.replacingOccurrences(of: "Alacant Terminal", with: "Alacant")
+        abbreviated = abbreviated.replacingOccurrences(of: "Santa María de la Alameda", with: "Sta.Mª Alameda")
+        abbreviated = abbreviated.replacingOccurrences(of: "Cazalla-Constantina", with: "Cazalla-Const.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Villalba de Guadarrama", with: "Villalba")
+        abbreviated = abbreviated.replacingOccurrences(of: "Alcalá de Henares", with: "Alcalá H.")
+        abbreviated = abbreviated.replacingOccurrences(of: "San Juan de Nieva", with: "S.Juan Nieva")
+        abbreviated = abbreviated.replacingOccurrences(of: "Puente de los Fierros", with: "Pte. Fierros")
+        abbreviated = abbreviated.replacingOccurrences(of: "Aeropuerto de Jerez", with: "Aerp. Jerez")
+        abbreviated = abbreviated.replacingOccurrences(of: "Benalmádena-Arroyo de la Miel", with: "Benalmádena")
+        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona Estació de França", with: "Est. França")
+        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-Passeig de Gràcia", with: "P. Gràcia")
+        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-Plaça de Catalunya", with: "Pl. Catalunya")
         abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-La Sagrera-Meridiana", with: "La Sagrera")
-        abbreviated = abbreviated.replacingOccurrences(of: "Les Franqueses-Granollers Nord", with: "Granollers N.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Benalmádena-Arroyo De La Miel", with: "Benalmádena")
+        abbreviated = abbreviated.replacingOccurrences(of: "Bilbao-Intermod. Abando Indalecio Prieto", with: "Abando")
+        abbreviated = abbreviated.replacingOccurrences(of: "Bilbao La Concordia", with: "La Concordia")
         abbreviated = abbreviated.replacingOccurrences(of: "San Sebastián-Donostia", with: "Donostia")
-        abbreviated = abbreviated.replacingOccurrences(of: "Universidad-Cantoblanco", with: "Univ-Canto")
-        abbreviated = abbreviated.replacingOccurrences(of: "Chamartín-Clara Campoamor", with: "Chamrt")
-        abbreviated = abbreviated.replacingOccurrences(of: "Villalba De Guadarrama", with: "Villalba Gua.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-Passeig De Gràcia", with: "P. Gràcia")
-        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-Plaça De Catalunya", with: "Pl. Catalunya")
-        abbreviated = abbreviated.replacingOccurrences(of: "Castelló De La Plana", with: "Castelló P.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Alcalá De Henares", with: "Alcalá H.")
-
-        // Shorten common words
-        abbreviated = abbreviated.replacingOccurrences(of: "Aeropuerto", with: "Aerp")
-        abbreviated = abbreviated.replacingOccurrences(of: "Príncipe Pío", with: "Prínc. Pío")
-        abbreviated = abbreviated.replacingOccurrences(of: "Chamartín", with: "Chamrt")
-        abbreviated = abbreviated.replacingOccurrences(of: "Universidad", with: "Univ")
-        abbreviated = abbreviated.replacingOccurrences(of: "Estación", with: "Est")
-        abbreviated = abbreviated.replacingOccurrences(of: "Estació", with: "Est.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Barcelona-", with: "Bcn-")
-        abbreviated = abbreviated.replacingOccurrences(of: "Centro Alameda", with: "Ctr Alameda")
-        abbreviated = abbreviated.replacingOccurrences(of: "Centro", with: "Ctr")
-        abbreviated = abbreviated.replacingOccurrences(of: "Hospital", with: "Hosp.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Sant Vicent Centre", with: "Sant Vicent")
+        abbreviated = abbreviated.replacingOccurrences(of: "Móstoles-El Soto", with: "Móstoles")
+        abbreviated = abbreviated.replacingOccurrences(of: "Infiesto Apeadero", with: "Infiesto")
+        abbreviated = abbreviated.replacingOccurrences(of: "Moixent/Mogente", with: "Moixent")
+        abbreviated = abbreviated.replacingOccurrences(of: "Málaga Centro", with: "Málaga Ctr.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Lora del Río", with: "Lora Río")
+        abbreviated = abbreviated.replacingOccurrences(of: "San Esteban", with: "S. Esteban")
         abbreviated = abbreviated.replacingOccurrences(of: "Dos Hermanas", with: "Dos Herm.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Hermanas", with: "Herm.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Villanueva", with: "Vnva")
-        abbreviated = abbreviated.replacingOccurrences(of: "Jardines", with: "Jard.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Virgen", with: "V.")
-        abbreviated = abbreviated.replacingOccurrences(of: " De La ", with: " ")
-        abbreviated = abbreviated.replacingOccurrences(of: " De Los ", with: " ")
-        abbreviated = abbreviated.replacingOccurrences(of: " Del ", with: " ")
-        abbreviated = abbreviated.replacingOccurrences(of: " De ", with: " ")
-        abbreviated = abbreviated.replacingOccurrences(of: "Santa", with: "S.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Santo", with: "S.")
-        abbreviated = abbreviated.replacingOccurrences(of: "San", with: "S.")
-        abbreviated = abbreviated.replacingOccurrences(of: "Intermod.", with: "")
 
-        // Truncate if still too long (max ~15 chars)
-        if abbreviated.count > 15 {
-            abbreviated = String(abbreviated.prefix(13)) + "."
-        }
+        // Common station names
+        abbreviated = abbreviated.replacingOccurrences(of: "Guadalajara", with: "Guadljr.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Chamartín", with: "Chamrt.")
 
+        // Common words
+        abbreviated = abbreviated.replacingOccurrences(of: "Aeropuerto", with: "Aerp.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Príncipe Pío", with: "P. Pío")
+        abbreviated = abbreviated.replacingOccurrences(of: "Universidad", with: "Univ.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Estación", with: "Est.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Estació", with: "Est.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Centro", with: "Ctr.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Hospital", with: "Hosp.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Terminal", with: "Term.")
+        abbreviated = abbreviated.replacingOccurrences(of: "Apeadero", with: "Aped.")
+        abbreviated = abbreviated.replacingOccurrences(of: " de la ", with: " ")
+        abbreviated = abbreviated.replacingOccurrences(of: " de los ", with: " ")
+        abbreviated = abbreviated.replacingOccurrences(of: " del ", with: " ")
+        abbreviated = abbreviated.replacingOccurrences(of: " de ", with: " ")
+        abbreviated = abbreviated.replacingOccurrences(of: "Santa ", with: "Sta. ")
+        abbreviated = abbreviated.replacingOccurrences(of: "Santo ", with: "Sto. ")
+        abbreviated = abbreviated.replacingOccurrences(of: "San ", with: "S. ")
+
+        // No truncation - let SwiftUI handle text wrapping based on screen size
         return abbreviated.trimmingCharacters(in: .whitespaces)
     }
 
@@ -262,21 +333,20 @@ struct LineRowView: View {
             Text(line.name)
                 .font(.system(size: badgeFontSize, weight: .heavy))
                 .foregroundStyle(.white)
-                .padding(.horizontal, line.name.count > 3 ? 6 : 8)
+                .padding(.horizontal, 6)
                 .padding(.vertical, 4)
-                .frame(minWidth: 40)
+                .frame(minWidth: badgeMinWidth)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(lineColor)
                 )
 
-            // Line info - nucleo name
-            VStack(alignment: .leading, spacing: 2) {
-                Text(line.nucleo.capitalized)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            // Line info - terminus stations (abbreviated for watchOS)
+            Text(abbreviateLine(line.longName))
+                .font(.system(size: descriptionFontSize))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
 
             Spacer()
 

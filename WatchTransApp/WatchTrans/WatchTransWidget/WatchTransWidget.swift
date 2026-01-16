@@ -7,6 +7,7 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Timeline Entry
 
@@ -17,11 +18,41 @@ struct ArrivalEntry: TimelineEntry {
     let minutesUntilArrival: Int
     let isDelayed: Bool
     let lineColor: String // Hex color
+    let stopName: String? // Name of the stop (for display)
+
+    init(date: Date, lineName: String, destination: String, minutesUntilArrival: Int, isDelayed: Bool, lineColor: String, stopName: String? = nil) {
+        self.date = date
+        self.lineName = lineName
+        self.destination = destination
+        self.minutesUntilArrival = minutesUntilArrival
+        self.isDelayed = isDelayed
+        self.lineColor = lineColor
+        self.stopName = stopName
+    }
 }
 
-// MARK: - Timeline Provider
+// MARK: - Timeline Provider (Configurable)
 
-struct ArrivalProvider: TimelineProvider {
+struct ArrivalProvider: AppIntentTimelineProvider {
+    private let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Refresh interval: 2.5 minutes (150 seconds)
+    private let refreshIntervalSeconds: TimeInterval = 150
+
+    // Recommendations for widget gallery
+    func recommendations() -> [AppIntentRecommendation<SelectStopIntent>] {
+        // Return some default recommendations
+        let defaultStops = [
+            ("RENFE_17000", "Nuevos Ministerios"),
+            ("RENFE_18000", "Sol"),
+            ("RENFE_10000", "Atocha Cercanías")
+        ]
+
+        return defaultStops.map { (id, name) in
+            let intent = SelectStopIntent(stop: StopEntity(id: id, name: name))
+            return AppIntentRecommendation(intent: intent, description: name)
+        }
+    }
+
     func placeholder(in context: Context) -> ArrivalEntry {
         ArrivalEntry(
             date: Date(),
@@ -29,134 +60,242 @@ struct ArrivalProvider: TimelineProvider {
             destination: "Aranjuez",
             minutesUntilArrival: 5,
             isDelayed: false,
-            lineColor: "#813380" // Official Cercanías C3 purple
+            lineColor: "#813380"
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (ArrivalEntry) -> ()) {
-        let entry = ArrivalEntry(
-            date: Date(),
-            lineName: "C3",
-            destination: "Aranjuez",
-            minutesUntilArrival: 5,
-            isDelayed: false,
-            lineColor: "#813380" // Official Cercanías C3 purple
-        )
-        completion(entry)
-    }
+    func snapshot(for configuration: SelectStopIntent, in context: Context) async -> ArrivalEntry {
+        // For preview in widget gallery, use placeholder
+        if context.isPreview {
+            return ArrivalEntry(
+                date: Date(),
+                lineName: "C3",
+                destination: "Aranjuez",
+                minutesUntilArrival: 5,
+                isDelayed: false,
+                lineColor: "#813380"
+            )
+        }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [ArrivalEntry] = []
-
-        // Generate timeline with mock data
-        // In real implementation, this would fetch from shared data or API
-        let currentDate = Date()
-
-        // Mock arrivals at 5, 12, and 20 minutes (using official Madrid colors)
-        let mockArrivals = [
-            (minutes: 5, line: "C3", dest: "Aranjuez", color: "#813380", delayed: false),       // Cercanías C3 purple
-            (minutes: 12, line: "L1", dest: "Valdecarros", color: "#2ca5dd", delayed: true),   // Metro L1 light blue
-            (minutes: 20, line: "L2", dest: "Cuatro Caminos", color: "#e0292f", delayed: false) // Metro L2 red
-        ]
-
-        for (index, arrival) in mockArrivals.enumerated() {
-            if let entryDate = Calendar.current.date(byAdding: .minute, value: index * 5, to: currentDate) {
-                let entry = ArrivalEntry(
-                    date: entryDate,
-                    lineName: arrival.line,
-                    destination: arrival.dest,
-                    minutesUntilArrival: arrival.minutes - (index * 5),
-                    isDelayed: arrival.delayed,
-                    lineColor: arrival.color
+        // Otherwise try to fetch real data
+        do {
+            let departures = try await fetchDepartures(for: configuration)
+            if let first = departures.first {
+                return ArrivalEntry(
+                    date: Date(),
+                    lineName: first.routeShortName,
+                    destination: first.headsign ?? "Unknown",
+                    minutesUntilArrival: first.minutesUntil,
+                    isDelayed: first.isDelayed,
+                    lineColor: first.routeColor ?? "#75B6E0"
                 )
-                entries.append(entry)
+            }
+        } catch {
+            print("⚠️ [Widget Snapshot] Error: \(error)")
+        }
+
+        // Fallback to placeholder
+        return ArrivalEntry(
+            date: Date(),
+            lineName: "---",
+            destination: "No data",
+            minutesUntilArrival: 0,
+            isDelayed: false,
+            lineColor: "#808080"
+        )
+    }
+
+    func timeline(for configuration: SelectStopIntent, in context: Context) async -> Timeline<ArrivalEntry> {
+        do {
+            let departures = try await fetchDepartures(for: configuration)
+            let entries = createEntries(from: departures)
+
+            // Update every 2.5 minutes
+            let nextUpdate = Date().addingTimeInterval(refreshIntervalSeconds)
+            return Timeline(entries: entries, policy: .after(nextUpdate))
+        } catch {
+            // On error, show error info and retry in 30 seconds
+            print("⚠️ [Widget] Failed to fetch: \(error)")
+            let errorMessage = String(describing: error).prefix(20)
+            let fallbackEntry = ArrivalEntry(
+                date: Date(),
+                lineName: "ERR",
+                destination: String(errorMessage),
+                minutesUntilArrival: 0,
+                isDelayed: true,
+                lineColor: "#FF0000"
+            )
+            let nextUpdate = Date().addingTimeInterval(30)
+            return Timeline(entries: [fallbackEntry], policy: .after(nextUpdate))
+        }
+    }
+
+    // MARK: - API Fetch
+
+    private func fetchDepartures(for configuration: SelectStopIntent) async throws -> [WidgetDeparture] {
+        // Get stop ID from configuration or use fallback
+        let stopId = try await getStopId(from: configuration)
+
+        let urlString = "\(apiBaseURL)/stops/\(stopId)/departures?limit=5"
+        guard let url = URL(string: urlString) else {
+            throw WidgetError.badURL
+        }
+
+        // Create a URLSession configuration that works in extensions
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 15
+        let session = URLSession(configuration: config)
+
+        let (data, response) = try await session.data(from: url)
+
+        // Check HTTP status
+        if let httpResponse = response as? HTTPURLResponse {
+            guard httpResponse.statusCode == 200 else {
+                throw WidgetError.httpError(httpResponse.statusCode)
             }
         }
 
-        // Update every 5 minutes
-        let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
+        let departures = try JSONDecoder().decode([WidgetDeparture].self, from: data)
+        return departures
+    }
+
+    // MARK: - Get Stop ID (User Selected or Fallback)
+
+    private func getStopId(from configuration: SelectStopIntent) async throws -> String {
+        // 1. Check if user selected a stop in widget configuration
+        if let selectedStop = configuration.stop {
+            return selectedStop.id
+        }
+
+        // 2. Fallback to Nuevos Ministerios (major hub in Madrid)
+        // TODO: Add App Group to share location between app and widget
+        return "RENFE_17000"
+    }
+
+    // MARK: - Create Timeline Entries
+
+    private func createEntries(from departures: [WidgetDeparture]) -> [ArrivalEntry] {
+        guard !departures.isEmpty else {
+            // Return a default placeholder entry
+            return [ArrivalEntry(
+                date: Date(),
+                lineName: "---",
+                destination: "No data",
+                minutesUntilArrival: 0,
+                isDelayed: false,
+                lineColor: "#75B6E0"
+            )]
+        }
+
+        let currentDate = Date()
+        var entries: [ArrivalEntry] = []
+
+        // Create entries for each departure
+        for (index, departure) in departures.prefix(3).enumerated() {
+            // Calculate entry date (stagger by 2 minutes for visual updates)
+            let entryDate = Calendar.current.date(byAdding: .minute, value: index * 2, to: currentDate) ?? currentDate
+
+            // Recalculate minutes until based on entry date
+            let originalMinutes = departure.minutesUntil
+            let adjustedMinutes = max(0, originalMinutes - (index * 2))
+
+            let entry = ArrivalEntry(
+                date: entryDate,
+                lineName: departure.routeShortName,
+                destination: departure.headsign ?? "Unknown",
+                minutesUntilArrival: adjustedMinutes,
+                isDelayed: departure.isDelayed,
+                lineColor: departure.routeColor ?? "#75B6E0"
+            )
+            entries.append(entry)
+        }
+
+        return entries
     }
 }
 
-// MARK: - Complication View
+// MARK: - Widget Models (simplified for widget)
+
+struct WidgetDeparture: Codable {
+    let tripId: String
+    let routeShortName: String
+    let routeColor: String?
+    let headsign: String?
+    let minutesUntil: Int
+    let isDelayed: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case tripId = "trip_id"
+        case routeShortName = "route_short_name"
+        case routeColor = "route_color"
+        case headsign
+        case minutesUntil = "minutes_until"
+        case isDelayed = "is_delayed"
+    }
+}
+
+struct WidgetStop: Codable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+}
+
+// Custom error type for better debugging
+enum WidgetError: Error, CustomStringConvertible {
+    case badURL
+    case httpError(Int)
+    case noData
+
+    var description: String {
+        switch self {
+        case .badURL: return "Bad URL"
+        case .httpError(let code): return "HTTP \(code)"
+        case .noData: return "No data"
+        }
+    }
+}
+
+// MARK: - Complication View (Rectangular)
+// accessoryRectangular supports: fullColor, accented, vibrant
 
 struct WatchTransWidgetEntryView: View {
-    @Environment(\.widgetRenderingMode) var renderingMode
     var entry: ArrivalProvider.Entry
 
-    var lineColor: Color {
-        Color(hex: entry.lineColor) ?? .blue
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             // Line and destination
             HStack(spacing: 4) {
                 Text(entry.lineName)
-                    .font(.system(size: 16, weight: .heavy)) // Increased size and weight per Miguel
-                    .foregroundStyle(renderingMode == .fullColor ? lineColor : .white)
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-
+                    .font(.headline)
+                    .bold()
+                Text("→")
+                    .font(.caption2)
                 Text(entry.destination)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .lineLimit(1)
             }
 
             // Time and progress
-            HStack(spacing: 4) {
-                // Progress bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        // Background
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.tertiary)
-                            .frame(height: 4)
-
-                        // Progress
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(entry.isDelayed ? .orange : .green)
-                            .frame(
-                                width: geometry.size.width * progressValue,
-                                height: 4
-                            )
-                    }
-                }
-                .frame(height: 4)
-
-                // Time text
+            HStack {
                 Text(timeText)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 35, alignment: .trailing)
-            }
-
-            // Delay indicator
-            if entry.isDelayed {
-                HStack(spacing: 2) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.orange)
-
-                    Text("Delayed")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
+                    .font(.body)
+                    .bold()
+                    .minimumScaleFactor(0.8)
+                Spacer()
+                ProgressView(value: progressValue)
+                    .frame(width: 50)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .privacySensitive(false)
     }
 
     var timeText: String {
         if entry.minutesUntilArrival == 0 {
             return "Now"
-        } else if entry.minutesUntilArrival == 1 {
-            return "1 min"
         } else {
-            return "\(entry.minutesUntilArrival)m"
+            return "\(entry.minutesUntilArrival) min"
         }
     }
 
@@ -168,44 +307,31 @@ struct WatchTransWidgetEntryView: View {
 }
 
 // MARK: - Circular Complication View
+// accessoryCircular supports: accented, vibrant (NO fullColor!)
 
 struct WatchTransCircularView: View {
-    @Environment(\.widgetRenderingMode) var renderingMode
     var entry: ArrivalProvider.Entry
-
-    var lineColor: Color {
-        Color(hex: entry.lineColor) ?? .blue
-    }
 
     var body: some View {
         ZStack {
-            // Progress ring - neutral color (Miguel's feedback: line color was too much)
-            Circle()
-                .stroke(Color.white.opacity(0.3), lineWidth: 3)
-
             Circle()
                 .trim(from: 0, to: progressValue)
-                .stroke(Color.white, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .rotationEffect(.degrees(-90))
 
-            // Content
-            VStack(spacing: 1) {
+            VStack(spacing: 0) {
                 Text(entry.lineName)
-                    .font(.system(size: 18, weight: .heavy)) // Increased size and weight per Miguel
-                    .foregroundStyle(renderingMode == .fullColor ? lineColor : .white)
-
+                    .font(.system(size: 16, weight: .bold))
                 Text(timeText)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 11))
             }
         }
+        .privacySensitive(false)
     }
 
     var timeText: String {
         if entry.minutesUntilArrival == 0 {
             return "Now"
-        } else if entry.minutesUntilArrival == 1 {
-            return "1m"
         } else {
             return "\(entry.minutesUntilArrival)m"
         }
@@ -224,12 +350,12 @@ struct WatchTransWidget: Widget {
     let kind: String = "juan.WatchTrans.watchkitapp.NextArrival"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: ArrivalProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectStopIntent.self, provider: ArrivalProvider()) { entry in
             WatchTransWidgetContentView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Next Arrival")
-        .description("See your next train or metro arrival")
+        .description("See your next train arrival. Tap to select a stop.")
         .supportedFamilies([
             .accessoryRectangular,
             .accessoryCircular,
@@ -260,48 +386,46 @@ struct WatchTransWidgetContentView: View {
 }
 
 // MARK: - Corner Complication View
+// accessoryCorner supports: accented, vibrant (NO fullColor!)
 
 struct WatchTransCornerView: View {
-    @Environment(\.widgetRenderingMode) var renderingMode
     var entry: ArrivalProvider.Entry
-
-    var lineColor: Color {
-        Color(hex: entry.lineColor) ?? .blue
-    }
 
     var body: some View {
         Text(entry.lineName)
-            .font(.system(size: 20, weight: .heavy)) // Increased size and weight per Miguel
-            .foregroundStyle(renderingMode == .fullColor ? lineColor : .white)
+            .font(.title2)
+            .bold()
             .widgetLabel {
                 Text(timeText)
-                    .font(.system(size: 15, weight: .bold))
             }
+            .privacySensitive(false)
     }
 
     var timeText: String {
         if entry.minutesUntilArrival == 0 {
             return "Now"
         } else {
-            return "\(entry.minutesUntilArrival)m"
+            return "\(entry.minutesUntilArrival) min"
         }
     }
 }
 
 // MARK: - Inline Complication View
+// accessoryInline supports: accented, vibrant (NO fullColor!)
 
 struct WatchTransInlineView: View {
     var entry: ArrivalProvider.Entry
 
     var body: some View {
         Text("\(entry.lineName): \(timeText)")
+            .privacySensitive(false)
     }
 
     var timeText: String {
         if entry.minutesUntilArrival == 0 {
             return "Now"
         } else {
-            return "\(entry.minutesUntilArrival)m"
+            return "\(entry.minutesUntilArrival) min"
         }
     }
 }

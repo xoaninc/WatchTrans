@@ -25,14 +25,27 @@ class GTFSRealtimeMapper {
             return []
         }
 
+        // Get current stop name to filter out terminus trains
+        let currentStopName = dataService.getStop(by: stopId)?.name
+
         let now = Date()
         var arrivals: [Arrival] = []
 
         print("🗺️ [Mapper] Processing \(departures.count) departures for stop \(stopId)")
 
         for departure in departures {
-            // Skip if already passed
-            guard departure.minutesUntil >= 0 else { continue }
+            // Skip if already passed - use realtime if available
+            let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
+            guard effectiveMinutes >= 0 else { continue }
+
+            // Skip terminus trains (where headsign = current stop)
+            // These are trains ending at this stop, not useful for passengers
+            if let headsign = departure.headsign,
+               let stopName = currentStopName,
+               headsign.localizedCaseInsensitiveCompare(stopName) == .orderedSame {
+                print("⏭️ [Mapper] Skipping terminus train: \(departure.routeShortName) -> \(headsign)")
+                continue
+            }
 
             // Find the line in our local data
             let line = findLine(
@@ -42,9 +55,10 @@ class GTFSRealtimeMapper {
                 dataService: dataService
             )
 
-            // Calculate times
-            let expectedTime = now.addingTimeInterval(TimeInterval(departure.minutesUntil * 60))
-            let scheduledTime = expectedTime  // API doesn't separate these yet
+            // Calculate times using realtime minutes if available
+            let expectedTime = now.addingTimeInterval(TimeInterval(effectiveMinutes * 60))
+            // Scheduled time uses the original minutes_until (without realtime adjustment)
+            let scheduledTime = now.addingTimeInterval(TimeInterval(departure.minutesUntil * 60))
 
             // Use headsign as destination, or try to determine from line
             let destination = departure.headsign ?? determineDestination(line: line, stopId: stopId)
@@ -56,7 +70,18 @@ class GTFSRealtimeMapper {
                 destination: destination,
                 scheduledTime: scheduledTime,
                 expectedTime: expectedTime,
-                platform: nil
+                platform: departure.platform,
+                platformEstimated: departure.platformEstimated ?? false,
+                trainCurrentStop: departure.trainPosition?.currentStopName,
+                trainProgressPercent: departure.trainPosition?.progressPercent,
+                trainLatitude: departure.trainPosition?.latitude,
+                trainLongitude: departure.trainPosition?.longitude,
+                trainStatus: departure.trainPosition?.status,
+                trainEstimated: departure.trainPosition?.estimated,
+                delaySeconds: departure.delaySeconds,
+                routeColor: departure.routeColor,
+                frequencyBased: departure.frequencyBased ?? false,
+                headwayMinutes: departure.headwayMinutes
             )
 
             arrivals.append(arrival)
@@ -99,7 +124,18 @@ class GTFSRealtimeMapper {
                 destination: "Unknown",  // ETA endpoint doesn't include headsign
                 scheduledTime: eta.scheduledArrival,
                 expectedTime: eta.estimatedArrival,
-                platform: nil
+                platform: nil,
+                platformEstimated: false,
+                trainCurrentStop: eta.currentStopId,
+                trainProgressPercent: nil,
+                trainLatitude: nil,
+                trainLongitude: nil,
+                trainStatus: nil,
+                trainEstimated: nil,
+                delaySeconds: eta.delaySeconds,
+                routeColor: nil,
+                frequencyBased: false,
+                headwayMinutes: nil
             )
 
             arrivals.append(arrival)
@@ -152,16 +188,29 @@ extension DepartureResponse {
     /// Convert to Arrival directly (when line info is known)
     func toArrival(lineId: String, lineName: String) -> Arrival {
         let now = Date()
-        let expectedTime = now.addingTimeInterval(TimeInterval(minutesUntil * 60))
+        let effectiveMinutes = realtimeMinutesUntil ?? minutesUntil
+        let expectedTime = now.addingTimeInterval(TimeInterval(effectiveMinutes * 60))
+        let scheduledTime = now.addingTimeInterval(TimeInterval(minutesUntil * 60))
 
         return Arrival(
             id: tripId,
             lineId: lineId,
             lineName: lineName,
             destination: headsign ?? "Unknown",
-            scheduledTime: expectedTime,
+            scheduledTime: scheduledTime,
             expectedTime: expectedTime,
-            platform: nil
+            platform: platform,
+            platformEstimated: platformEstimated ?? false,
+            trainCurrentStop: trainPosition?.currentStopName,
+            trainProgressPercent: trainPosition?.progressPercent,
+            trainLatitude: trainPosition?.latitude,
+            trainLongitude: trainPosition?.longitude,
+            trainStatus: trainPosition?.status,
+            trainEstimated: trainPosition?.estimated,
+            delaySeconds: delaySeconds,
+            routeColor: routeColor,
+            frequencyBased: frequencyBased ?? false,
+            headwayMinutes: headwayMinutes
         )
     }
 }
@@ -176,7 +225,18 @@ extension ETAResponse {
             destination: destination,
             scheduledTime: scheduledArrival,
             expectedTime: estimatedArrival,
-            platform: nil
+            platform: nil,
+            platformEstimated: false,
+            trainCurrentStop: currentStopId,
+            trainProgressPercent: nil,
+            trainLatitude: nil,
+            trainLongitude: nil,
+            trainStatus: nil,
+            trainEstimated: nil,
+            delaySeconds: delaySeconds,
+            routeColor: nil,
+            frequencyBased: false,
+            headwayMinutes: nil
         )
     }
 }
