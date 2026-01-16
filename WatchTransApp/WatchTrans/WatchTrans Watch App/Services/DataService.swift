@@ -167,8 +167,8 @@ class DataService {
             print("📡 [DataService] Fetching routes for nucleo: \(nucleoName)...")
             let routeResponses = try await gtfsRealtimeService.fetchRoutesByNucleo(nucleoName: nucleoName)
 
-            // Group routes by short name to create lines
-            var lineDict: [String: Line] = [:]
+            // Group routes by short name to create lines, collecting all route IDs
+            var lineDict: [String: (line: Line, routeIds: [String])] = [:]
 
             // Get nucleo color for fallback (API returns "R,G,B" format)
             let nucleoColor = currentNucleo.map { nucleo -> String in
@@ -182,21 +182,37 @@ class DataService {
             for route in routeResponses {
                 let lineId = route.shortName.lowercased()
 
-                if lineDict[lineId] == nil {
+                if var existing = lineDict[lineId] {
+                    // Add route ID to existing line
+                    existing.routeIds.append(route.id)
+                    lineDict[lineId] = existing
+                } else {
                     // Use route color if available, otherwise use nucleo color
                     let color = route.color.map { "#\($0)" } ?? nucleoColor
 
-                    lineDict[lineId] = Line(
+                    let line = Line(
                         id: lineId,
                         name: route.shortName,
                         type: .cercanias,
                         colorHex: color,
-                        nucleo: nucleoName
+                        nucleo: nucleoName,
+                        routeIds: [route.id]
                     )
+                    lineDict[lineId] = (line: line, routeIds: [route.id])
                 }
             }
 
-            lines = Array(lineDict.values)
+            // Create final lines with all collected route IDs
+            lines = lineDict.map { (_, value) in
+                Line(
+                    id: value.line.id,
+                    name: value.line.name,
+                    type: value.line.type,
+                    colorHex: value.line.colorHex,
+                    nucleo: value.line.nucleo,
+                    routeIds: value.routeIds
+                )
+            }
             print("✅ [DataService] Loaded \(lines.count) lines for \(nucleoName)")
         } catch {
             print("⚠️ [DataService] Failed to fetch routes for nucleo: \(error)")

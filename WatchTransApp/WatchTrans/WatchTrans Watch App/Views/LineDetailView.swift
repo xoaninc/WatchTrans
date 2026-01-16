@@ -88,8 +88,10 @@ struct LineDetailView: View {
 
     private func loadStops() async {
         isLoading = true
-        // Fetch stops for this line from API using the line ID as route ID
-        stops = await dataService.fetchStopsForRoute(routeId: line.id)
+        // Fetch stops for this line using the first actual route ID
+        if let routeId = line.routeIds.first {
+            stops = await dataService.fetchStopsForRoute(routeId: routeId)
+        }
         isLoading = false
     }
 }
@@ -186,7 +188,8 @@ struct StopRow: View {
                 name: "C1",
                 type: .cercanias,
                 colorHex: "#75B6E0",
-                nucleo: "madrid"
+                nucleo: "madrid",
+                routeIds: ["RENFE_C1_34"]
             ),
             dataService: DataService()
         )

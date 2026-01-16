@@ -14,6 +14,7 @@ struct Line: Identifiable, Codable {
     let type: TransportType   // .metro, .cercanias, .tram
     let colorHex: String      // Store as hex string for Codable
     let nucleo: String        // Nucleo name from API: "madrid", "sevilla", etc.
+    let routeIds: [String]    // Actual API route IDs (e.g., ["RENFE_C1_34"])
 
     // Computed property for SwiftUI Color
     var color: Color {
