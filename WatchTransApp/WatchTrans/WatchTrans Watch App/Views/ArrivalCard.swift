@@ -30,9 +30,11 @@ struct ArrivalCard: View {
             }
 
             // Progress bar, time, and platform
+            // Cercanías: green (on time) / orange (delayed)
+            // Metro/ML: line color (no real-time delay info)
             HStack {
                 ProgressView(value: arrival.progressValue)
-                    .tint(arrival.isDelayed ? .orange : lineColor)
+                    .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
                     .frame(height: 4)
 
                 // Show frequency for Metro, or time for Cercanías

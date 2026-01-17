@@ -20,10 +20,18 @@ struct ContentView: View {
     @State private var refreshTimer: Timer?
     @State private var refreshTrigger = UUID()  // Changes to trigger refresh
 
+    // Network monitoring
+    private var networkMonitor = NetworkMonitor.shared
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    // Offline banner (shown when no connection)
+                    if !networkMonitor.isConnected {
+                        OfflineBanner()
+                    }
+
                     // Favorites Section (max 5)
                     if let manager = favoritesManager, !manager.favorites.isEmpty {
                         FavoritesSectionView(
@@ -123,10 +131,14 @@ struct ContentView: View {
         let lat = locationService.currentLocation?.coordinate.latitude
         let lon = locationService.currentLocation?.coordinate.longitude
 
-        // Save location for Widget to use
+        // Save location for Widget to use (via App Group shared storage)
         if let lat = lat, let lon = lon {
-            UserDefaults.standard.set(lat, forKey: "lastLatitude")
-            UserDefaults.standard.set(lon, forKey: "lastLongitude")
+            SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
+        }
+
+        // Save nucleo info for Widget
+        if let nucleo = dataService.currentNucleo {
+            SharedStorage.shared.saveNucleo(name: nucleo.name, id: nucleo.id)
         }
 
         await dataService.fetchTransportData(latitude: lat, longitude: lon)

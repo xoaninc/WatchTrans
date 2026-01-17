@@ -23,9 +23,15 @@ struct Stop: Identifiable, Equatable {
     let hasBusConnection: Bool
     let hasMetroConnection: Bool
 
+    // Connection details - Metro, Metro Ligero, and Cercanías line numbers
+    let corMetro: String?      // Metro connections: "1, 10" or "6, 8, 10"
+    let corMl: String?         // Metro Ligero connections: "1" or "2, 3"
+    let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
+
     init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String],
          province: String? = nil, nucleoName: String? = nil, accesibilidad: String? = nil,
-         hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false) {
+         hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
+         corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil) {
         self.id = id
         self.name = name
         self.latitude = latitude
@@ -37,6 +43,9 @@ struct Stop: Identifiable, Equatable {
         self.hasParking = hasParking
         self.hasBusConnection = hasBusConnection
         self.hasMetroConnection = hasMetroConnection
+        self.corMetro = corMetro
+        self.corMl = corMl
+        self.corCercanias = corCercanias
     }
 
     // Computed property for CLLocation
@@ -69,6 +78,7 @@ extension Stop: Codable {
         case id, name, latitude, longitude, connectionLineIds
         case province, nucleoName, accesibilidad
         case hasParking, hasBusConnection, hasMetroConnection
+        case corMetro, corMl, corCercanias
     }
 
     init(from decoder: Decoder) throws {
@@ -84,5 +94,8 @@ extension Stop: Codable {
         hasParking = try container.decodeIfPresent(Bool.self, forKey: .hasParking) ?? false
         hasBusConnection = try container.decodeIfPresent(Bool.self, forKey: .hasBusConnection) ?? false
         hasMetroConnection = try container.decodeIfPresent(Bool.self, forKey: .hasMetroConnection) ?? false
+        corMetro = try container.decodeIfPresent(String.self, forKey: .corMetro)
+        corMl = try container.decodeIfPresent(String.self, forKey: .corMl)
+        corCercanias = try container.decodeIfPresent(String.self, forKey: .corCercanias)
     }
 }

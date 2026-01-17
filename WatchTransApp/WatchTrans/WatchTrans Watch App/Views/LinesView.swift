@@ -47,7 +47,7 @@ struct LinesView: View {
 
     // Extract numeric value from line name for proper sorting (C1, C2, C4a, C4b, C10, ML1, etc.)
     private func lineNumber(_ name: String) -> Double {
-        var numericString = name.lowercased()
+        let numericString = name.lowercased()
             .replacingOccurrences(of: "c", with: "")
             .replacingOccurrences(of: "r", with: "")  // For Rodalies
             .replacingOccurrences(of: "ml", with: "")  // For Metro Ligero

@@ -26,7 +26,8 @@ struct StopEntity: AppEntity {
 // MARK: - Stop Query
 
 struct StopQuery: EntityQuery {
-    private let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Use centralized widget config
+    private var apiBaseURL: String { WidgetAPIConfig.baseURL }
 
     func entities(for identifiers: [String]) async throws -> [StopEntity] {
         // Return entities for given IDs
@@ -48,19 +49,14 @@ struct StopQuery: EntityQuery {
     }
 
     private func fetchNearbyStops() async throws -> [StopEntity] {
-        // Get last known location from UserDefaults
-        guard let lat = UserDefaults.standard.object(forKey: "lastLatitude") as? Double,
-              let lon = UserDefaults.standard.object(forKey: "lastLongitude") as? Double else {
-            // If no location, return some default Madrid stops
-            return [
-                StopEntity(id: "RENFE_17000", name: "Nuevos Ministerios"),
-                StopEntity(id: "RENFE_18000", name: "Sol"),
-                StopEntity(id: "RENFE_10000", name: "Atocha Cercanías")
-            ]
+        // Get last known location from SharedStorage (App Group)
+        guard let location = SharedStorage.shared.getLocation() else {
+            // If no location saved, return empty - widget will use automatic location detection
+            return []
         }
 
         // Fetch nearest stops from API
-        let urlString = "\(apiBaseURL)/stops/by-coordinates?lat=\(lat)&lon=\(lon)&limit=10"
+        let urlString = "\(apiBaseURL)/stops/by-coordinates?lat=\(location.latitude)&lon=\(location.longitude)&limit=10"
         guard let url = URL(string: urlString) else {
             return []
         }

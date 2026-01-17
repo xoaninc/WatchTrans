@@ -95,4 +95,9 @@ struct Arrival: Identifiable, Codable {
             return status
         }
     }
+
+    /// Check if this is a Metro/ML line (static GTFS, no real-time delay info)
+    var isMetroLine: Bool {
+        frequencyBased || lineName.hasPrefix("L") || lineName.hasPrefix("ML")
+    }
 }

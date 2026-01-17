@@ -298,7 +298,9 @@ struct StopResponse: Codable, Identifiable {
     let parkingBicis: String?
     let accesibilidad: String?
     let corBus: String?
-    let corMetro: String?
+    let corMetro: String?      // Metro connections: "1, 10" or "6, 8, 10"
+    let corMl: String?         // Metro Ligero connections: "1" or "2, 3"
+    let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, code, province, accesibilidad, lineas
@@ -310,6 +312,8 @@ struct StopResponse: Codable, Identifiable {
         case parkingBicis = "parking_bicis"
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
+        case corMl = "cor_ml"
+        case corCercanias = "cor_cercanias"
     }
 
     /// Parse lineas string into array of line IDs

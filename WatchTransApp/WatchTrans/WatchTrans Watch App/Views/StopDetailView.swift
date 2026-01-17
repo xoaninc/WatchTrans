@@ -21,9 +21,25 @@ struct StopDetailView: View {
     @State private var refreshTimer: Timer?
     @State private var refreshTrigger = UUID()
 
+    // Network monitoring
+    private var networkMonitor = NetworkMonitor.shared
+
+    // Explicit initializer to ensure accessible init for previews/navigation
+    init(stop: Stop, dataService: DataService, locationService: LocationService, favoritesManager: FavoritesManager?) {
+        self.stop = stop
+        self.dataService = dataService
+        self.locationService = locationService
+        self.favoritesManager = favoritesManager
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                // Offline indicator
+                if !networkMonitor.isConnected {
+                    OfflineBannerCompact()
+                }
+
                 // Stop header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -219,7 +235,10 @@ struct StopDetailView: View {
                 accesibilidad: "Accesible",
                 hasParking: true,
                 hasBusConnection: true,
-                hasMetroConnection: true
+                hasMetroConnection: true,
+                corMetro: "6, 8, 10",
+                corMl: nil,
+                corCercanias: nil
             ),
             dataService: DataService(),
             locationService: LocationService(),

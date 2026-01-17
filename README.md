@@ -22,23 +22,30 @@ WatchTrans is an Apple Watch (watchOS 11+) application for Spanish public transp
 - Shows line, destination, and time
 - Progress bar visualization
 - Delay indicators
-- Updates every 5 minutes
+- Updates every 2.5 minutes
 
 ✅ **Line Browser**
 - Browse all Metro and Cercanías lines
 - Grouped by transport type
-- City filtering (Madrid/Sevilla)
+- Auto-filters by detected nucleo
 - Visual termometro with connections
 
+✅ **Real-Time Data** (COMPLETE)
+- Live arrivals with delays
+- Train position tracking
+- Platform information (with estimated indicator)
+- Service alerts
+- Frequency-based departures for Metro
+
 ✅ **Data Coverage** (COMPLETE)
-- **Madrid:** 10 Cercanías lines, 144 stops ✅
-- **Sevilla:** 5 Cercanías lines, 51 stops ✅
-- **Barcelona:** 12 Rodalies lines, 320 stops ✅
-- **Valencia:** 5 Cercanías lines, 72 stops ✅
-- **Málaga:** 2 Cercanías lines, 28 stops ✅
-- **Bilbao:** 4 Cercanías lines, 96 stops ✅
-- **San Sebastián:** 1 Cercanías line, 30 stops ✅
-- **TOTAL:** 39 lines, 741 stops across 6 networks
+- **Madrid:** Cercanías + Metro + Metro Ligero
+- **Sevilla:** Cercanías
+- **Barcelona:** Rodalies
+- **Valencia:** Cercanías
+- **Málaga:** Cercanías
+- **Bilbao:** Cercanías
+- **San Sebastián:** Cercanías
+- Data loaded dynamically from RenfeServer API
 
 ---
 
@@ -53,10 +60,11 @@ WatchTrans is an Apple Watch (watchOS 11+) application for Spanish public transp
 - **Platform:** watchOS 11+
 - **Language:** Swift
 - **UI:** SwiftUI
-- **Persistence:** SwiftData
+- **Persistence:** SwiftData (favorites)
 - **Location:** CoreLocation
 - **Complications:** WidgetKit
-- **Data Source:** GTFS + GTFS-Realtime from Renfe
+- **Backend:** RenfeServer API (redcercanias.com)
+- **Data Source:** GTFS + GTFS-Realtime processed by backend
 
 ---
 
@@ -100,54 +108,54 @@ watch_transport-main/
 
 ## 🎯 Development Roadmap
 
-### Phase 1: Extract ALL Cercanías Lines ✅ COMPLETE
-- [x] Sevilla (5 lines, 51 stops)
-- [x] Madrid (10 lines, 144 stops)
-- [x] Barcelona (12 lines, 320 stops)
-- [x] Valencia (5 lines, 72 stops)
-- [x] Málaga (2 lines, 28 stops)
-- [x] Bilbao (4 lines, 96 stops)
-- [x] San Sebastián (1 line, 30 stops)
+### Phase 1: GTFS Data Extraction ✅ COMPLETE
+- [x] Extract all Spanish Cercanías networks
+- [x] Organize data in gtfs-extraction folder
+- [x] Create Swift line definitions
 
-### Phase 2: Update DataService ✅ COMPLETE
-- [x] Add all 6 networks to DataService
-- [x] Set connection IDs for all interchanges
-- [x] Complete stop sequences for all lines
-- [x] City identification for all stops
+### Phase 2: RenfeServer API Integration ✅ COMPLETE
+- [x] Connect to RenfeServer backend (redcercanias.com)
+- [x] Dynamic data loading by nucleo
+- [x] Nucleo detection via bounding boxes
 
-### Phase 3: Testing & Validation ⏳ NEXT
-- [ ] Build and test in Xcode
-- [ ] Verify line browser shows all 39 lines
-- [ ] Test favorites across networks
-- [ ] Test GPS-based city detection
-- [ ] Verify connection IDs work
+### Phase 3: Real-Time Integration ✅ COMPLETE
+- [x] Live departures with delays
+- [x] Train position tracking
+- [x] Service alerts
+- [x] Platform information (with estimated indicator)
+- [x] Frequency-based departures for Metro
+- [x] 60s cache with stale fallback
 
-### Phase 4: Real-Time Integration (After Testing)
-- [ ] GTFS-Realtime trip updates
-- [ ] Vehicle positions
-- [ ] Delay and cancellation alerts
-- [ ] Live arrival times
+### Phase 4: Widget & Complications ✅ COMPLETE
+- [x] Rectangular complication
+- [x] Circular complication
+- [x] Corner complication
+- [x] Inline complication
+- [x] Configurable stop selection
 
-### Phase 5: Madrid Metro & Polish
-- [ ] Replace Madrid Metro mock data
-- [ ] Add complete Metro Ligero data
-- [ ] Verify missing lines (Barcelona R4, R7, etc.)
+### Phase 5: Polish & App Store ⏳ IN PROGRESS
+- [ ] App Group for widget location sharing
+- [ ] Retry logic for network errors
+- [ ] Offline state UI
 - [ ] App Store preparation
+- [ ] Screenshots and marketing
 
 ---
 
 ## 🚦 Current Status
 
-**Last Updated:** January 14, 2026
-**Current Phase:** Phase 3 - Testing & Validation
-**Completed:** All 39 Cercanías lines integrated into DataService.swift
-**Next Task:** Build and test in Xcode
+**Last Updated:** January 17, 2026
+**Current Phase:** Phase 5 - Polish & App Store
+**Backend:** RenfeServer API fully integrated
+**Next Task:** App Group implementation for widget
 
 ### Recent Achievements ✅
-- ✅ Complete GTFS extraction for all 6 Spanish Cercanías networks
-- ✅ 741 stops with GPS coordinates and connection IDs
-- ✅ DataService.swift updated from 642 to 1,304 lines
-- ✅ All project files organized in proper structure
+- ✅ Full real-time integration with RenfeServer API
+- ✅ Train position tracking and delay display
+- ✅ Service alerts system
+- ✅ All 4 widget complication types working
+- ✅ Platform information with historical estimation
+- ✅ Frequency-based departures for Metro
 
 See [docs/INTEGRATION_COMPLETE.md](./docs/INTEGRATION_COMPLETE.md) for detailed integration documentation.
 
@@ -174,9 +182,18 @@ cd WatchTransApp/WatchTrans
 open WatchTrans.xcodeproj
 ```
 
-3. Select your target Apple Watch device/simulator
+3. **Configure App Group** (required for widget):
 
-4. Build and run (⌘ + R)
+   **WatchTrans Watch App target:**
+   - Select target → Signing & Capabilities → + Capability → App Groups
+   - Add: `group.juan.WatchTrans`
+
+   **WatchTransWidgetExtension target:**
+   - Same steps, add same group: `group.juan.WatchTrans`
+
+4. Select your target Apple Watch device/simulator
+
+5. Build and run (⌘ + R)
 
 ### Location Permissions
 
@@ -190,13 +207,20 @@ The app requires location access. Add to `Info.plist`:
 
 ## 📊 Data Sources
 
-### Official Renfe Open Data
+### RenfeServer API (Primary)
+- **Base URL:** https://redcercanias.com/api/v1/gtfs
+- **Endpoints:**
+  - `/nucleos` - All networks with bounding boxes
+  - `/stops/by-nucleo` - Stops by network
+  - `/routes` - Routes by network
+  - `/stops/{id}/departures` - Real-time departures
+  - `/realtime/alerts` - Service alerts
+  - `/realtime/estimated` - Train positions
+- **Update Frequency:** Real-time (30s cache on server)
+
+### Original Data Source
 - **Portal:** https://data.renfe.com/dataset
-- **GTFS Static:** Complete Spain network data
-- **GTFS-Realtime:**
-  - Trip Updates: https://gtfsrt.renfe.com/trip_updates.json
-  - Vehicle Positions: https://gtfsrt.renfe.com/vehicle_positions.json
-- **Update Frequency:** 30 seconds
+- **GTFS-Realtime:** Processed by RenfeServer
 - **License:** Creative Commons Attribution 4.0
 
 ---

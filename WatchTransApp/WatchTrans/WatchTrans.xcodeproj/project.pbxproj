@@ -74,6 +74,7 @@
 		DE27E02F2F17171500DD3818 /* WatchTrans Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WatchTrans Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE27E03E2F17171600DD3818 /* WatchTrans Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE27E0482F17171600DD3818 /* WatchTrans Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE9255C52F1C253300E2113D /* WatchTransWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WatchTransWidgetExtension.entitlements; sourceTree = "<group>"; };
 		DEC642652F1728F0002D9435 /* WatchTransWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WatchTransWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEC642672F1728F0002D9435 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DEC642692F1728F0002D9435 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -152,6 +153,7 @@
 		DE27E0222F17171400DD3818 = {
 			isa = PBXGroup;
 			children = (
+				DE9255C52F1C253300E2113D /* WatchTransWidgetExtension.entitlements */,
 				DE27E0332F17171500DD3818 /* WatchTrans Watch App */,
 				DE27E0412F17171600DD3818 /* WatchTrans Watch AppTests */,
 				DE27E04B2F17171600DD3818 /* WatchTrans Watch AppUITests */,
@@ -567,7 +569,7 @@
 				CODE_SIGN_ENTITLEMENTS = "WatchTrans Watch App/WatchTrans Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "WatchTrans-Watch-App-Info.plist";
@@ -603,7 +605,7 @@
 				CODE_SIGN_ENTITLEMENTS = "WatchTrans Watch App/WatchTrans Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "WatchTrans-Watch-App-Info.plist";
@@ -637,6 +639,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans;
@@ -653,6 +656,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans;
@@ -671,6 +675,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppTests";
@@ -693,6 +698,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppTests";
@@ -758,8 +764,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WatchTransWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchTransWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchTransWidget;
@@ -790,8 +798,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WatchTransWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchTransWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = WatchTransWidget;

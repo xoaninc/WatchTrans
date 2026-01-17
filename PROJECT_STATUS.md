@@ -1,221 +1,244 @@
-# WatchTrans Project - Current Status & Plan
+# WatchTrans Project - Current Status
 
-**Date:** January 14, 2026
-**Session:** Implementing Spanish Cercanías Networks
-
----
-
-## 📋 PROJECT PLAN
-
-### Phase 1: Extract ALL Cercanías Lines (CURRENT PHASE)
-Extract complete line data (routes + stations) for the 6 major Cercanías networks in Spain:
-
-1. ✅ **Sevilla** - COMPLETE (100%)
-   - 6 lines: C1, C2, C3, C4, C5, Metro L1
-   - 32 stations with official GTFS data
-   - All connections mapped
-   - Colors: Official Renfe colors
-
-2. ⏳ **Madrid** - IN PROGRESS
-   - 11 lines: C1, C2, C3, C4a, C4b, C5, C7, C8a, C8b, C9, C10
-   - 78 stations identified from Renfe CSV
-   - GTFS route prefix: 10T
-   - Need to extract complete stop sequences
-
-3. ⏳ **Barcelona** - PENDING
-   - Lines: R1, R2, R3, R4, R7, R8, R11, R12, R13, R14, R15, R16, R17
-   - GTFS route prefix: 51T
-   - 105 stations (Rodalies network)
-
-4. ⏳ **Valencia** - PENDING
-   - Lines: C1, C2, C3, C4, C5, C6
-   - GTFS route prefix: 40T
-   - 47 stations + Castellón (21) = 68 total
-
-5. ⏳ **Bilbao** - PENDING
-   - Lines: C1, C2, C3
-   - GTFS route prefixes: 60T, 61T
-   - 56 stations (Bizkaia + Gipuzkoa + Araba)
-
-6. ⏳ **Málaga** - PENDING
-   - Lines: C1, C2
-   - GTFS route prefix: 32T
-   - 14 stations
-
-### Phase 2: Update DataService (AFTER Phase 1)
-Once ALL lines from ALL 6 networks are extracted:
-- Update DataService.swift with complete data
-- Add all lines with official colors, stops, and connections
-- Implement city detection for all networks
-- Test the app with static/mock data
-
-### Phase 3: Real-Time Integration (AFTER Phase 2)
-Only implement real-time features AFTER all lines are in place:
-- Integrate GTFS-Realtime API: `https://gtfsrt.renfe.com/trip_updates.json`
-- Integrate vehicle positions: `https://gtfsrt.renfe.com/vehicle_positions.json`
-- Both update every 30 seconds
-- Show delays, cancellations, live arrivals
+**Date:** January 17, 2026
+**Phase:** 5 - Polish & App Store Preparation
 
 ---
 
-## ✅ COMPLETED WORK
+## PROJECT STATUS: FEATURE COMPLETE
 
-### Sevilla Cercanías - 100% Complete
-**Data Source:** Official GTFS from `/Users/juanmaciasgomez/Downloads/20260113_170011_RENFE_CERCA/`
+The app is fully functional with real-time data integration.
 
-#### Line C1 (Color: #78B4E1 - Light Blue)
-**Route:** Lora del Río → Lebrija (17 stops)
-- Lora del Río → Guadajoz → Los Rosales → Cantillana → Brenes → El Cáñamo → La Rinconada
-- Sevilla-Santa Justa → San Bernardo → Virgen del Rocío
-- Jardines de Hércules → Bellavista → Dos Hermanas → Cantaelgallo → Utrera → Las Cabezas de San Juan → Lebrija
-- **Connections:** C3 (northern corridor), C5 (southern corridor)
+### Completed Features
 
-#### Line C2 (Color: #067B34 - Green)
-**Route:** Santa Justa → Cartuja (3 stops)
-- Sevilla-Santa Justa → Estadio Olímpico → Cartuja
-- Short line to Cartuja complex
-
-#### Line C3 (Color: #E4242D - Red)
-**Route:** Santa Justa → Cazalla-Constantina (11 stops)
-- Sevilla-Santa Justa → La Rinconada → El Cáñamo → Brenes → Cantillana → Los Rosales
-- Tocina → **Alcolea del Río** → Villanueva del Río-Minas → Pedroso → Cazalla-Constantina
-- **Connections:** C1 (shared northern corridor)
-
-#### Line C4 (Color: #8E2182 - Purple)
-**Route:** Circular line (5 stops)
-- Sevilla-Santa Justa → Palacio de Congresos → Padre Pío-Palmete → Virgen del Rocío → San Bernardo
-- Returns to Santa Justa
-
-#### Line C5 (Color: #073588 - Dark Blue)
-**Route:** Two branches (13 stops)
-- **Eastern branch:** Dos Hermanas → Bellavista → Jardines de Hércules
-- **Central corridor:** Virgen del Rocío → San Bernardo → Sevilla-Santa Justa
-- **Western branch:** San Jerónimo → Camas → Valencina-Santiponce → Salteras → Villanueva del Ariscal y Olivares → Sanlúcar la Mayor → Benacazón
-
-#### Metro L1 (Color: #0d6928 - Green)
-**Route:** Ciudad Expo → San Juan Alto → Olivar de Quintos (3 stops)
-
-**Key Interchanges:**
-- Santa Justa: C1, C2, C3, C4, C5
-- San Bernardo: C1, C4, C5, Metro L1
-- Virgen del Rocío: C1, C4, C5
-- Other connections documented in code
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Home Screen | ✅ | Favorites + Recommended sections |
+| Line Browser | ✅ | Auto-filters by detected nucleo |
+| Stop Detail | ✅ | All departures with alerts |
+| Train Detail | ✅ | Position, platform, delays |
+| Favorites | ✅ | SwiftData persistence, max 5 |
+| Location | ✅ | Auto-detect nucleo via GPS |
+| Real-Time | ✅ | RenfeServer API integration |
+| Alerts | ✅ | Service alerts per stop/route |
+| Delays | ✅ | Visual indicators + minutes |
+| Train Position | ✅ | Current stop + status |
+| Platform | ✅ | With estimated indicator |
+| Widget | ✅ | All 4 complications, line colors, smart fallback |
+| Background Refresh | ✅ | Every 50 seconds |
 
 ---
 
-## 🔄 CURRENT WORK IN PROGRESS
+## API INTEGRATION
 
-### Madrid Cercanías Extraction
-**Status:** Extracting line by line
+### RenfeServer API (redcercanias.com)
 
-**Available Data Sources:**
-1. ✅ Renfe stations CSV: 78 stations identified
-   - URL: `https://ssl.renfe.com/ftransit/Fichero_estaciones/estaciones.csv`
+All endpoints integrated and working:
 
-2. ✅ Madrid-specific CSV:
-   - URL: `https://data.renfe.com/dataset/.../listado-estaciones-cercanias-madrid.csv`
-   - Last updated: March 2, 2021
+```
+Base URL: https://redcercanias.com/api/v1/gtfs
 
-3. ✅ GTFS routes file: Route definitions available
-   - Prefix: 10T
-   - Routes defined but stop_times incomplete in general GTFS
+GET /nucleos                          - List all networks
+GET /stops/by-nucleo?nucleo_name=X    - Stops by network
+GET /routes?nucleo_name=X             - Routes by network
+GET /stops/{id}/departures            - Real-time departures
+GET /realtime/alerts                  - Service alerts
+GET /realtime/stops/{id}/alerts       - Alerts for stop
+GET /realtime/routes/{id}/alerts      - Alerts for route
+GET /realtime/estimated               - Train positions
+GET /trips/{id}                       - Trip details
+```
 
-4. ⚠️ Wikipedia: Blocked with 403 errors
-
-**Extraction Method:**
-- Using CSV station data + GTFS route colors
-- Organizing stations by line based on route descriptions
-- Will document principal stations per line
-- Complete sequences to be validated
-
-**Lines to Extract:**
-- C1: Príncipe Pío → Aeropuerto T4 (Color: #75B6E0)
-- C2: Multiple routes (Color: #00943D)
-- C3: Chamartín → Aranjuez (Color: #952585)
-- C4a/C4b: Chamartín → Parla (Color: #2C2A86)
-- C5: Móstoles → Humanes (Color: #FECB00)
-- C7: (Color: #DA3239)
-- C8a/C8b: El Escorial/Cercedilla (Color: #868584)
-- C9: Cercedilla → Cotos (Color: #F3972A)
-- C10: Multiple routes (Color: #BCCF00)
+### Caching Strategy
+- **Client cache:** 60 seconds TTL
+- **Stale cache:** 5 minutes grace period
+- **Server cache:** 30 seconds
 
 ---
 
-## 📚 DATA SOURCES
+## COMPLETED TASKS (Phase 5)
 
-### Official Renfe Open Data Portal
-- Main portal: `https://data.renfe.com/dataset`
-- All networks tagged "cercanías"
+### 1. App Group for Widget Location ✅
+**Status:** Code complete - requires Xcode configuration
+**Code:** `SharedStorage.swift` saves/reads location via App Group
+**Xcode Setup Required:**
+- Add App Group `group.juan.WatchTrans` to both targets (WatchTrans Watch App + Widget)
 
-### Real-Time Data (For Phase 3)
-- **Trip Updates:** `https://gtfsrt.renfe.com/trip_updates.json` (30s refresh)
-- **Vehicle Positions:** `https://gtfsrt.renfe.com/vehicle_positions.json` (30s refresh)
-- **Format:** GTFS-Realtime (JSON)
-- **License:** Creative Commons Attribution 4.0
+### 2. Retry Logic ✅
+**Status:** Complete
+**Implementation:** `NetworkService.swift` - exponential backoff (1s, 2s, 4s), max 3 retries
 
-### GTFS Static Data
-- Complete Spain GTFS: `/Users/juanmaciasgomez/Downloads/20260113_170011_RENFE_CERCA/`
-- Individual network CSVs available on Renfe portal
+### 3. Offline State UI ✅
+**Status:** Complete
+**Implementation:** `NetworkMonitor.swift` + `OfflineBanner.swift`
+**Views updated:** ContentView, StopDetailView
 
-### Network Identification (GTFS Prefixes)
-- 10T = Madrid
-- 30T = Sevilla ✅
-- 32T = Málaga
-- 40T = Valencia
-- 51T = Barcelona (Rodalies)
-- 60T, 61T = Bilbao
+### 4. API Configuration Centralized ✅
+**Status:** Complete
+**Implementation:** `APIConfiguration.swift` + `WidgetAPIConfig` enum
 
 ---
 
-## 🎯 NEXT STEPS (When you return)
+## PENDING TASKS
 
-1. **Continue Madrid extraction** line by line:
-   - C1 first (Príncipe Pío → Aeropuerto T4)
-   - Extract principal stations from CSV
-   - Map connections between lines
-   - Document in same format as Sevilla
+### App Store Preparation
+**Priority:** High (when ready)
+- Screenshots for all watch sizes
+- App description and keywords
+- Privacy policy
+- TestFlight beta testing
 
-2. **After Madrid is complete** → Move to Barcelona
-   - Same process: CSV + GTFS data
-   - Line by line extraction
+### Widget Recommendations - Improve with iOS App ⏳
+**Priority:** Medium (when iOS companion app is ready)
+**Issue:** Widget recommendations currently only show "Parada más cercana" (location-based)
+**Improvement needed:** Once iOS companion app exists, read favorites from SharedStorage and show them as widget recommendations
+**Location:** `WatchTransWidget/WatchTransWidget.swift` → `recommendations()` function
+**Notes:**
+- Current behavior: Uses location to auto-detect nearest stop
+- Future: Should also show user's favorites as quick-select options
+- Requires: Saving favorites to App Group shared storage (currently only in SwiftData)
 
-3. **Continue until ALL 6 networks complete**
-   - Madrid → Barcelona → Valencia → Bilbao → Málaga
+### BackgroundRefreshService - Share Data with Widget ⏳
+**Priority:** Low (when optimizing widget performance)
+**Issue:** BackgroundRefreshService uses `UserDefaults.standard` which is not accessible by widget
+**Location:** `WatchTrans Watch App/Services/BackgroundRefreshService.swift`
+**Improvement needed:**
+- Move `cachedDeparturesKey` to SharedStorage (App Group) so widget can use cached data
+- Move `favoriteStopIdKey` to SharedStorage so widget can show favorites in recommendations
+**Current behavior:** Widget always fetches fresh data; can't use cached departures from background refresh
+**Future benefit:** Widget could use cached data for faster initial load
 
-4. **Then update DataService.swift** with ALL networks
-
-5. **Finally implement real-time** (Phase 3)
-
----
-
-## 📝 IMPORTANT NOTES
-
-- **Schedules/timetables DON'T matter now** - only line routes and stations
-- **Real-time implementation is LAST** - after all static data is in place
-- **Focus on completeness** - extract ALL lines for each network before moving to next
-- All station IDs match official Renfe codes (validated for Sevilla)
-- Colors are official Renfe brand colors from GTFS
-
----
-
-## 🗂️ FILES MODIFIED
-
-### Completed
-- `DataService.swift` - Sevilla lines complete (lines 451-574)
-- `ContentView.swift` - City filtering implemented
-- `LinesView.swift` - Multi-city support with filtering
-
-### To Update (Phase 2)
-- `DataService.swift` - Add Madrid, Barcelona, Valencia, Bilbao, Málaga
-- City detection logic - Expand coordinate ranges for all cities
-
-### To Create (Phase 3)
-- `RealTimeService.swift` - GTFS-RT integration
-- API models for trip updates and vehicle positions
-- Live arrival display components
+### ~~Fix Metro Duplicate Stations (API)~~ ✅ FIXED
+**Status:** Fixed in API on 2026-01-17
+**Solution:** Added deduplication logic in `crtm_metro_importer.py`
 
 ---
 
-**Last Updated:** 2026-01-14 07:48 CET
-**Session End Reason:** User going to sleep
-**Next Session:** Continue Madrid C1 extraction line by line
+## FILE STRUCTURE
+
+```
+WatchTransApp/WatchTrans/
+├── WatchTrans Watch App/
+│   ├── WatchTransApp.swift          # Entry point + SwiftData
+│   ├── ContentView.swift            # Home screen
+│   ├── Models/
+│   │   ├── Arrival.swift            # With train position fields
+│   │   ├── Line.swift               # With routeIds array
+│   │   ├── Stop.swift               # With API fields
+│   │   ├── Favorite.swift           # SwiftData model
+│   │   └── TransportType.swift
+│   ├── Views/
+│   │   ├── ArrivalCard.swift        # Compact arrival display
+│   │   ├── LinesView.swift          # Line browser
+│   │   ├── LineDetailView.swift     # Stop termometro
+│   │   ├── StopDetailView.swift     # All departures
+│   │   └── TrainDetailView.swift    # Train details
+│   └── Services/
+│       ├── DataService.swift        # Main data coordinator
+│       ├── LocationService.swift    # GPS handling
+│       ├── FavoritesManager.swift   # SwiftData operations
+│       ├── BackgroundRefreshService.swift
+│       ├── Network/
+│       │   ├── NetworkService.swift
+│       │   └── NetworkError.swift
+│       └── GTFSRT/
+│           ├── GTFSRealtimeService.swift   # API client
+│           ├── GTFSRealtimeMapper.swift    # Response mapper
+│           ├── GTFSRealtimeModels.swift    # Legacy models
+│           └── RenfeServerModels.swift     # Current API models
+├── WatchTransWidget/
+│   ├── WatchTransWidget.swift       # All complication views
+│   ├── WatchTransWidgetBundle.swift
+│   └── StopSelectionIntent.swift    # Widget configuration
+└── WatchTrans.xcodeproj/
+```
+
+---
+
+## NETWORKS SUPPORTED
+
+Data loaded dynamically from API. Currently available:
+
+| Network | Transport Types |
+|---------|-----------------|
+| Madrid | Cercanías, Metro, Metro Ligero |
+| Rodalies de Catalunya | Rodalies |
+| Valencia | Cercanías |
+| Sevilla | Cercanías |
+| Málaga | Cercanías |
+| Bilbao | Cercanías |
+| San Sebastián | Cercanías |
+| Asturias | Cercanías |
+| Cantabria | Cercanías |
+| Murcia/Alicante | Cercanías |
+| Cádiz | Cercanías |
+| Zaragoza | Cercanías |
+
+---
+
+## RECENTLY COMPLETED (2026-01-17)
+
+### 5. Connection Badges (Correspondencias) ✅
+**Status:** Complete
+**Implementation:**
+- Cercanías stops show Metro/ML connections (L1, L10, ML2, etc.)
+- Metro/ML stops show Cercanías connections (C1, C3, C4a, etc.)
+- Colors match official line colors
+**Files:** `LineDetailView.swift` (MetroConnectionBadges, CercaniasConnectionBadges)
+**API fields:** `cor_metro`, `cor_ml`, `cor_cercanias`
+
+### 6. App Group Configuration ✅
+**Status:** Complete
+**Xcode configuration:** Done for both targets
+- WatchTrans Watch App: `group.juan.WatchTrans`
+- WatchTransWidgetExtension: `group.juan.WatchTrans`
+
+### 7. Widget Colors ✅
+**Status:** Complete
+**Implementation:**
+- **Rectangular widget:**
+  - Line name: colored badge with line color
+  - Progress bar (Cercanías): green (on time) / orange (delayed)
+  - Progress bar (Metro/ML): line color (no real-time delay info)
+- **Circular/Corner/Inline:** Use `.widgetAccentable()` (system accent color)
+**Note:** Circular, corner, and inline complications don't support custom colors in watchOS - only "accented" mode.
+**File:** `WatchTransWidget/WatchTransWidget.swift`
+
+### 8. Widget Fallback Logic ✅
+**Status:** Complete
+**Implementation:** Smart fallback when no location or user selection available
+**Priority order:**
+1. User-selected stop (manual configuration)
+2. Nearest stop by GPS location
+3. Main hub station based on last known nucleo
+
+**Hub stations by nucleo:**
+| Núcleo | Estación | ID |
+|--------|----------|-----|
+| Madrid | Atocha RENFE | RENFE_18000 |
+| Rodalies de Catalunya | Barcelona-Sants | RENFE_71801 |
+| Valencia | València Nord | RENFE_65000 |
+| Sevilla | Santa Justa | RENFE_51003 |
+| Bilbao | Abando | RENFE_13200 |
+| Málaga | Málaga Centro | RENFE_54517 |
+| Asturias | Oviedo | RENFE_15211 |
+| San Sebastián | Donostia | RENFE_11511 |
+| Cantabria | Santander | RENFE_14223 |
+| Murcia/Alicante | Murcia del Carmen | RENFE_61200 |
+| Cádiz | Cádiz | RENFE_51405 |
+| Zaragoza | Zaragoza - Goya | RENFE_70807 |
+
+**Ultimate fallback:** Atocha (if no nucleo detected)
+**File:** `WatchTransWidget/WatchTransWidget.swift` → `getFallbackStop()`
+
+### 9. Code Review & Sync ✅
+**Status:** Complete
+**Fixes applied:**
+- Widget SharedStorage now includes `lastLocationTimestamp` and `lastNucleoName` keys (in sync with app)
+- `StopSelectionIntent.swift` uses `SharedStorage.shared.getLocation()` instead of `UserDefaults.standard`
+- Removed unused code and fixed warnings
+
+---
+
+**Last Updated:** 2026-01-17 (Widget colors + fallback logic)
+**Author:** Juan Macias Gomez + Claude

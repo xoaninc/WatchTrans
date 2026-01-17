@@ -117,7 +117,10 @@ class DataService {
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
-                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0"
+                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                    corMetro: response.corMetro,
+                    corMl: response.corMl,
+                    corCercanias: response.corCercanias
                 )
             }
         } catch {
@@ -147,7 +150,10 @@ class DataService {
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
-                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0"
+                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                    corMetro: response.corMetro,
+                    corMl: response.corMl,
+                    corCercanias: response.corCercanias
                 )
             }
 
@@ -361,7 +367,10 @@ class DataService {
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
-                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0"
+                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                    corMetro: response.corMetro,
+                    corMl: response.corMl,
+                    corCercanias: response.corCercanias
                 )
             }
         } catch {

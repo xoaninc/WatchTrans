@@ -12,8 +12,8 @@ import Foundation
 class GTFSRealtimeService {
     private let networkService: NetworkService
 
-    // RedCercanías API base URL (HTTPS)
-    private let baseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Use centralized API configuration
+    private var baseURL: String { APIConfiguration.baseURL }
 
     var isLoading = false
     var lastFetchTime: Date?
