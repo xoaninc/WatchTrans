@@ -35,17 +35,34 @@ class GTFSRealtimeService {
             urlString += "&route_id=\(routeId)"
         }
 
+        print("🚉 [DEP] Fetching: \(urlString)")
+
         guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
         }
 
         do {
-            let departures: [DepartureResponse] = try await networkService.fetch(url)
+            // DEBUG: Fetch raw data first to see what API returns
+            let rawData = try await networkService.fetchData(url)
+            let rawString = String(data: rawData, encoding: .utf8) ?? "nil"
+            print("🚉 [DEP] 📦 RAW response (\(rawData.count) bytes): \(rawString.prefix(500))")
+
+            // Now decode
+            let decoder = JSONDecoder()
+            let departures = try decoder.decode([DepartureResponse].self, from: rawData)
+
             lastFetchTime = Date()
-            print("✅ [RenfeServer] Fetched \(departures.count) departures for stop \(stopId)")
+            print("🚉 [DEP] ✅ Got \(departures.count) departures for \(stopId)")
+
+            // Debug: show first 3 departures
+            for (i, dep) in departures.prefix(3).enumerated() {
+                let platformInfo = dep.platform.map { "vía \($0)\(dep.platformEstimated == true ? "?" : "")" } ?? ""
+                print("🚉 [DEP]   [\(i)] \(dep.routeShortName) → \(dep.headsign ?? "?") in \(dep.minutesUntil)min \(platformInfo) (freq:\(dep.frequencyBased ?? false))")
+            }
+
             return departures
         } catch {
-            print("⚠️ [RenfeServer] Failed to fetch departures: \(error)")
+            print("🚉 [DEP] ❌ FAILED for \(stopId): \(error)")
             throw error
         }
     }
@@ -257,6 +274,65 @@ class GTFSRealtimeService {
         return stops
     }
 
+    /// Fetch frequencies for a route (Metro, ML, Tranvía - frequency-based)
+    func fetchFrequencies(routeId: String) async throws -> [FrequencyResponse] {
+        let urlString = "\(baseURL)/routes/\(routeId)/frequencies"
+        print("📅 [FREQ] Fetching: \(urlString)")
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.badResponse
+        }
+
+        // First fetch raw data to debug if decoding fails
+        let data = try await networkService.fetchData(url)
+
+        // Log raw JSON first (always, for debugging)
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📅 [FREQ] Raw JSON (first 300 chars): \(String(jsonString.prefix(300)))")
+        }
+
+        // Try to decode
+        let decoder = JSONDecoder()
+        do {
+            let frequencies = try decoder.decode([FrequencyResponse].self, from: data)
+            print("📅 [FREQ] ✅ Decoded \(frequencies.count) entries for \(routeId)")
+
+            // Debug: print all day types and time ranges
+            let byDayType = Dictionary(grouping: frequencies, by: { $0.dayType })
+            for (dayType, freqs) in byDayType {
+                let starts = freqs.map { $0.startTime }.sorted()
+                let ends = freqs.map { $0.endTime }.sorted()
+                print("📅 [FREQ]   \(dayType): \(freqs.count) entries, \(starts.first ?? "?") - \(ends.last ?? "?")")
+            }
+
+            return frequencies
+        } catch {
+            print("📅 [FREQ] ❌ Decode FAILED: \(error)")
+            throw NetworkError.decodingError(error)
+        }
+    }
+
+    /// Fetch operating hours for a route (Cercanías - schedule-based from stop_times)
+    func fetchRouteOperatingHours(routeId: String) async throws -> RouteOperatingHoursResponse {
+        guard let url = URL(string: "\(baseURL)/routes/\(routeId)/operating-hours") else {
+            throw NetworkError.badResponse
+        }
+
+        print("📅 [RenfeServer] Calling: \(url.absoluteString)")
+        let hours: RouteOperatingHoursResponse = try await networkService.fetch(url)
+        print("📅 [RenfeServer] Operating hours for \(hours.routeShortName):")
+        if let wd = hours.weekday {
+            print("   📅 weekday: \(wd.firstDeparture) - \(wd.lastDeparture) (\(wd.totalTrips) trips)")
+        }
+        if let sat = hours.saturday {
+            print("   📅 saturday: \(sat.firstDeparture) - \(sat.lastDeparture) (\(sat.totalTrips) trips)")
+        }
+        if let sun = hours.sunday {
+            print("   📅 sunday: \(sun.firstDeparture) - \(sun.lastDeparture) (\(sun.totalTrips) trips)")
+        }
+        return hours
+    }
+
     /// Fetch stops (with optional filters)
     func fetchStops(search: String? = nil, locationType: Int? = nil, limit: Int = 100) async throws -> [StopResponse] {
         var urlString = "\(baseURL)/stops?limit=\(limit)"
@@ -286,19 +362,6 @@ class GTFSRealtimeService {
         return stop
     }
 
-    /// Fetch stops by coordinates (returns all stops in the province)
-    func fetchStopsByCoordinates(latitude: Double, longitude: Double, limit: Int = 100) async throws -> [StopResponse] {
-        let urlString = "\(baseURL)/stops/by-coordinates?lat=\(latitude)&lon=\(longitude)&limit=\(limit)"
-
-        guard let url = URL(string: urlString) else {
-            throw NetworkError.badResponse
-        }
-
-        let stops: [StopResponse] = try await networkService.fetch(url)
-        print("✅ [RenfeServer] Fetched \(stops.count) stops for coordinates (\(latitude), \(longitude))")
-        return stops
-    }
-
     // MARK: - Trips
 
     /// Fetch trip details with all stops
@@ -311,9 +374,66 @@ class GTFSRealtimeService {
         return trip
     }
 
-    // MARK: - Nucleos
+    // MARK: - Coordinate-based Location Detection (NEW API)
+
+    /// Fetch stops by coordinates - uses Haversine distance calculation
+    /// Returns all stops within radius_km, ordered by distance
+    func fetchStopsByCoordinates(latitude: Double, longitude: Double, radiusKm: Int = 50, limit: Int = 600) async throws -> [StopResponse] {
+        let urlString = "\(baseURL)/stops/by-coordinates?lat=\(latitude)&lon=\(longitude)&radius_km=\(radiusKm)&limit=\(limit)"
+        print("📍 [COORD] Fetching stops: \(urlString)")
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.badResponse
+        }
+
+        let stops: [StopResponse] = try await networkService.fetch(url)
+        print("📍 [COORD] ✅ Got \(stops.count) stops for coordinates (\(latitude), \(longitude))")
+        return stops
+    }
+
+    /// Fetch routes by coordinates - uses PostGIS province detection
+    /// Returns all routes in the detected province's transport networks
+    func fetchRoutesByCoordinates(latitude: Double, longitude: Double, limit: Int = 600) async throws -> [RouteResponse] {
+        let urlString = "\(baseURL)/coordinates/routes?lat=\(latitude)&lon=\(longitude)&limit=\(limit)"
+        print("📍 [COORD] Fetching routes: \(urlString)")
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.badResponse
+        }
+
+        let routes: [RouteResponse] = try await networkService.fetch(url)
+        print("📍 [COORD] ✅ Got \(routes.count) routes for coordinates (\(latitude), \(longitude))")
+        return routes
+    }
+
+    // MARK: - Networks
+
+    /// Fetch all networks
+    func fetchAllNetworks() async throws -> [NetworkResponse] {
+        guard let url = URL(string: "\(baseURL)/networks") else {
+            throw NetworkError.badResponse
+        }
+
+        let networks: [NetworkResponse] = try await networkService.fetch(url)
+        print("🌐 [NET] Fetched \(networks.count) networks")
+        return networks
+    }
+
+    /// Fetch network details with lines
+    func fetchNetworkDetails(code: String) async throws -> NetworkDetailResponse {
+        guard let url = URL(string: "\(baseURL)/networks/\(code)") else {
+            throw NetworkError.badResponse
+        }
+
+        let network: NetworkDetailResponse = try await networkService.fetch(url)
+        return network
+    }
+
+    // MARK: - Nucleos (DEPRECATED - use coordinate-based methods)
 
     /// Fetch all nucleos (with bounding boxes for location detection)
+    /// NOTE: This endpoint is being deprecated. Use fetchStopsByCoordinates instead.
+    @available(*, deprecated, message: "Use fetchStopsByCoordinates instead")
     func fetchNucleos() async throws -> [NucleoResponse] {
         guard let url = URL(string: "\(baseURL)/nucleos") else {
             throw NetworkError.badResponse
@@ -324,6 +444,7 @@ class GTFSRealtimeService {
     }
 
     /// Fetch a specific nucleo
+    @available(*, deprecated, message: "Use fetchNetworkDetails instead")
     func fetchNucleo(nucleoId: Int) async throws -> NucleoResponse {
         guard let url = URL(string: "\(baseURL)/nucleos/\(nucleoId)") else {
             throw NetworkError.badResponse
@@ -333,10 +454,22 @@ class GTFSRealtimeService {
         return nucleo
     }
 
-    /// Fetch stops by nucleo name
+    /// Fetch stops by network ID
+    func fetchStopsByNetwork(networkId: String, limit: Int = 500) async throws -> [StopResponse] {
+        guard let url = URL(string: "\(baseURL)/stops/by-network?network_id=\(networkId)&limit=\(limit)") else {
+            throw NetworkError.badResponse
+        }
+
+        let stops: [StopResponse] = try await networkService.fetch(url)
+        print("📍 [NET] Fetched \(stops.count) stops for network \(networkId)")
+        return stops
+    }
+
+    /// Fetch stops by nucleo name (DEPRECATED - use fetchStopsByNetwork)
+    @available(*, deprecated, message: "Use fetchStopsByNetwork instead")
     func fetchStopsByNucleo(nucleoName: String, limit: Int = 500) async throws -> [StopResponse] {
         let encodedName = nucleoName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? nucleoName
-        guard let url = URL(string: "\(baseURL)/stops/by-nucleo?nucleo_name=\(encodedName)&limit=\(limit)") else {
+        guard let url = URL(string: "\(baseURL)/stops?search=\(encodedName)&limit=\(limit)") else {
             throw NetworkError.badResponse
         }
 
@@ -344,7 +477,18 @@ class GTFSRealtimeService {
         return stops
     }
 
-    /// Fetch routes by nucleo name
+    /// Fetch routes by network ID
+    func fetchRoutesByNetwork(networkId: String) async throws -> [RouteResponse] {
+        guard let url = URL(string: "\(baseURL)/routes?network_id=\(networkId)") else {
+            throw NetworkError.badResponse
+        }
+
+        let routes: [RouteResponse] = try await networkService.fetch(url)
+        return routes
+    }
+
+    /// Fetch routes by nucleo name (DEPRECATED - may not work after migration)
+    @available(*, deprecated, message: "Use fetchRoutesByNetwork or fetchRoutesByCoordinates instead")
     func fetchRoutesByNucleo(nucleoName: String) async throws -> [RouteResponse] {
         let encodedName = nucleoName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? nucleoName
         guard let url = URL(string: "\(baseURL)/routes?nucleo_name=\(encodedName)") else {
@@ -364,7 +508,7 @@ class GTFSRealtimeService {
         }
 
         let alerts: [AlertResponse] = try await networkService.fetch(url)
-        return alerts.filter { $0.isActive }
+        return alerts.filter { $0.isActive ?? true }
     }
 
     /// Fetch alerts for a specific stop
@@ -374,7 +518,7 @@ class GTFSRealtimeService {
         }
 
         let alerts: [AlertResponse] = try await networkService.fetch(url)
-        return alerts.filter { $0.isActive }
+        return alerts.filter { $0.isActive ?? true }
     }
 
     /// Fetch alerts for a specific route
@@ -384,7 +528,7 @@ class GTFSRealtimeService {
         }
 
         let alerts: [AlertResponse] = try await networkService.fetch(url)
-        return alerts.filter { $0.isActive }
+        return alerts.filter { $0.isActive ?? true }
     }
 
     // MARK: - Estimated Positions
@@ -399,7 +543,19 @@ class GTFSRealtimeService {
         return positions
     }
 
-    /// Fetch estimated positions for a nucleo
+    /// Fetch estimated positions for a network
+    func fetchEstimatedPositionsForNetwork(networkId: String) async throws -> [EstimatedPositionResponse] {
+        guard let url = URL(string: "\(baseURL)/realtime/networks/\(networkId)/estimated") else {
+            throw NetworkError.badResponse
+        }
+
+        let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
+        print("📍 [RT] Fetched \(positions.count) estimated positions for network \(networkId)")
+        return positions
+    }
+
+    /// Fetch estimated positions for a nucleo (DEPRECATED - use fetchEstimatedPositionsForNetwork)
+    @available(*, deprecated, message: "Use fetchEstimatedPositionsForNetwork instead")
     func fetchEstimatedPositionsForNucleo(nucleoId: Int) async throws -> [EstimatedPositionResponse] {
         guard let url = URL(string: "\(baseURL)/realtime/nucleos/\(nucleoId)/estimated") else {
             throw NetworkError.badResponse

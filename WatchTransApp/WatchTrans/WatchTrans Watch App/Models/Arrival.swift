@@ -63,6 +63,9 @@ struct Arrival: Identifiable, Codable {
             return "Now"
         } else if minutes == 1 {
             return "1 min"
+        } else if minutes > 30 && !isCercaniasLine {
+            // For all non-Cercanías lines (Metro, ML, Tranvía, etc.) cap at +30 min
+            return "+ 30 min"
         } else {
             return "\(minutes) min"
         }
@@ -91,6 +94,16 @@ struct Arrival: Identifiable, Codable {
             return "Parado en"
         case "INCOMING_AT":
             return "Llegando a"
+        case "WAITING_AT_ORIGIN":
+            return "En origen"
+        case "SCHEDULED":
+            return "Programado"
+        case "CANCELED", "CANCELLED":
+            return "Cancelado"
+        case "SKIPPED":
+            return "Omitido"
+        case "NO_DATA":
+            return "Sin datos"
         default:
             return status
         }
@@ -99,5 +112,17 @@ struct Arrival: Identifiable, Codable {
     /// Check if this is a Metro/ML line (static GTFS, no real-time delay info)
     var isMetroLine: Bool {
         frequencyBased || lineName.hasPrefix("L") || lineName.hasPrefix("ML")
+    }
+
+    /// Check if this is a frequency-based line (Metro, ML, Tranvía)
+    /// These lines don't have precise schedules, only frequency info
+    var isFrequencyBasedLine: Bool {
+        frequencyBased || lineName.hasPrefix("L") || lineName.hasPrefix("ML") || lineName.hasPrefix("T")
+    }
+
+    /// Check if this is a Cercanías/Rodalies line (C1, C2, R1, R2, etc.)
+    /// These are the only lines that show exact times even for > 30 min
+    var isCercaniasLine: Bool {
+        lineName.hasPrefix("C") || lineName.hasPrefix("R")
     }
 }

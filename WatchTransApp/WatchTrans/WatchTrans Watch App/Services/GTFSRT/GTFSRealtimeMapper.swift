@@ -38,6 +38,9 @@ class GTFSRealtimeMapper {
             let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
             guard effectiveMinutes >= 0 else { continue }
 
+            // DEBUG: Log raw headsign from API
+            print("🚂 [Mapper] \(departure.routeShortName) - headsign from API: \"\(departure.headsign ?? "nil")\" (trip: \(departure.tripId))")
+
             // Skip terminus trains (where headsign = current stop)
             // These are trains ending at this stop, not useful for passengers
             if let headsign = departure.headsign,
@@ -62,6 +65,11 @@ class GTFSRealtimeMapper {
 
             // Use headsign as destination, or try to determine from line
             let destination = departure.headsign ?? determineDestination(line: line, stopId: stopId)
+
+            // DEBUG: Log final destination used
+            if departure.headsign == nil {
+                print("⚠️ [Mapper] headsign was nil, using fallback: \"\(destination)\"")
+            }
 
             let arrival = Arrival(
                 id: departure.tripId,

@@ -15,10 +15,16 @@ struct LineDetailView: View {
 
     @State private var stops: [Stop] = []
     @State private var alerts: [AlertResponse] = []
+    @State private var operatingHours: String?
     @State private var isLoading = true
 
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
+    }
+
+    /// All line types can potentially have operating hours from API
+    var shouldShowOperatingHours: Bool {
+        true  // Try to fetch for all lines - API returns empty if not available
     }
 
     var body: some View {
@@ -58,6 +64,7 @@ struct LineDetailView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }
+
                     }
 
                     Spacer()
@@ -82,6 +89,19 @@ struct LineDetailView: View {
                     .padding(.horizontal, 8)
                 }
 
+                // Operating hours (below alerts)
+                if let hours = operatingHours {
+                    let _ = print("🕐 [UI] Rendering operating hours: \(hours)")
+                    Text("Apertura hoy: \(hours)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.gray.opacity(0.15))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 8)
+                }
+
                 // All stops
                 if isLoading {
                     ProgressView("Cargando paradas...")
@@ -100,6 +120,7 @@ struct LineDetailView: View {
                                 isLast: index == stops.count - 1,
                                 lineColor: lineColor,
                                 currentLineId: line.id,
+                                currentLineName: line.name,
                                 dataService: dataService,
                                 locationService: locationService
                             )
@@ -118,7 +139,10 @@ struct LineDetailView: View {
 
     private func loadData() async {
         isLoading = true
-        // Fetch stops and alerts in parallel
+
+        print("🚀 [LineDetail] Loading data for line \(line.name) (routeIds: \(line.routeIds))")
+
+        // Fetch stops, alerts, and operating hours in parallel
         async let stopsTask: [Stop] = {
             if let routeId = line.routeIds.first {
                 return await dataService.fetchStopsForRoute(routeId: routeId)
@@ -126,9 +150,21 @@ struct LineDetailView: View {
             return []
         }()
         async let alertsTask = dataService.fetchAlertsForLine(line)
+        async let hoursTask: String? = {
+            if let routeId = line.routeIds.first {
+                print("📅 [LineDetail] Requesting operating hours for routeId: \(routeId)")
+                return await dataService.fetchOperatingHours(routeId: routeId)
+            }
+            print("⚠️ [LineDetail] No routeId available for line \(line.name)")
+            return nil
+        }()
 
         stops = await stopsTask
         alerts = await alertsTask
+        operatingHours = await hoursTask
+
+        print("✅ [LineDetail] Loaded: \(stops.count) stops, \(alerts.count) alerts, hours=\(operatingHours ?? "nil")")
+
         isLoading = false
     }
 }
@@ -162,7 +198,7 @@ struct LineAlertBannerView: View {
         if let header = alert.headerText, !header.isEmpty {
             return header
         }
-        return alert.descriptionText
+        return alert.descriptionText ?? "Alerta de servicio"
     }
 }
 
@@ -203,147 +239,178 @@ struct WrappingHStack: View {
     }
 }
 
-// MARK: - Metro/ML Connection Badges
+// MARK: - All Connection Badges (Combined Wrapping View)
+
+/// View showing all connection badges (Metro, ML, Cercanías, Tranvía) in a wrapping layout
+struct AllConnectionBadges: View {
+    let corMetro: String?
+    let corMl: String?
+    let corCercanias: String?
+    let corTranvia: String?
+    let dataService: DataService
+    var excludeLineName: String? = nil  // Filter out current line to avoid duplicates
+    var excludeLineIds: [String] = []   // Filter out lines already shown in connectionLineIds
+
+    // Default colors for when line not found
+    private let defaultMetroColor = "#ED1C24"
+    private let defaultMlColor = "#3A7DDA"
+    private let defaultCercaniasColor = "#75B2E0"
+    private let defaultTranviaColor = "#E4002B"
+
+    /// All badges as (name, color) tuples - ordered by transport type:
+    /// Cercanías → Metro → Metro Ligero → Tranvía
+    private var allBadges: [(name: String, color: String)] {
+        var badges: [(String, String)] = []
+        let excludeLower = excludeLineName?.lowercased()
+
+        // Normalize excludeLineIds for comparison
+        let excludeIdsNormalized = Set(excludeLineIds.map { normalizeLineName($0) })
+
+        // DEBUG: Log filtering
+        if let exclude = excludeLineName {
+            print("🏷️ [Filter] excludeLineName='\(exclude)', excludeIds=\(excludeLineIds), cor_metro=\(corMetro ?? "nil"), cor_cerc=\(corCercanias ?? "nil")")
+        }
+
+        // 1. Cercanías lines first
+        for line in parseLines(corCercanias) {
+            let normalized = normalizeLineName(line)
+            if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
+                let color = dataService.getLine(by: line)?.colorHex ?? defaultCercaniasColor
+                badges.append((line, color))
+            }
+        }
+
+        // 2. Metro lines
+        for line in parseLines(corMetro) {
+            let normalized = normalizeLineName(line)
+            if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
+                let color = dataService.getLine(by: line)?.colorHex ?? defaultMetroColor
+                badges.append((line, color))
+            }
+        }
+
+        // 3. Metro Ligero lines
+        for line in parseLines(corMl) {
+            let normalized = normalizeLineName(line)
+            if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
+                let color = dataService.getLine(by: line)?.colorHex ?? defaultMlColor
+                badges.append((line, color))
+            }
+        }
+
+        // 4. Tranvía lines last
+        for line in parseLines(corTranvia) {
+            let normalized = normalizeLineName(line)
+            if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
+                let color = dataService.getLine(by: line)?.colorHex ?? defaultTranviaColor
+                badges.append((line, color))
+            }
+        }
+
+        return badges
+    }
+
+    var body: some View {
+        let badges = allBadges
+        if !badges.isEmpty {
+            // DEBUG: Log badges being displayed
+            let _ = print("🏷️ [AllConnectionBadges] Displaying \(badges.count) badges: \(badges.map { $0.name }.joined(separator: ", "))")
+
+            // Split into rows of max 5 badges each
+            let rows = badges.chunked(into: 5)
+
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 3) {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, badge in
+                            Text(badge.name)
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color(hex: badge.color) ?? .gray)
+                                )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Parse comma-separated line names: "L1, L10" -> ["L1", "L10"]
+    private func parseLines(_ value: String?) -> [String] {
+        guard let value = value, !value.isEmpty else { return [] }
+        return value.split(separator: ",")
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Normalize line name for comparison: "L7" -> "7", "l7" -> "7", "7" -> "7"
+    private func normalizeLineName(_ name: String) -> String {
+        var normalized = name.lowercased().trimmingCharacters(in: .whitespaces)
+        for prefix in ["ml", "l", "c", "r", "t"] {
+            if normalized.hasPrefix(prefix) && normalized.count > prefix.count {
+                let afterPrefix = normalized.dropFirst(prefix.count)
+                if let firstChar = afterPrefix.first, firstChar.isNumber {
+                    normalized = String(afterPrefix)
+                    break
+                }
+            }
+        }
+        return normalized
+    }
+}
+
+// MARK: - Legacy Badge Views (kept for compatibility)
 
 /// View showing Metro and Metro Ligero connection badges
 struct MetroConnectionBadges: View {
-    let corMetro: String?   // e.g. "1, 10" or "6, 8, 10"
-    let corMl: String?      // e.g. "1" or "2, 3"
-
-    // Metro Madrid official colors
-    private let metroColors: [String: String] = [
-        "1": "#00A1E4",   // Light blue
-        "2": "#D0032A",   // Red
-        "3": "#FFD503",   // Yellow
-        "4": "#944634",   // Brown
-        "5": "#85BC20",   // Green
-        "6": "#808083",   // Gray
-        "7": "#F2A400",   // Orange
-        "8": "#E84D8A",   // Pink
-        "9": "#9C3293",   // Purple
-        "10": "#0F5AA7",  // Dark blue
-        "11": "#85BC20",  // Green
-        "12": "#A2C100",  // Olive/Yellow
-        "R": "#0F5AA7"    // Blue (Ramal)
-    ]
-
-    // Metro Ligero colors
-    private let mlColors: [String: String] = [
-        "1": "#00A1E4",   // Light blue
-        "2": "#9C3293",   // Purple
-        "3": "#D0032A",   // Red
-        "4": "#85BC20"    // Green (Parla)
-    ]
+    let corMetro: String?
+    let corMl: String?
+    let dataService: DataService
 
     var body: some View {
-        let metroLines = parseLines(corMetro)
-        let mlLines = parseLines(corMl)
-
-        if !metroLines.isEmpty || !mlLines.isEmpty {
-            HStack(spacing: 3) {
-                // Metro badges (L1, L2, etc. - except R for Ramal)
-                ForEach(metroLines, id: \.self) { line in
-                    let prefix = line == "R" ? "" : "L"
-                    MetroBadge(line: line, prefix: prefix, color: metroColors[line] ?? "#808080")
-                }
-
-                // Metro Ligero badges (ML1, ML2, etc.)
-                ForEach(mlLines, id: \.self) { line in
-                    MetroBadge(line: line, prefix: "ML", color: mlColors[line] ?? "#808080")
-                }
-            }
-        }
-    }
-
-    /// Parse comma-separated line numbers: "1, 10" -> ["1", "10"]
-    private func parseLines(_ value: String?) -> [String] {
-        guard let value = value, !value.isEmpty else { return [] }
-        return value.split(separator: ",")
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        AllConnectionBadges(
+            corMetro: corMetro,
+            corMl: corMl,
+            corCercanias: nil,
+            corTranvia: nil,
+            dataService: dataService
+        )
     }
 }
 
-/// Individual Metro/ML badge
-struct MetroBadge: View {
-    let line: String
-    let prefix: String   // "L" for Metro, "ML" for Metro Ligero, "" for Ramal
-    let color: String
-
-    var body: some View {
-        Text("\(prefix)\(line)")
-            .font(.system(size: 8, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: color) ?? .gray)
-            )
-    }
-}
-
-// MARK: - Cercanías Connection Badges
-
-/// View showing Cercanías connection badges (for Metro/ML stops)
+/// View showing Cercanías connection badges
 struct CercaniasConnectionBadges: View {
-    let corCercanias: String?   // e.g. "C1, C10, C2" or "C3, C4, C4a, C4b"
-
-    // Cercanías Madrid colors (approximate)
-    private let cercaniasColors: [String: String] = [
-        "C1": "#66CCFF",   // Light blue
-        "C2": "#00AA00",   // Green
-        "C3": "#AA00AA",   // Purple
-        "C3A": "#AA00AA",
-        "C3B": "#AA00AA",
-        "C4": "#0066CC",   // Blue
-        "C4A": "#0066CC",
-        "C4B": "#0066CC",
-        "C5": "#FFCC00",   // Yellow
-        "C7": "#FF6600",   // Orange
-        "C8": "#FF0066",   // Pink
-        "C8A": "#FF0066",
-        "C8B": "#FF0066",
-        "C9": "#AA5500",   // Brown
-        "C10": "#99CC00"   // Lime
-    ]
+    let corCercanias: String?
+    let dataService: DataService
 
     var body: some View {
-        let lines = parseLines(corCercanias)
-
-        if !lines.isEmpty {
-            HStack(spacing: 3) {
-                ForEach(lines.prefix(6), id: \.self) { line in
-                    CercaniasBadge(line: line, color: cercaniasColors[line.uppercased()] ?? "#75B6E0")
-                }
-            }
-        }
-    }
-
-    /// Parse comma-separated line names: "C1, C10, C2" -> ["C1", "C10", "C2"]
-    private func parseLines(_ value: String?) -> [String] {
-        guard let value = value, !value.isEmpty else { return [] }
-        return value.split(separator: ",")
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        AllConnectionBadges(
+            corMetro: nil,
+            corMl: nil,
+            corCercanias: corCercanias,
+            corTranvia: nil,
+            dataService: dataService
+        )
     }
 }
 
-/// Individual Cercanías badge
-struct CercaniasBadge: View {
-    let line: String   // "C1", "C10", etc.
-    let color: String
+/// View showing Tranvía connection badges
+struct TranviaConnectionBadges: View {
+    let corTranvia: String?
+    let dataService: DataService
 
     var body: some View {
-        Text(line)
-            .font(.system(size: 8, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: color) ?? .blue)
-            )
+        AllConnectionBadges(
+            corMetro: nil,
+            corMl: nil,
+            corCercanias: nil,
+            corTranvia: corTranvia,
+            dataService: dataService
+        )
     }
 }
 
@@ -364,14 +431,40 @@ struct StopRow: View {
     let isLast: Bool
     let lineColor: Color
     let currentLineId: String  // To filter out current line from connections
+    let currentLineName: String  // To filter out current line from cor_* badges
     let dataService: DataService
     let locationService: LocationService
 
     // Filter connections to exclude current line, sorted numerically
+    // Compare normalized names (strip L/C/ML prefixes for comparison)
     var otherLineConnections: [String] {
-        stop.connectionLineIds
-            .filter { $0 != currentLineId }
+        let currentNormalized = normalizeLineName(currentLineName)
+        let filtered = stop.connectionLineIds
+            .filter { normalizeLineName($0) != currentNormalized }
             .sorted { lineNumber($0) < lineNumber($1) }
+
+        // DEBUG: Log filtering
+        if !stop.connectionLineIds.isEmpty {
+            print("🔗 [StopRow] '\(stop.name)' lineas=\(stop.connectionLineIds), current='\(currentLineName)'(\(currentNormalized)), filtered=\(filtered)")
+        }
+        return filtered
+    }
+
+    // Normalize line name for comparison: "L7" -> "7", "l7" -> "7", "7" -> "7"
+    private func normalizeLineName(_ name: String) -> String {
+        var normalized = name.lowercased().trimmingCharacters(in: .whitespaces)
+        // Remove common prefixes
+        for prefix in ["ml", "l", "c", "r", "t"] {
+            if normalized.hasPrefix(prefix) && normalized.count > prefix.count {
+                let afterPrefix = normalized.dropFirst(prefix.count)
+                // Only strip if what follows starts with a digit
+                if let firstChar = afterPrefix.first, firstChar.isNumber {
+                    normalized = String(afterPrefix)
+                    break
+                }
+            }
+        }
+        return normalized
     }
 
     // Extract numeric value from line name for proper sorting (C1, C2, C4a, C4b, C10, L1, L4, ML1)
@@ -420,6 +513,11 @@ struct StopRow: View {
         stop.corCercanias != nil && !stop.corCercanias!.isEmpty
     }
 
+    /// Check if stop has Tranvía connections
+    var hasTranviaConnections: Bool {
+        stop.corTranvia != nil && !stop.corTranvia!.isEmpty
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Connection line (vertical)
@@ -457,14 +555,18 @@ struct StopRow: View {
                             WrappingHStack(otherLineConnections, dataService: dataService)
                         }
 
-                        // Metro/ML connection badges (for Cercanías stops)
-                        if hasMetroConnections {
-                            MetroConnectionBadges(corMetro: stop.corMetro, corMl: stop.corMl)
-                        }
-
-                        // Cercanías connection badges (for Metro/ML stops)
-                        if hasCercaniasConnections {
-                            CercaniasConnectionBadges(corCercanias: stop.corCercanias)
+                        // All other connection badges (Metro, ML, Cercanías, Tranvía) combined
+                        // Exclude current line AND lines already shown in WrappingHStack
+                        if hasMetroConnections || hasCercaniasConnections || hasTranviaConnections {
+                            AllConnectionBadges(
+                                corMetro: stop.corMetro,
+                                corMl: stop.corMl,
+                                corCercanias: stop.corCercanias,
+                                corTranvia: stop.corTranvia,
+                                dataService: dataService,
+                                excludeLineName: currentLineName,
+                                excludeLineIds: otherLineConnections  // Don't duplicate badges from WrappingHStack
+                            )
                         }
                     }
 

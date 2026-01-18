@@ -68,7 +68,7 @@ struct ContentView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 12)
             }
-            .navigationTitle(dataService.currentNucleo?.name ?? "WatchTrans")
+            .navigationTitle(dataService.currentLocation?.displayName ?? "WatchTrans")
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -108,9 +108,31 @@ struct ContentView: View {
         stopAutoRefresh() // Cancel existing timer
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 50, repeats: true) { _ in
             Task { @MainActor in
+                // Check if nucleo changed
+                await checkAndUpdateNucleo()
+
                 dataService.clearArrivalCache()
                 refreshTrigger = UUID()  // Trigger UI refresh
             }
+        }
+    }
+
+    /// Check if user moved to a different location and reload data if needed
+    private func checkAndUpdateNucleo() async {
+        guard let location = locationService.currentLocation else { return }
+
+        let lat = location.coordinate.latitude
+        let lon = location.coordinate.longitude
+
+        // Check if current location context is different from previous
+        // Since we use province-based detection now, we just reload on significant moves
+        // The API will return the correct province for the new location
+        let currentProvince = dataService.currentLocation?.provinceName
+
+        // For now, we reload data on every check to ensure freshness
+        // The API handles province detection via PostGIS
+        if currentProvince == nil {
+            await loadData()
         }
     }
 
@@ -120,7 +142,10 @@ struct ContentView: View {
     }
 
     private func loadData() async {
+        print("🏠 [ContentView] ========== LOAD DATA ==========")
+
         if locationService.authorizationStatus == .notDetermined {
+            print("🏠 [ContentView] Requesting location permission...")
             locationService.requestPermission()
         }
 
@@ -130,18 +155,27 @@ struct ContentView: View {
         // Pass user's coordinates to load nearby stops
         let lat = locationService.currentLocation?.coordinate.latitude
         let lon = locationService.currentLocation?.coordinate.longitude
+        print("🏠 [ContentView] Location: lat=\(lat ?? 0), lon=\(lon ?? 0)")
 
         // Save location for Widget to use (via App Group shared storage)
-        if let lat = lat, let lon = lon {
-            SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
+        if let latitude = lat, let longitude = lon {
+            SharedStorage.shared.saveLocation(latitude: latitude, longitude: longitude)
         }
 
-        // Save nucleo info for Widget
-        if let nucleo = dataService.currentNucleo {
-            SharedStorage.shared.saveNucleo(name: nucleo.name, id: nucleo.id)
-        }
-
+        // Fetch transport data (this will detect province from coordinates)
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
+
+        // Debug: Show result
+        print("🏠 [ContentView] ========== LOAD RESULT ==========")
+        print("🏠 [ContentView] currentLocation: \(dataService.currentLocation?.provinceName ?? "nil")")
+        print("🏠 [ContentView] Lines: \(dataService.lines.count)")
+        print("🏠 [ContentView] Stops: \(dataService.stops.count)")
+
+        // Save location info for Widget AFTER fetching (so we have the correct province)
+        if let location = dataService.currentLocation {
+            print("🏠 [ContentView] Saving province to Widget: \(location.provinceName)")
+            SharedStorage.shared.saveNucleo(name: location.provinceName, id: 0)
+        }
     }
 }
 
@@ -201,15 +235,10 @@ struct RecommendedSectionView: View {
     // They come from the user's province/nucleo automatically
     var recommendedStops: [Stop] {
         var stops: [Stop] = []
+        var seenNames: Set<String> = []  // Deduplicate by name (multiple platforms same station)
         let favoriteIds = favoritesManager?.favorites.map { $0.stopId } ?? []
 
-        // 1. Add nearest stop (if not in favorites)
-        if let nearest = locationService.findNearestStop(from: dataService.stops),
-           !favoriteIds.contains(nearest.id) {
-            stops.append(nearest)
-        }
-
-        // 2. Add 2 more stops (sorted by distance, that aren't favorites or nearest)
+        // Sort all stops by distance first
         let sortedByDistance: [Stop]
         if let location = locationService.currentLocation {
             sortedByDistance = dataService.stops.sorted {
@@ -219,12 +248,27 @@ struct RecommendedSectionView: View {
             sortedByDistance = dataService.stops
         }
 
-        let otherStops = sortedByDistance.filter { stop in
-            !favoriteIds.contains(stop.id) && !stops.contains(where: { $0.id == stop.id })
-        }
-        stops.append(contentsOf: Array(otherStops.prefix(2)))
+        // Add stops, skipping duplicates by name and favorites
+        for stop in sortedByDistance {
+            // Skip if already have a stop with this name (different platform)
+            if seenNames.contains(stop.name) {
+                continue
+            }
+            // Skip favorites
+            if favoriteIds.contains(stop.id) {
+                continue
+            }
 
-        return Array(stops.prefix(3)) // Max 3
+            stops.append(stop)
+            seenNames.insert(stop.name)
+
+            // Max 3 stops
+            if stops.count >= 3 {
+                break
+            }
+        }
+
+        return stops
     }
 
     var body: some View {
@@ -426,7 +470,7 @@ struct AlertBannerView: View {
             return header
         }
 
-        let description = alert.descriptionText
+        let description = alert.descriptionText ?? "Alerta de servicio"
         if description.count > 60 {
             return String(description.prefix(57)) + "..."
         }

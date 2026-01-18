@@ -9,14 +9,30 @@
 
 import Foundation
 
+/// Current location context - holds network/province info for the user's location
+struct LocationContext {
+    let provinceName: String
+    let networks: [NetworkInfo]
+
+    /// Display name for the title bar
+    var displayName: String {
+        // Use province name as display (e.g., "Barcelona", "Madrid", "Sevilla")
+        provinceName
+    }
+}
+
 @Observable
 class DataService {
     var lines: [Line] = []
     var stops: [Stop] = []
-    var nucleos: [NucleoResponse] = []
-    var currentNucleo: NucleoResponse?  // Detected from user's location
+    var currentLocation: LocationContext?  // NEW: Province + networks for user's location
     var isLoading = false
     var error: Error?
+
+    // DEPRECATED - kept for backward compatibility during migration
+    var nucleos: [NucleoResponse] = []
+    @available(*, deprecated, message: "Use currentLocation instead")
+    var currentNucleo: NucleoResponse?  // Will be removed after full migration
 
     // MARK: - GTFS-Realtime Services
 
@@ -58,10 +74,141 @@ class DataService {
 
     // MARK: - Public Methods
 
-    /// Fetch all nucleos from API (with bounding boxes for location detection)
-    func fetchNucleos() async {
+    /// Initialize data - call this on app launch
+    /// Pass coordinates to detect user's location and load relevant data
+    func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        guard let lat = latitude, let lon = longitude else {
+            print("⚠️ [DataService] No coordinates provided - cannot load data")
+            return
+        }
+
+        print("📍 [DataService] ========== LOADING DATA ==========")
+        print("📍 [DataService] Coordinates: (\(lat), \(lon))")
+
+        // Try new coordinate-based API first, fall back to nucleo-based if needed
         do {
-            print("📡 [DataService] Fetching nucleos from API...")
+            // 1. Fetch stops by coordinates (includes province detection)
+            print("📍 [DataService] Step 1: Fetching stops by coordinates...")
+            let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
+            print("📍 [DataService] ✅ Got \(stopResponses.count) stops")
+
+            // Debug: Show first 3 stops with province info
+            for (i, stop) in stopResponses.prefix(3).enumerated() {
+                print("📍 [DataService]   [\(i)] \(stop.name) - province: \(stop.province ?? "nil")")
+            }
+
+            stops = stopResponses.map { response in
+                Stop(
+                    id: response.id,
+                    name: response.name,
+                    latitude: response.lat,
+                    longitude: response.lon,
+                    connectionLineIds: response.lineIds,
+                    province: response.province,
+                    nucleoName: nil,  // No longer provided by API
+                    accesibilidad: response.accesibilidad,
+                    hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
+                    hasBusConnection: response.corBus != nil && response.corBus != "0",
+                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                    corMetro: response.corMetro,
+                    corMl: response.corMl,
+                    corCercanias: response.corCercanias,
+                    corTranvia: response.corTranvia
+                )
+            }
+            print("📍 [DataService] ✅ Mapped \(stops.count) stops to Stop model")
+
+            // 2. Fetch routes by coordinates
+            print("📍 [DataService] Step 2: Fetching routes by coordinates...")
+            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: lat, longitude: lon)
+            print("📍 [DataService] ✅ Got \(routeResponses.count) routes")
+
+            // Debug: Show networks found in routes
+            let networkIds = Set(routeResponses.compactMap { $0.networkId })
+            print("📍 [DataService] Networks in routes: \(networkIds.sorted().joined(separator: ", "))")
+
+            // Debug: Show route breakdown by agency
+            let byAgency = Dictionary(grouping: routeResponses, by: { $0.agencyId })
+            for (agency, routes) in byAgency.sorted(by: { $0.key < $1.key }) {
+                let shortNames = routes.map { $0.shortName }.sorted().joined(separator: ", ")
+                print("📍 [DataService]   \(agency): \(routes.count) routes (\(shortNames.prefix(50))...)")
+            }
+
+            // Determine province name - from stops if available, otherwise detect from coordinates
+            var provinceName = stopResponses.first?.province
+
+            // If no stops returned but we have routes, try to determine province from network
+            if provinceName == nil && !routeResponses.isEmpty {
+                // Use network to infer province (this is a fallback)
+                let networkIds = Set(routeResponses.compactMap { $0.networkId })
+                provinceName = inferProvinceFromNetworks(networkIds)
+                print("📍 [DataService] ⚠️ No stops returned, inferred province from networks: \(provinceName ?? "unknown")")
+            }
+
+            let finalProvinceName = provinceName ?? "WatchTrans"
+            print("📍 [DataService] Step 3: Processing routes with province: \(finalProvinceName)")
+            await processRoutes(routeResponses, provinceName: finalProvinceName)
+
+            // 3. Set current location context
+            let networkCodes = Set(routeResponses.compactMap { $0.networkId })
+            let networks = networkCodes.map { NetworkInfo(code: $0, name: $0) }
+
+            if let province = provinceName {
+                currentLocation = LocationContext(provinceName: province, networks: networks)
+                print("📍 [DataService] ✅ Location context set:")
+                print("📍 [DataService]   Province: \(province)")
+                print("📍 [DataService]   Networks: \(networkCodes.sorted().joined(separator: ", "))")
+            } else {
+                print("📍 [DataService] ⚠️ Could not determine province - currentLocation is nil")
+            }
+
+            print("📍 [DataService] ========== LOAD COMPLETE ==========")
+            print("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
+
+        } catch {
+            print("⚠️ [DataService] Coordinate-based API failed, trying fallback: \(error)")
+            // Fallback to legacy nucleo-based API
+            await fetchTransportDataLegacy(latitude: lat, longitude: lon)
+        }
+    }
+
+    /// Legacy data loading using nucleo-based API (fallback)
+    @available(*, deprecated, message: "Use coordinate-based API instead")
+    private func fetchTransportDataLegacy(latitude: Double, longitude: Double) async {
+        // 1. Fetch nucleos first (for location detection via bounding boxes)
+        await fetchNucleos()
+
+        // 2. Detect user's nucleo from coordinates using bounding boxes
+        let matchingNucleos = nucleos.filter { $0.contains(latitude: latitude, longitude: longitude) }
+        if matchingNucleos.count > 1 {
+            print("📍 [DataService] Multiple nucleos match: \(matchingNucleos.map { $0.name }.joined(separator: ", "))")
+        }
+
+        currentNucleo = detectNucleo(latitude: latitude, longitude: longitude)
+        print("📍 [DataService] Detected nucleo: \(currentNucleo?.name ?? "none") for coords (\(latitude), \(longitude))")
+
+        // 3. Fetch stops and routes for the detected nucleo
+        if let nucleo = currentNucleo {
+            await fetchStopsForNucleo(nucleoName: nucleo.name)
+            await fetchRoutesForNucleo(nucleoName: nucleo.name)
+
+            // Set location context from nucleo
+            currentLocation = LocationContext(provinceName: nucleo.name, networks: [])
+        } else {
+            print("⚠️ [DataService] No nucleo detected - user may be outside coverage")
+        }
+
+        print("✅ [DataService] Legacy data load complete: \(nucleos.count) nucleos, \(lines.count) lines, \(stops.count) stops")
+    }
+
+    /// Fetch all nucleos from API (LEGACY - for fallback only)
+    @available(*, deprecated, message: "Use coordinate-based API instead")
+    private func fetchNucleos() async {
+        do {
+            print("📡 [DataService] Fetching nucleos from API (legacy)...")
             nucleos = try await gtfsRealtimeService.fetchNucleos()
             print("✅ [DataService] Loaded \(nucleos.count) nucleos")
         } catch {
@@ -70,57 +217,146 @@ class DataService {
         }
     }
 
-    /// Detect user's nucleo from coordinates using bounding boxes
-    func detectNucleo(latitude: Double, longitude: Double) -> NucleoResponse? {
-        return nucleos.first { $0.contains(latitude: latitude, longitude: longitude) }
+    /// Infer province name from network IDs (fallback when stops don't return province)
+    private func inferProvinceFromNetworks(_ networkIds: Set<String>) -> String? {
+        // Map network IDs to provinces
+        for networkId in networkIds {
+            switch networkId {
+            case "51T": return "Barcelona"  // Rodalies de Catalunya
+            case "TMB_METRO": return "Barcelona"
+            case "FGC": return "Barcelona"
+            case "TRAM_BCN", "TRAM_BARCELONA_1", "TRAM_BARCELONA_BESOS_2": return "Barcelona"
+            case "10T": return "Madrid"  // Cercanías Madrid
+            case "11T": return "Madrid"  // Metro Madrid
+            case "12T": return "Madrid"  // Metro Ligero
+            case "30T": return "Sevilla"
+            case "32T": return "Sevilla"  // Metro Sevilla
+            case "40T": return "Valencia"
+            case "METRO_VALENCIA": return "Valencia"
+            case "60T": return "Vizcaya"  // Bilbao
+            case "METRO_BILBAO": return "Vizcaya"
+            case "EUSKOTREN": return "Vizcaya"
+            case "70T": return "Zaragoza"
+            case "TRANVIA_ZARAGOZA": return "Zaragoza"
+            default: continue
+            }
+        }
+        return nil
     }
 
-    /// Initialize data - call this on app launch
-    /// Pass coordinates to detect user's nucleo and load relevant data
-    func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
-        isLoading = true
-        defer { isLoading = false }
+    /// Detect user's nucleo from coordinates using bounding boxes (LEGACY)
+    @available(*, deprecated, message: "Use coordinate-based API instead")
+    private func detectNucleo(latitude: Double, longitude: Double) -> NucleoResponse? {
+        let matchingNucleos = nucleos.filter { $0.contains(latitude: latitude, longitude: longitude) }
 
-        // 1. Fetch nucleos first (for location detection via bounding boxes)
-        await fetchNucleos()
+        // If multiple nucleos match, prefer the smallest one (most specific)
+        return matchingNucleos.min { nucleo1, nucleo2 in
+            let area1 = (nucleo1.boundingBoxMaxLat - nucleo1.boundingBoxMinLat) *
+                        (nucleo1.boundingBoxMaxLon - nucleo1.boundingBoxMinLon)
+            let area2 = (nucleo2.boundingBoxMaxLat - nucleo2.boundingBoxMinLat) *
+                        (nucleo2.boundingBoxMaxLon - nucleo2.boundingBoxMinLon)
+            return area1 < area2
+        }
+    }
 
-        // 2. Detect user's nucleo from coordinates using bounding boxes
-        if let lat = latitude, let lon = longitude {
-            currentNucleo = detectNucleo(latitude: lat, longitude: lon)
-            print("📍 [DataService] Detected nucleo: \(currentNucleo?.name ?? "none") for coords (\(lat), \(lon))")
+    /// Process route responses into Line models
+    private func processRoutes(_ routeResponses: [RouteResponse], provinceName: String) async {
+        print("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
+
+        // Group routes by short name to create lines, collecting all route IDs
+        var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
+
+        // Default color
+        let defaultColor = "#75B6E0"
+
+        for route in routeResponses {
+            // Create unique ID per agency to separate Metro L1 from Cercanías C1
+            let transportType = TransportType.from(agencyId: route.agencyId)
+            let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
+
+            if var existing = lineDict[lineId] {
+                existing.routeIds.append(route.id)
+                lineDict[lineId] = existing
+            } else {
+                let color = route.color ?? defaultColor
+
+                // Format line name: Metro lines get "L" prefix (except R ramal)
+                let displayName: String
+                if transportType == .metro && route.shortName != "R" && !route.shortName.uppercased().hasPrefix("L") {
+                    displayName = "L\(route.shortName)"
+                } else {
+                    displayName = route.shortName
+                }
+
+                let line = Line(
+                    id: lineId,
+                    name: displayName,
+                    longName: route.longName,
+                    type: transportType,
+                    colorHex: color,
+                    nucleo: provinceName,
+                    routeIds: [route.id]
+                )
+                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName)
+            }
         }
 
-        // 3. Fetch stops and routes for the detected nucleo
-        if let nucleo = currentNucleo {
-            await fetchStopsForNucleo(nucleoName: nucleo.name)
-            await fetchRoutesForNucleo(nucleoName: nucleo.name)
-        } else {
-            print("⚠️ [DataService] No nucleo detected - user may be outside Cercanías coverage")
+        // Create final lines with all collected route IDs
+        lines = lineDict.map { (_, value) in
+            Line(
+                id: value.line.id,
+                name: value.line.name,
+                longName: value.longName,
+                type: value.line.type,
+                colorHex: value.line.colorHex,
+                nucleo: value.line.nucleo,
+                routeIds: value.routeIds
+            )
         }
 
-        print("✅ [DataService] Data load complete: \(nucleos.count) nucleos, \(lines.count) lines, \(stops.count) stops")
+        // Debug: Show lines by type
+        let byType = Dictionary(grouping: lines, by: { $0.type })
+        print("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
+        for (type, typeLines) in byType.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
+            print("🚃 [ProcessRoutes]   \(type.rawValue): \(typeLines.count) lines (\(names))")
+        }
     }
 
     /// Fetch stops for a specific route
     func fetchStopsForRoute(routeId: String) async -> [Stop] {
         do {
             let stopResponses = try await gtfsRealtimeService.fetchRouteStops(routeId: routeId)
+            print("🚏 [DataService] Fetched \(stopResponses.count) stops for route \(routeId)")
             return stopResponses.map { response in
-                Stop(
+                // DEBUG: Log correspondences - especially branch junction stations
+                let isBranchJunction = response.name.lowercased().contains("metropolitano") ||
+                                       response.name.lowercased().contains("arganda") ||
+                                       response.name.lowercased().contains("tres olivos")
+                if isBranchJunction || (response.corMetro != nil && response.corMetro!.contains("B")) {
+                    print("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
+                    print("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
+                    print("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
+                    print("🔗 [BRANCH]   cerc=\(response.corCercanias ?? "nil")")
+                } else if response.corMetro != nil || response.corCercanias != nil || response.corTranvia != nil || response.corMl != nil {
+                    print("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), cerc=\(response.corCercanias ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
+                }
+                return Stop(
                     id: response.id,
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
                     connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
-                    nucleoName: response.nucleoName,
+                    nucleoName: nil,  // Removed from API
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     corMetro: response.corMetro,
                     corMl: response.corMl,
-                    corCercanias: response.corCercanias
+                    corCercanias: response.corCercanias,
+                    corTranvia: response.corTranvia
                 )
             }
         } catch {
@@ -129,10 +365,171 @@ class DataService {
         }
     }
 
-    /// Fetch stops for a specific nucleo
+    /// Fetch operating hours for a route (all types)
+    /// - Metro/ML/Tranvía: uses /frequencies endpoint
+    /// - Cercanías: uses /operating-hours endpoint (from stop_times)
+    func fetchOperatingHours(routeId: String) async -> String? {
+        // Determine current day type (weekday=L-J, friday=V, saturday=S, sunday=D)
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: Date())
+        let dayType: String
+        let dayName: String
+        switch weekday {
+        case 1:  // Sunday
+            dayType = "sunday"
+            dayName = "Domingo"
+        case 6:  // Friday
+            dayType = "friday"
+            dayName = "Viernes"
+        case 7:  // Saturday
+            dayType = "saturday"
+            dayName = "Sábado"
+        default:  // Monday-Thursday
+            dayType = "weekday"
+            dayName = "L-J (weekday \(weekday))"
+        }
+        print("📅 [HOURS] Fetching for \(routeId), dayType=\(dayType) (\(dayName))")
+
+        // Try frequencies first (Metro/ML/Tranvía)
+        do {
+            let frequencies = try await gtfsRealtimeService.fetchFrequencies(routeId: routeId)
+
+            if !frequencies.isEmpty {
+                // DEBUG: Log all day types returned by API
+                let dayTypes = Set(frequencies.map { $0.dayType })
+                print("📅 [HOURS] API returned day types: \(dayTypes.sorted())")
+
+                // Filter by current day type
+                let todayFrequencies = frequencies.filter { $0.dayType == dayType }
+                print("📅 [HOURS] Matched \(todayFrequencies.count) frequencies for '\(dayType)'")
+
+                if !todayFrequencies.isEmpty {
+                    let result = calculateOperatingHours(from: todayFrequencies)
+                    print("📅 [HOURS] ✅ From frequencies (\(dayType)): \(result)")
+                    return result
+                }
+
+                // Fallback chain: friday → weekday → any
+                let fallbackOrder = ["friday", "weekday", "saturday", "sunday"]
+                for fallback in fallbackOrder where fallback != dayType {
+                    let fallbackFrequencies = frequencies.filter { $0.dayType == fallback }
+                    if !fallbackFrequencies.isEmpty {
+                        let result = calculateOperatingHours(from: fallbackFrequencies)
+                        print("📅 [HOURS] ✅ From frequencies (\(fallback) fallback): \(result)")
+                        return result
+                    }
+                }
+            }
+        } catch {
+            print("📅 [HOURS] Frequencies failed, trying operating-hours...")
+        }
+
+        // Try operating-hours (Cercanías - from stop_times)
+        do {
+            let hours = try await gtfsRealtimeService.fetchRouteOperatingHours(routeId: routeId)
+
+            // DEBUG: Log RAW API response
+            print("📅 [HOURS] RAW API response for \(routeId):")
+            if let wd = hours.weekday {
+                print("📅 [HOURS]   weekday: first=\(wd.firstDeparture), last=\(wd.lastDeparture), trips=\(wd.totalTrips)")
+            }
+            if let sat = hours.saturday {
+                print("📅 [HOURS]   saturday: first=\(sat.firstDeparture), last=\(sat.lastDeparture)")
+            }
+            if let sun = hours.sunday {
+                print("📅 [HOURS]   sunday: first=\(sun.firstDeparture), last=\(sun.lastDeparture)")
+            }
+
+            // Select the appropriate day
+            let dayHours: DayOperatingHours?
+            switch dayType {
+            case "sunday":
+                dayHours = hours.sunday ?? hours.weekday
+            case "saturday":
+                dayHours = hours.saturday ?? hours.weekday
+            default:
+                dayHours = hours.weekday
+            }
+
+            if let dh = dayHours {
+                let result = dh.displayString
+                print("📅 [HOURS] ✅ From operating-hours (\(dayType)): \(result)")
+                return result
+            }
+        } catch {
+            print("📅 [HOURS] ❌ Both endpoints failed for \(routeId): \(error)")
+        }
+
+        print("📅 [HOURS] ❌ No hours found for \(routeId)")
+        return nil
+    }
+
+    /// Calculate operating hours string from frequency responses
+    private func calculateOperatingHours(from frequencies: [FrequencyResponse]) -> String {
+        // Separate morning service (starts >= 04:00) from late-night service (starts < 04:00)
+        // Late-night service (e.g., 00:00-01:30) runs AFTER midnight, not at opening
+        let morningThreshold = 4 * 60  // 04:00 in minutes
+
+        let morningStarts = frequencies.compactMap { parseTimeToMinutes($0.startTime) }
+            .filter { $0 >= morningThreshold }
+        let allEndTimes = frequencies.compactMap { parseTimeToMinutes($0.endTime) }
+
+        // Opening = earliest morning start (ignore 00:00 late-night entries)
+        // Closing = latest end time (could be 24:00, 25:30, or 01:30)
+        guard let openingTime = morningStarts.min(), let maxEnd = allEndTimes.max() else {
+            // Fallback to simple min/max if no morning entries
+            let startTimes = frequencies.compactMap { parseTimeToMinutes($0.startTime) }
+            guard let minStart = startTimes.min(), let maxEnd = allEndTimes.max() else {
+                return "?"
+            }
+            return "\(formatMinutesToTime(minStart)) - \(formatMinutesToTime(maxEnd % (24 * 60)))"
+        }
+
+        // DEBUG: Log raw times
+        let rawStartTimes = frequencies.map { $0.startTime }
+        let rawEndTimes = frequencies.map { $0.endTime }
+        print("📅 [HOURS] Raw start times: \(rawStartTimes)")
+        print("📅 [HOURS] Raw end times: \(rawEndTimes)")
+        print("📅 [HOURS] Opening (morning): \(openingTime / 60):\(String(format: "%02d", openingTime % 60))")
+        print("📅 [HOURS] maxEnd (minutes): \(maxEnd) = \(maxEnd / 60)h \(maxEnd % 60)m")
+
+        let startStr = formatMinutesToTime(openingTime)
+        // Handle times > 24:00 (e.g., 25:30:00 = 01:30 next day)
+        let endStr = formatMinutesToTime(maxEnd % (24 * 60))
+
+        // DEBUG: Log conversion if time was > 24:00
+        if maxEnd >= 24 * 60 {
+            print("📅 [HOURS] GTFS time >24h: \(maxEnd / 60):\(String(format: "%02d", maxEnd % 60)) → \(endStr)")
+        }
+
+        print("📅 [DataService] Operating hours: \(startStr) - \(endStr)")
+        return "\(startStr) - \(endStr)"
+    }
+
+    /// Parse time string "HH:MM:SS" to minutes since midnight
+    private func parseTimeToMinutes(_ timeStr: String) -> Int? {
+        let parts = timeStr.split(separator: ":")
+        guard parts.count >= 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else { return nil }
+        return hour * 60 + minute
+    }
+
+    /// Format minutes to "HH:MM" string
+    private func formatMinutesToTime(_ minutes: Int) -> String {
+        let hour = minutes / 60
+        let min = minutes % 60
+        return String(format: "%02d:%02d", hour, min)
+    }
+
+    /// Fetch stops for a specific nucleo (LEGACY - use fetchStopsByCoordinates instead)
+    @available(*, deprecated, message: "Use fetchStopsByCoordinates instead")
     func fetchStopsForNucleo(nucleoName: String) async {
         isLoading = true
         defer { isLoading = false }
+
+        // Clear old stops immediately to prevent showing wrong nucleo data
+        stops = []
 
         do {
             print("📡 [DataService] Fetching stops for nucleo: \(nucleoName)...")
@@ -146,14 +543,15 @@ class DataService {
                     longitude: response.lon,
                     connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
-                    nucleoName: response.nucleoName,
+                    nucleoName: nil,  // Removed from API
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     corMetro: response.corMetro,
                     corMl: response.corMl,
-                    corCercanias: response.corCercanias
+                    corCercanias: response.corCercanias,
+                    corTranvia: response.corTranvia
                 )
             }
 
@@ -164,10 +562,14 @@ class DataService {
         }
     }
 
-    /// Fetch routes for a specific nucleo
+    /// Fetch routes for a specific nucleo (LEGACY - use fetchRoutesByCoordinates instead)
+    @available(*, deprecated, message: "Use fetchRoutesByCoordinates instead")
     func fetchRoutesForNucleo(nucleoName: String) async {
         isLoading = true
         defer { isLoading = false }
+
+        // Clear old lines immediately to prevent showing wrong nucleo data
+        lines = []
 
         do {
             print("📡 [DataService] Fetching routes for nucleo: \(nucleoName)...")
@@ -185,6 +587,14 @@ class DataService {
                 return "#75B6E0"
             } ?? "#75B6E0"
 
+            // DEBUG: Log all routes to verify L7B, L9B, L10B appear
+            print("🚇 [Routes] Received \(routeResponses.count) routes:")
+            for route in routeResponses {
+                if route.shortName.contains("B") || route.shortName == "L7" || route.shortName == "L9" || route.shortName == "L10" {
+                    print("🚇 [Routes]   BRANCH: \(route.shortName) (id: \(route.id), longName: \(route.longName))")
+                }
+            }
+
             for route in routeResponses {
                 // Create unique ID per agency to separate Metro L1 from Cercanías C1
                 let transportType = TransportType.from(agencyId: route.agencyId)
@@ -200,8 +610,9 @@ class DataService {
                     let color = route.color ?? nucleoColor
 
                     // Format line name: Metro lines get "L" prefix (except R ramal)
+                    // But don't add "L" if API already includes it
                     let displayName: String
-                    if transportType == .metro && route.shortName != "R" {
+                    if transportType == .metro && route.shortName != "R" && !route.shortName.uppercased().hasPrefix("L") {
                         displayName = "L\(route.shortName)"
                     } else {
                         displayName = route.shortName
@@ -231,6 +642,12 @@ class DataService {
                     nucleo: value.line.nucleo,
                     routeIds: value.routeIds
                 )
+            }
+
+            // DEBUG: Log all created lines, highlighting branch lines
+            let branchLines = lines.filter { $0.name.contains("B") || $0.name == "L7" || $0.name == "L9" || $0.name == "L10" }
+            if !branchLines.isEmpty {
+                print("🚇 [Lines] Created branch lines: \(branchLines.map { "\($0.name) (\($0.routeIds.first ?? "?"))" }.joined(separator: ", "))")
             }
             print("✅ [DataService] Loaded \(lines.count) lines for \(nucleoName)")
         } catch {
@@ -323,6 +740,7 @@ class DataService {
 
     // Get line by ID or name (case-insensitive)
     // Handles API format variations: "1" -> "L1", "4" -> "L4", "ML1" -> "ML1", "C1" -> "C1"
+    // Also handles branch lines: "7b" -> "L7B", "9b" -> "L9B", "10b" -> "L10B"
     func getLine(by id: String) -> Line? {
         let lowerId = id.lowercased().trimmingCharacters(in: .whitespaces)
 
@@ -340,6 +758,15 @@ class DataService {
             }
         }
 
+        // For Metro branch lines: "7b" -> "L7B", "9b" -> "L9B", "10b" -> "L10B"
+        // Check if it ends with 'b' and starts with a number
+        if lowerId.hasSuffix("b") && lowerId.first?.isNumber == true {
+            let metroName = "l\(lowerId)"  // "7b" -> "l7b"
+            if let metro = lines.first(where: { $0.name.lowercased() == metroName && $0.type == .metro }) {
+                return metro
+            }
+        }
+
         // For Cercanías: try with "c" prefix if not already present
         if !lowerId.hasPrefix("c") && !lowerId.hasPrefix("l") && !lowerId.hasPrefix("ml") {
             let cercaniasName = "c\(lowerId)"
@@ -348,6 +775,8 @@ class DataService {
             }
         }
 
+        // Debug: log only when not found
+        print("❌ [getLine] NOT FOUND '\(id)'. Available: \(lines.map { $0.name }.sorted().joined(separator: ", "))")
         return nil
     }
 
@@ -363,14 +792,15 @@ class DataService {
                     longitude: response.lon,
                     connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
-                    nucleoName: response.nucleoName,
+                    nucleoName: nil,  // Removed from API
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     corMetro: response.corMetro,
                     corMl: response.corMl,
-                    corCercanias: response.corCercanias
+                    corCercanias: response.corCercanias,
+                    corTranvia: response.corTranvia
                 )
             }
         } catch {
@@ -394,8 +824,26 @@ class DataService {
     /// Fetch alerts for a specific stop
     func fetchAlertsForStop(stopId: String) async -> [AlertResponse] {
         do {
-            let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
-            print("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
+            let allAlerts = try await gtfsRealtimeService.fetchAlerts()
+
+            // Extract numeric part from stop ID (RENFE_18000 -> 18000)
+            let stopNumber: String
+            if stopId.hasPrefix("RENFE_") {
+                stopNumber = String(stopId.dropFirst(6))
+            } else if stopId.hasPrefix("METRO_") {
+                stopNumber = String(stopId.dropFirst(6))
+            } else {
+                stopNumber = stopId
+            }
+
+            // Filter alerts that affect this stop
+            let alerts = allAlerts.filter { alert in
+                alert.informedEntities.contains { entity in
+                    entity.stopId == stopNumber
+                }
+            }
+
+            print("✅ [DataService] Found \(alerts.count) alerts for stop \(stopId) (number: \(stopNumber))")
             return alerts
         } catch {
             print("⚠️ [DataService] Failed to fetch alerts for stop \(stopId): \(error)")
@@ -415,42 +863,86 @@ class DataService {
         }
     }
 
-    /// Fetch alerts for a line (checks all route IDs)
+    /// Fetch alerts for a line (matches by route_short_name AND route IDs)
     func fetchAlertsForLine(_ line: Line) async -> [AlertResponse] {
-        var allAlerts: [AlertResponse] = []
-        var seenIds = Set<String>()
-
-        for routeId in line.routeIds {
-            let alerts = await fetchAlertsForRoute(routeId: routeId)
-            for alert in alerts {
-                if !seenIds.contains(alert.id) {
-                    seenIds.insert(alert.id)
-                    allAlerts.append(alert)
-                }
-            }
-        }
-
-        return allAlerts
-    }
-
-    /// Fetch all alerts for the current nucleo
-    func fetchAlertsForCurrentNucleo() async -> [AlertResponse] {
         do {
             let allAlerts = try await gtfsRealtimeService.fetchAlerts()
 
-            // Filter to alerts that affect routes in our nucleo
-            guard currentNucleo != nil else { return allAlerts }
+            // Get line short_name and route IDs
+            let lineShortName = line.name.uppercased()
+            let lineRouteIds = Set(line.routeIds)
 
-            let nucleoRouteIds = Set(lines.flatMap { $0.routeIds })
-            let nucleoStopIds = Set(stops.map { $0.id })
+            print("🔔 [Alerts] Checking \(allAlerts.count) alerts for '\(lineShortName)' (routes: \(lineRouteIds.count))")
+
+            // Filter alerts where entity matches short_name AND is from our routes
+            let matchingAlerts = allAlerts.filter { alert in
+                alert.informedEntities.contains { entity in
+                    // Must match short name
+                    guard let routeShortName = entity.routeShortName,
+                          routeShortName.uppercased() == lineShortName else {
+                        return false
+                    }
+
+                    // Match by route ID if available
+                    if let entityRouteId = entity.routeId {
+                        if lineRouteIds.contains(entityRouteId) {
+                            print("🔔 [Alerts] ✅ \(alert.alertId) matches \(lineShortName) (route \(entityRouteId))")
+                            return true
+                        }
+                    }
+
+                    // If no route IDs to match, just accept by short name
+                    // (useful when routes in the same province have same short names)
+                    if lineRouteIds.isEmpty {
+                        return true
+                    }
+
+                    return false
+                }
+            }
+
+            print("🔔 [Alerts] Found \(matchingAlerts.count) alerts for \(line.name)")
+            return matchingAlerts
+        } catch {
+            print("⚠️ [Alerts] Failed for line \(line.name): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch all alerts for the current location
+    func fetchAlertsForCurrentLocation() async -> [AlertResponse] {
+        do {
+            let allAlerts = try await gtfsRealtimeService.fetchAlerts()
+
+            // Filter to alerts that affect routes in our location
+            guard currentLocation != nil || !lines.isEmpty else { return allAlerts }
+
+            // Get all short_names from our lines (e.g., "C1", "C8a", "L1")
+            let lineShortNames = Set(lines.map { $0.name.uppercased() })
+
+            // Get stop IDs - extract numeric part for matching (RENFE_18000 -> 18000)
+            let nucleoStopNumbers = Set(stops.map { stopId -> String in
+                if stopId.id.hasPrefix("RENFE_") {
+                    return String(stopId.id.dropFirst(6))
+                } else if stopId.id.hasPrefix("METRO_") {
+                    return String(stopId.id.dropFirst(6))
+                }
+                return stopId.id
+            })
 
             return allAlerts.filter { alert in
                 alert.informedEntities.contains { entity in
-                    if let routeId = entity.routeId, nucleoRouteIds.contains(routeId) {
-                        return true
+                    // Match by route_short_name
+                    if let routeShortName = entity.routeShortName {
+                        if lineShortNames.contains(routeShortName.uppercased()) {
+                            return true
+                        }
                     }
-                    if let stopId = entity.stopId, nucleoStopIds.contains(stopId) {
-                        return true
+                    // Match by stop_id (API returns "64103", we have "RENFE_64103")
+                    if let stopId = entity.stopId {
+                        if nucleoStopNumbers.contains(stopId) {
+                            return true
+                        }
                     }
                     return false
                 }
@@ -463,18 +955,55 @@ class DataService {
 
     // MARK: - Estimated Positions
 
-    /// Fetch estimated train positions for current nucleo
+    /// Fetch estimated train positions for current location
     func fetchTrainPositions() async -> [EstimatedPositionResponse] {
-        guard let nucleo = currentNucleo else { return [] }
-
-        do {
-            let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForNucleo(nucleoId: nucleo.id)
-            print("✅ [DataService] Fetched \(positions.count) train positions for \(nucleo.name)")
-            return positions
-        } catch {
-            print("⚠️ [DataService] Failed to fetch train positions: \(error)")
-            return []
+        // Try network-based endpoint first (new API)
+        if let location = currentLocation {
+            for network in location.networks {
+                do {
+                    let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForNetwork(networkId: network.code)
+                    if !positions.isEmpty {
+                        print("✅ [DataService] Fetched \(positions.count) train positions for network \(network.code)")
+                        return positions
+                    }
+                } catch {
+                    print("⚠️ [DataService] Network \(network.code) positions failed: \(error)")
+                }
+            }
         }
+
+        // Fallback: try legacy nucleo-based endpoint
+        if let nucleo = currentNucleo {
+            do {
+                let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForNucleo(nucleoId: nucleo.id)
+                print("✅ [DataService] Fetched \(positions.count) train positions for nucleo \(nucleo.name)")
+                return positions
+            } catch {
+                print("⚠️ [DataService] Nucleo-based positions failed: \(error)")
+            }
+        }
+
+        // Final fallback: fetch positions for each route
+        var allPositions: [EstimatedPositionResponse] = []
+        var seenIds = Set<String>()
+
+        let routesToFetch = lines.prefix(5)
+        for line in routesToFetch {
+            for routeId in line.routeIds.prefix(1) {
+                do {
+                    let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForRoute(routeId: routeId)
+                    for position in positions where !seenIds.contains(position.id) {
+                        seenIds.insert(position.id)
+                        allPositions.append(position)
+                    }
+                } catch {
+                    // Silently continue on individual route failures
+                }
+            }
+        }
+
+        print("✅ [DataService] Fetched \(allPositions.count) train positions via routes")
+        return allPositions
     }
 
     /// Fetch estimated train positions for a specific line

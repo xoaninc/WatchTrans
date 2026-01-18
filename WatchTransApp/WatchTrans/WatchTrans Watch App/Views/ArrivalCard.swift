@@ -37,9 +37,25 @@ struct ArrivalCard: View {
                     .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
                     .frame(height: 4)
 
-                // Show frequency for Metro, or time for Cercanías
+                // Show frequency for Metro/ML/Tranvía, or time for Cercanías
+                // If arrival is > 30 min away (non-Cercanías), show "+ 30 min"
                 if arrival.frequencyBased, let headway = arrival.headwayMinutes {
-                    Text("c/\(headway) min")
+                    if arrival.minutesUntilArrival > 30 {
+                        let _ = print("⏱️ [ArrivalCard] \(arrival.lineName) freq-based, \(arrival.minutesUntilArrival) min > 30 → showing '+ 30 min'")
+                        Text("+ 30 min")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("c/\(headway) min")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                    }
+                } else if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
+                    // Non-Cercanías lines: cap at +30 min
+                    let _ = print("⏱️ [ArrivalCard] \(arrival.lineName) non-Cercanías, \(arrival.minutesUntilArrival) min > 30 → showing '+ 30 min'")
+                    Text("+ 30 min")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -51,25 +67,18 @@ struct ArrivalCard: View {
                 }
 
                 // Platform badge (if available)
+                // Color indicates confidence: blue = confirmed, orange = estimated
                 if let platform = arrival.platform, !platform.isEmpty {
-                    HStack(spacing: 2) {
-                        Text("Vía \(platform)")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.white)
-                        // Estimated indicator
-                        if arrival.platformEstimated {
-                            Text("*")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
-                    )
+                    Text("Vía \(platform)")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
+                        )
                 }
             }
 

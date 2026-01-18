@@ -432,15 +432,14 @@ struct WatchTransWidgetEntryView: View {
             }
 
             // Time and progress
-            HStack {
+            HStack(spacing: 8) {
                 Text(timeText)
                     .font(.body)
                     .bold()
                     .minimumScaleFactor(0.8)
-                Spacer()
+                    .frame(minWidth: 45, alignment: .leading)
                 ProgressView(value: progressValue)
                     .tint(progressColor)
-                    .frame(width: 50)
             }
         }
         .privacySensitive(false)
@@ -462,29 +461,48 @@ struct WatchTransWidgetEntryView: View {
 }
 
 // MARK: - Circular Complication View
-// accessoryCircular supports: accented, vibrant (NO fullColor!)
 
 struct WatchTransCircularView: View {
     var entry: ArrivalProvider.Entry
+
+    var lineColor: Color {
+        Color(hex: entry.lineColor) ?? .blue
+    }
+
+    /// Check if this is a Metro/ML line (no real-time delay info)
+    var isMetroLine: Bool {
+        entry.lineName.hasPrefix("L") || entry.lineName.hasPrefix("ML")
+    }
+
+    /// Progress bar color:
+    /// - Cercanías: green (on time) or orange (delayed)
+    /// - Metro/ML: line color
+    var progressColor: Color {
+        if isMetroLine {
+            return lineColor
+        } else {
+            return entry.isDelayed ? .orange : .green
+        }
+    }
 
     var body: some View {
         ZStack {
             // Background circle (full ring, dimmed)
             Circle()
                 .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                .opacity(0.3)
+                .foregroundStyle(progressColor.opacity(0.3))
 
-            // Progress circle
+            // Progress circle - Cercanías: green/orange, Metro: line color
             Circle()
                 .trim(from: 0, to: progressValue)
                 .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .foregroundStyle(progressColor)
                 .rotationEffect(.degrees(-90))
-                .widgetAccentable()
 
             VStack(spacing: 0) {
                 Text(entry.lineName)
                     .font(.system(size: 16, weight: .bold))
-                    .widgetAccentable()
+                    .foregroundStyle(lineColor)
                 Text(timeText)
                     .font(.system(size: 11))
             }
@@ -549,16 +567,19 @@ struct WatchTransWidgetContentView: View {
 }
 
 // MARK: - Corner Complication View
-// accessoryCorner supports: accented, vibrant (NO fullColor!)
 
 struct WatchTransCornerView: View {
     var entry: ArrivalProvider.Entry
+
+    var lineColor: Color {
+        Color(hex: entry.lineColor) ?? .blue
+    }
 
     var body: some View {
         Text(entry.lineName)
             .font(.title2)
             .bold()
-            .widgetAccentable()
+            .foregroundStyle(lineColor)
             .widgetLabel {
                 Text(timeText)
             }
@@ -575,14 +596,18 @@ struct WatchTransCornerView: View {
 }
 
 // MARK: - Inline Complication View
-// accessoryInline supports: accented, vibrant (NO fullColor!)
+// Note: Inline has very limited color support, keeping widgetAccentable as fallback
 
 struct WatchTransInlineView: View {
     var entry: ArrivalProvider.Entry
 
+    var lineColor: Color {
+        Color(hex: entry.lineColor) ?? .blue
+    }
+
     var body: some View {
         Text("\(entry.lineName): \(timeText)")
-            .widgetAccentable()
+            .foregroundStyle(lineColor)
             .privacySensitive(false)
     }
 
