@@ -119,10 +119,7 @@ struct ContentView: View {
 
     /// Check if user moved to a different location and reload data if needed
     private func checkAndUpdateNucleo() async {
-        guard let location = locationService.currentLocation else { return }
-
-        let lat = location.coordinate.latitude
-        let lon = location.coordinate.longitude
+        guard locationService.currentLocation != nil else { return }
 
         // Check if current location context is different from previous
         // Since we use province-based detection now, we just reload on significant moves
