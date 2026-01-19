@@ -25,14 +25,9 @@ struct LocationContext {
 class DataService {
     var lines: [Line] = []
     var stops: [Stop] = []
-    var currentLocation: LocationContext?  // NEW: Province + networks for user's location
+    var currentLocation: LocationContext?
     var isLoading = false
     var error: Error?
-
-    // DEPRECATED - kept for backward compatibility during migration
-    var nucleos: [NucleoResponse] = []
-    @available(*, deprecated, message: "Use currentLocation instead")
-    var currentNucleo: NucleoResponse?  // Will be removed after full migration
 
     // MARK: - GTFS-Realtime Services
 
@@ -169,50 +164,7 @@ class DataService {
             print("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
 
         } catch {
-            print("⚠️ [DataService] Coordinate-based API failed, trying fallback: \(error)")
-            // Fallback to legacy nucleo-based API
-            await fetchTransportDataLegacy(latitude: lat, longitude: lon)
-        }
-    }
-
-    /// Legacy data loading using nucleo-based API (fallback)
-    @available(*, deprecated, message: "Use coordinate-based API instead")
-    private func fetchTransportDataLegacy(latitude: Double, longitude: Double) async {
-        // 1. Fetch nucleos first (for location detection via bounding boxes)
-        await fetchNucleos()
-
-        // 2. Detect user's nucleo from coordinates using bounding boxes
-        let matchingNucleos = nucleos.filter { $0.contains(latitude: latitude, longitude: longitude) }
-        if matchingNucleos.count > 1 {
-            print("📍 [DataService] Multiple nucleos match: \(matchingNucleos.map { $0.name }.joined(separator: ", "))")
-        }
-
-        currentNucleo = detectNucleo(latitude: latitude, longitude: longitude)
-        print("📍 [DataService] Detected nucleo: \(currentNucleo?.name ?? "none") for coords (\(latitude), \(longitude))")
-
-        // 3. Fetch stops and routes for the detected nucleo
-        if let nucleo = currentNucleo {
-            await fetchStopsForNucleo(nucleoName: nucleo.name)
-            await fetchRoutesForNucleo(nucleoName: nucleo.name)
-
-            // Set location context from nucleo
-            currentLocation = LocationContext(provinceName: nucleo.name, networks: [])
-        } else {
-            print("⚠️ [DataService] No nucleo detected - user may be outside coverage")
-        }
-
-        print("✅ [DataService] Legacy data load complete: \(nucleos.count) nucleos, \(lines.count) lines, \(stops.count) stops")
-    }
-
-    /// Fetch all nucleos from API (LEGACY - for fallback only)
-    @available(*, deprecated, message: "Use coordinate-based API instead")
-    private func fetchNucleos() async {
-        do {
-            print("📡 [DataService] Fetching nucleos from API (legacy)...")
-            nucleos = try await gtfsRealtimeService.fetchNucleos()
-            print("✅ [DataService] Loaded \(nucleos.count) nucleos")
-        } catch {
-            print("⚠️ [DataService] Failed to fetch nucleos: \(error)")
+            print("⚠️ [DataService] Failed to load transport data: \(error)")
             self.error = error
         }
     }
@@ -242,21 +194,6 @@ class DataService {
             }
         }
         return nil
-    }
-
-    /// Detect user's nucleo from coordinates using bounding boxes (LEGACY)
-    @available(*, deprecated, message: "Use coordinate-based API instead")
-    private func detectNucleo(latitude: Double, longitude: Double) -> NucleoResponse? {
-        let matchingNucleos = nucleos.filter { $0.contains(latitude: latitude, longitude: longitude) }
-
-        // If multiple nucleos match, prefer the smallest one (most specific)
-        return matchingNucleos.min { nucleo1, nucleo2 in
-            let area1 = (nucleo1.boundingBoxMaxLat - nucleo1.boundingBoxMinLat) *
-                        (nucleo1.boundingBoxMaxLon - nucleo1.boundingBoxMinLon)
-            let area2 = (nucleo2.boundingBoxMaxLat - nucleo2.boundingBoxMinLat) *
-                        (nucleo2.boundingBoxMaxLon - nucleo2.boundingBoxMinLon)
-            return area1 < area2
-        }
     }
 
     /// Process route responses into Line models
@@ -520,140 +457,6 @@ class DataService {
         let hour = minutes / 60
         let min = minutes % 60
         return String(format: "%02d:%02d", hour, min)
-    }
-
-    /// Fetch stops for a specific nucleo (LEGACY - use fetchStopsByCoordinates instead)
-    @available(*, deprecated, message: "Use fetchStopsByCoordinates instead")
-    func fetchStopsForNucleo(nucleoName: String) async {
-        isLoading = true
-        defer { isLoading = false }
-
-        // Clear old stops immediately to prevent showing wrong nucleo data
-        stops = []
-
-        do {
-            print("📡 [DataService] Fetching stops for nucleo: \(nucleoName)...")
-            let stopResponses = try await gtfsRealtimeService.fetchStopsByNucleo(nucleoName: nucleoName)
-
-            stops = stopResponses.map { response in
-                Stop(
-                    id: response.id,
-                    name: response.name,
-                    latitude: response.lat,
-                    longitude: response.lon,
-                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
-                    province: response.province,
-                    nucleoName: nil,  // Removed from API
-                    accesibilidad: response.accesibilidad,
-                    hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
-                    hasBusConnection: response.corBus != nil && response.corBus != "0",
-                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
-                    corMetro: response.corMetro,
-                    corMl: response.corMl,
-                    corCercanias: response.corCercanias,
-                    corTranvia: response.corTranvia
-                )
-            }
-
-            print("✅ [DataService] Loaded \(stops.count) stops for \(nucleoName)")
-        } catch {
-            print("⚠️ [DataService] Failed to fetch stops for nucleo: \(error)")
-            self.error = error
-        }
-    }
-
-    /// Fetch routes for a specific nucleo (LEGACY - use fetchRoutesByCoordinates instead)
-    @available(*, deprecated, message: "Use fetchRoutesByCoordinates instead")
-    func fetchRoutesForNucleo(nucleoName: String) async {
-        isLoading = true
-        defer { isLoading = false }
-
-        // Clear old lines immediately to prevent showing wrong nucleo data
-        lines = []
-
-        do {
-            print("📡 [DataService] Fetching routes for nucleo: \(nucleoName)...")
-            let routeResponses = try await gtfsRealtimeService.fetchRoutesByNucleo(nucleoName: nucleoName)
-
-            // Group routes by short name to create lines, collecting all route IDs
-            var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
-
-            // Get nucleo color for fallback (API returns "R,G,B" format)
-            let nucleoColor = currentNucleo.map { nucleo -> String in
-                let rgb = nucleo.color.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-                if rgb.count == 3 {
-                    return String(format: "#%02X%02X%02X", rgb[0], rgb[1], rgb[2])
-                }
-                return "#75B6E0"
-            } ?? "#75B6E0"
-
-            // DEBUG: Log all routes to verify L7B, L9B, L10B appear
-            print("🚇 [Routes] Received \(routeResponses.count) routes:")
-            for route in routeResponses {
-                if route.shortName.contains("B") || route.shortName == "L7" || route.shortName == "L9" || route.shortName == "L10" {
-                    print("🚇 [Routes]   BRANCH: \(route.shortName) (id: \(route.id), longName: \(route.longName))")
-                }
-            }
-
-            for route in routeResponses {
-                // Create unique ID per agency to separate Metro L1 from Cercanías C1
-                let transportType = TransportType.from(agencyId: route.agencyId)
-                let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
-
-                if var existing = lineDict[lineId] {
-                    // Add route ID to existing line
-                    existing.routeIds.append(route.id)
-                    lineDict[lineId] = existing
-                } else {
-                    // Use route color if available, otherwise use nucleo color
-                    // API now returns colors with # prefix
-                    let color = route.color ?? nucleoColor
-
-                    // Format line name: Metro lines get "L" prefix (except R ramal)
-                    // But don't add "L" if API already includes it
-                    let displayName: String
-                    if transportType == .metro && route.shortName != "R" && !route.shortName.uppercased().hasPrefix("L") {
-                        displayName = "L\(route.shortName)"
-                    } else {
-                        displayName = route.shortName
-                    }
-
-                    let line = Line(
-                        id: lineId,
-                        name: displayName,
-                        longName: route.longName,
-                        type: transportType,
-                        colorHex: color,
-                        nucleo: nucleoName,
-                        routeIds: [route.id]
-                    )
-                    lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName)
-                }
-            }
-
-            // Create final lines with all collected route IDs
-            lines = lineDict.map { (_, value) in
-                Line(
-                    id: value.line.id,
-                    name: value.line.name,
-                    longName: value.longName,
-                    type: value.line.type,
-                    colorHex: value.line.colorHex,
-                    nucleo: value.line.nucleo,
-                    routeIds: value.routeIds
-                )
-            }
-
-            // DEBUG: Log all created lines, highlighting branch lines
-            let branchLines = lines.filter { $0.name.contains("B") || $0.name == "L7" || $0.name == "L9" || $0.name == "L10" }
-            if !branchLines.isEmpty {
-                print("🚇 [Lines] Created branch lines: \(branchLines.map { "\($0.name) (\($0.routeIds.first ?? "?"))" }.joined(separator: ", "))")
-            }
-            print("✅ [DataService] Loaded \(lines.count) lines for \(nucleoName)")
-        } catch {
-            print("⚠️ [DataService] Failed to fetch routes for nucleo: \(error)")
-            self.error = error
-        }
     }
 
     // Fetch arrivals for a specific stop using RenfeServer API
@@ -972,18 +775,7 @@ class DataService {
             }
         }
 
-        // Fallback: try legacy nucleo-based endpoint
-        if let nucleo = currentNucleo {
-            do {
-                let positions = try await gtfsRealtimeService.fetchEstimatedPositionsForNucleo(nucleoId: nucleo.id)
-                print("✅ [DataService] Fetched \(positions.count) train positions for nucleo \(nucleo.name)")
-                return positions
-            } catch {
-                print("⚠️ [DataService] Nucleo-based positions failed: \(error)")
-            }
-        }
-
-        // Final fallback: fetch positions for each route
+        // Fallback: fetch positions for each route
         var allPositions: [EstimatedPositionResponse] = []
         var seenIds = Set<String>()
 
