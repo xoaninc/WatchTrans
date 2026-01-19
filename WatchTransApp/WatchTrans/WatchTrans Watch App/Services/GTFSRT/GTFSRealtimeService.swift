@@ -429,31 +429,6 @@ class GTFSRealtimeService {
         return network
     }
 
-    // MARK: - Nucleos (DEPRECATED - use coordinate-based methods)
-
-    /// Fetch all nucleos (with bounding boxes for location detection)
-    /// NOTE: This endpoint is being deprecated. Use fetchStopsByCoordinates instead.
-    @available(*, deprecated, message: "Use fetchStopsByCoordinates instead")
-    func fetchNucleos() async throws -> [NucleoResponse] {
-        guard let url = URL(string: "\(baseURL)/nucleos") else {
-            throw NetworkError.badResponse
-        }
-
-        let nucleos: [NucleoResponse] = try await networkService.fetch(url)
-        return nucleos
-    }
-
-    /// Fetch a specific nucleo
-    @available(*, deprecated, message: "Use fetchNetworkDetails instead")
-    func fetchNucleo(nucleoId: Int) async throws -> NucleoResponse {
-        guard let url = URL(string: "\(baseURL)/nucleos/\(nucleoId)") else {
-            throw NetworkError.badResponse
-        }
-
-        let nucleo: NucleoResponse = try await networkService.fetch(url)
-        return nucleo
-    }
-
     /// Fetch stops by network ID
     func fetchStopsByNetwork(networkId: String, limit: Int = 500) async throws -> [StopResponse] {
         guard let url = URL(string: "\(baseURL)/stops/by-network?network_id=\(networkId)&limit=\(limit)") else {
@@ -465,33 +440,9 @@ class GTFSRealtimeService {
         return stops
     }
 
-    /// Fetch stops by nucleo name (DEPRECATED - use fetchStopsByNetwork)
-    @available(*, deprecated, message: "Use fetchStopsByNetwork instead")
-    func fetchStopsByNucleo(nucleoName: String, limit: Int = 500) async throws -> [StopResponse] {
-        let encodedName = nucleoName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? nucleoName
-        guard let url = URL(string: "\(baseURL)/stops?search=\(encodedName)&limit=\(limit)") else {
-            throw NetworkError.badResponse
-        }
-
-        let stops: [StopResponse] = try await networkService.fetch(url)
-        return stops
-    }
-
     /// Fetch routes by network ID
     func fetchRoutesByNetwork(networkId: String) async throws -> [RouteResponse] {
         guard let url = URL(string: "\(baseURL)/routes?network_id=\(networkId)") else {
-            throw NetworkError.badResponse
-        }
-
-        let routes: [RouteResponse] = try await networkService.fetch(url)
-        return routes
-    }
-
-    /// Fetch routes by nucleo name (DEPRECATED - may not work after migration)
-    @available(*, deprecated, message: "Use fetchRoutesByNetwork or fetchRoutesByCoordinates instead")
-    func fetchRoutesByNucleo(nucleoName: String) async throws -> [RouteResponse] {
-        let encodedName = nucleoName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? nucleoName
-        guard let url = URL(string: "\(baseURL)/routes?nucleo_name=\(encodedName)") else {
             throw NetworkError.badResponse
         }
 
@@ -554,17 +505,6 @@ class GTFSRealtimeService {
         return positions
     }
 
-    /// Fetch estimated positions for a nucleo (DEPRECATED - use fetchEstimatedPositionsForNetwork)
-    @available(*, deprecated, message: "Use fetchEstimatedPositionsForNetwork instead")
-    func fetchEstimatedPositionsForNucleo(nucleoId: Int) async throws -> [EstimatedPositionResponse] {
-        guard let url = URL(string: "\(baseURL)/realtime/nucleos/\(nucleoId)/estimated") else {
-            throw NetworkError.badResponse
-        }
-
-        let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
-        return positions
-    }
-
     /// Fetch estimated positions for a route
     func fetchEstimatedPositionsForRoute(routeId: String) async throws -> [EstimatedPositionResponse] {
         guard let url = URL(string: "\(baseURL)/realtime/routes/\(routeId)/estimated") else {
@@ -595,23 +535,5 @@ class GTFSRealtimeService {
         }
 
         print("✅ [RenfeServer] Triggered realtime data fetch")
-    }
-}
-
-// MARK: - Legacy Compatibility
-
-extension GTFSRealtimeService {
-    /// Legacy method for compatibility with existing code
-    /// Converts DepartureResponse to the format expected by the mapper
-    @available(*, deprecated, message: "Use fetchDepartures directly")
-    func fetchTripUpdates() async throws -> GTFSRealtimeFeed {
-        // This would require the old Renfe API format
-        // For now, throw an error to indicate migration is needed
-        throw NetworkError.badResponse
-    }
-
-    @available(*, deprecated, message: "Use fetchDepartures directly")
-    func fetchTripUpdates(for stopId: String) async throws -> GTFSRealtimeFeed {
-        throw NetworkError.badResponse
     }
 }

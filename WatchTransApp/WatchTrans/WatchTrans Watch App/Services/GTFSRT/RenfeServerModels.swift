@@ -396,64 +396,14 @@ struct TripUpdateResponse: Codable, Identifiable {
     }
 }
 
-// MARK: - Province Networks Response (NEW API)
+// MARK: - Network Info
 
-/// Response from province detection endpoint
-/// Returns province info + all transit networks operating there
-struct ProvinceNetworksResponse: Codable {
-    let provinceCode: String
-    let provinceName: String
-    let networks: [NetworkInfo]
-
-    enum CodingKeys: String, CodingKey {
-        case provinceCode = "province_code"
-        case provinceName = "province_name"
-        case networks
-    }
-}
-
-/// Network info within a province
+/// Network info for transport networks
 struct NetworkInfo: Codable, Identifiable {
     let code: String
     let name: String
 
     var id: String { code }
-}
-
-// MARK: - Nucleo Response (DEPRECATED - use ProvinceNetworksResponse)
-
-/// Response from GET /api/v1/gtfs/nucleos
-/// NOTE: This endpoint is being deprecated. Use coordinates-based detection instead.
-struct NucleoResponse: Codable, Identifiable {
-    let id: Int
-    let name: String
-    let color: String
-    let boundingBoxMinLat: Double
-    let boundingBoxMaxLat: Double
-    let boundingBoxMinLon: Double
-    let boundingBoxMaxLon: Double
-    let centerLat: Double
-    let centerLon: Double
-    let stationsCount: Int
-    let linesCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id, name, color
-        case boundingBoxMinLat = "bounding_box_min_lat"
-        case boundingBoxMaxLat = "bounding_box_max_lat"
-        case boundingBoxMinLon = "bounding_box_min_lon"
-        case boundingBoxMaxLon = "bounding_box_max_lon"
-        case centerLat = "center_lat"
-        case centerLon = "center_lon"
-        case stationsCount = "stations_count"
-        case linesCount = "lines_count"
-    }
-
-    /// Check if coordinates are within this nucleo's bounding box
-    func contains(latitude: Double, longitude: Double) -> Bool {
-        return latitude >= boundingBoxMinLat && latitude <= boundingBoxMaxLat &&
-               longitude >= boundingBoxMinLon && longitude <= boundingBoxMaxLon
-    }
 }
 
 // MARK: - Alert Response
