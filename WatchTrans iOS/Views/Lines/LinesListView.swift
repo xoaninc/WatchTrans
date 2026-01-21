@@ -21,6 +21,34 @@ struct LinesListView: View {
         dataService.currentLocation?.isRodalies ?? false
     }
 
+    // Metro section title based on province
+    var metroSectionTitle: String {
+        guard let province = currentProvince else { return "Metro" }
+        switch province {
+        case "sevilla": return "Metro Sevilla"
+        case "vizcaya", "bilbao": return "Metro Bilbao"
+        case "valencia": return "Metrovalencia"
+        case "málaga", "malaga": return "Metro Málaga"
+        case "granada": return "Metro Granada"
+        case "santa cruz de tenerife", "tenerife": return "Tranvía Tenerife"
+        case "barcelona", "rodalies de catalunya": return "Metro Barcelona"
+        default: return "Metro"
+        }
+    }
+
+    // Tram section title based on province
+    var tramSectionTitle: String {
+        guard let province = currentProvince else { return "Tranvía" }
+        switch province {
+        case "sevilla": return "MetroCentro"
+        case "zaragoza": return "Tranvía Zaragoza"
+        case "alicante": return "TRAM Alicante"
+        case "murcia": return "Tranvía Murcia"
+        case "barcelona", "rodalies de catalunya": return "Tram Barcelona"
+        default: return "Tranvía"
+        }
+    }
+
     // MARK: - Numeric Line Sorting
 
     /// Extract numeric sort key from line name (C1 -> 1.0, C4a -> 4.1, L10 -> 10.0)
@@ -124,9 +152,12 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack {
-                            Image(systemName: "tram.fill")
-                            Text(isRodalies ? "Rodalies" : "Cercanias")
+                        HStack(spacing: 8) {
+                            LogoImageView(
+                                logoType: isRodalies ? .rodalies : .cercanias,
+                                height: 22
+                            )
+                            Text(isRodalies ? "Rodalies" : "Cercanías")
                         }
                     }
                 }
@@ -144,9 +175,12 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack {
-                            Image(systemName: "tram.tunnel.fill")
-                            Text("Metro")
+                        HStack(spacing: 8) {
+                            LogoImageView(
+                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? "Madrid"),
+                                height: 18
+                            )
+                            Text(metroSectionTitle)
                         }
                     }
                 }
@@ -164,8 +198,11 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack {
-                            Image(systemName: "tram.tunnel.fill")
+                        HStack(spacing: 8) {
+                            LogoImageView(
+                                logoType: .metroLigero,
+                                height: 18
+                            )
                             Text("Metro Ligero")
                         }
                     }
@@ -184,9 +221,12 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack {
-                            Image(systemName: "lightrail.fill")
-                            Text("Tranvia")
+                        HStack(spacing: 8) {
+                            LogoImageView(
+                                logoType: .tram(nucleo: dataService.currentLocation?.provinceName ?? ""),
+                                height: 18
+                            )
+                            Text(tramSectionTitle)
                         }
                     }
                 }
@@ -204,8 +244,11 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack {
-                            Image(systemName: "tram.fill")
+                        HStack(spacing: 8) {
+                            LogoImageView(
+                                logoType: .fgc,
+                                height: 22
+                            )
                             Text("Ferrocarrils (FGC)")
                         }
                     }
