@@ -63,9 +63,16 @@ struct Arrival: Identifiable, Codable {
         return formatter.string(from: scheduledTime)
     }
 
+    /// Check if this line has GTFS-RT (real-time data with precise schedules)
+    /// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, etc.
+    /// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Tranvía (frequency-based only)
+    var hasGTFSRT: Bool {
+        !frequencyBased
+    }
+
     // Display string for arrival time
-    // For GTFS-RT lines (Cercanías): show minutes if <30, show time if >=30
-    // For frequency-based lines: show frequency or "+30 min"
+    // For GTFS-RT lines: show minutes if <30, show actual time if >=30
+    // For frequency-based lines (no GTFS-RT): show minutes or "+30 min"
     var arrivalTimeString: String {
         let minutes = minutesUntilArrival
 
@@ -73,11 +80,11 @@ struct Arrival: Identifiable, Codable {
             return "Now"
         } else if minutes == 1 {
             return "1 min"
-        } else if minutes >= 30 && isCercaniasLine {
-            // Cercanías with GTFS-RT: show actual time when >= 30 min away
+        } else if minutes >= 30 && hasGTFSRT {
+            // GTFS-RT lines: show actual time when >= 30 min away
             return scheduledTimeString
-        } else if minutes > 30 && !isCercaniasLine {
-            // For all non-Cercanías lines (Metro, ML, Tranvía, etc.) cap at +30 min
+        } else if minutes > 30 {
+            // Frequency-based lines (no GTFS-RT): cap at +30 min
             return "+ 30 min"
         } else {
             return "\(minutes) min"
