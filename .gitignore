@@ -1,27 +1,47 @@
-# IDE
-.idea/
+# Xcode
+*.xcuserstate
 *.xcworkspace
 xcuserdata/
-*.xcuserstate
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+build/
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+._*
 
-# Build
-build/
-DerivedData/
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Dependencies
+# CocoaPods
 Pods/
-Carthage/
-.build/
+Podfile.lock
 
-# Misc
-*.log
-*.swp
-*~
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# IDEs
+*.xcscmblueprint
+*.xcworkspace/
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Secrets
+*.xcconfig
+Secrets/

@@ -1,0 +1,431 @@
+//
+//  LineDetailView.swift
+//  WatchTrans iOS
+//
+//  Created by Juan Macias Gomez on 21/1/26.
+//
+
+import SwiftUI
+
+struct LineDetailView: View {
+    let line: Line
+    let dataService: DataService
+    let locationService: LocationService
+
+    @State private var stops: [Stop] = []
+    @State private var alerts: [AlertResponse] = []
+    @State private var operatingHoursResult: OperatingHoursResult?
+    @State private var isLoading = true
+    @State private var isAlertsExpanded = false
+
+    var lineColor: Color {
+        Color(hex: line.colorHex) ?? .blue
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Line header
+                LineHeaderView(line: line, stopsCount: stops.count, isLoading: isLoading)
+
+                // Alerts (if any) - expandable
+                if !alerts.isEmpty {
+                    AlertsSummaryView(
+                        alerts: alerts,
+                        isExpanded: $isAlertsExpanded
+                    )
+                }
+
+                // Operating hours or suspension banner
+                if let result = operatingHoursResult {
+                    if result.isSuspended {
+                        // Suspended service banner
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "exclamationmark.octagon.fill")
+                                    .foregroundStyle(.red)
+                                Text("Servicio suspendido")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            if let message = result.suspensionMessage {
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(10)
+                    } else if let hours = result.hoursString {
+                        // Normal operating hours
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundStyle(.blue)
+                            Text("Apertura hoy: \(hours)")
+                                .font(.subheadline)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                    }
+                }
+
+                // Stops list
+                if isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView("Cargando paradas...")
+                        Spacer()
+                    }
+                    .padding(.vertical, 40)
+                } else if stops.isEmpty {
+                    Text("No hay paradas disponibles")
+                        .foregroundStyle(.secondary)
+                        .padding()
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
+                            NavigationLink(destination: StopDetailView(
+                                stop: stop,
+                                dataService: dataService,
+                                locationService: locationService,
+                                favoritesManager: nil
+                            )) {
+                                LineStopRowView(
+                                    stop: stop,
+                                    lineColor: lineColor,
+                                    isFirst: index == 0,
+                                    isLast: index == stops.count - 1,
+                                    dataService: dataService
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(line.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadData()
+        }
+    }
+
+    private func loadData() async {
+        isLoading = true
+
+        async let stopsTask: [Stop] = {
+            if let routeId = line.routeIds.first {
+                return await dataService.fetchStopsForRoute(routeId: routeId)
+            }
+            return []
+        }()
+
+        async let alertsTask = dataService.fetchAlertsForLine(line)
+
+        async let hoursTask: OperatingHoursResult? = {
+            if let routeId = line.routeIds.first {
+                return await dataService.fetchOperatingHours(routeId: routeId)
+            }
+            return nil
+        }()
+
+        stops = await stopsTask
+        alerts = await alertsTask
+        operatingHoursResult = await hoursTask
+        isLoading = false
+    }
+}
+
+// MARK: - Line Header View
+
+struct LineHeaderView: View {
+    let line: Line
+    let stopsCount: Int
+    let isLoading: Bool
+
+    var lineColor: Color {
+        Color(hex: line.colorHex) ?? .blue
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Line badge
+            Text(line.name)
+                .font(.title)
+                .fontWeight(.heavy)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(lineColor)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(line.longName)
+                    .font(.headline)
+                    .lineLimit(2)
+
+                HStack {
+                    Text(line.type.rawValue.capitalized)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    } else {
+                        Text("·")
+                            .foregroundStyle(.secondary)
+                        Text("\(stopsCount) paradas")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+}
+
+// MARK: - Alert Banner View
+
+// MARK: - Alerts Summary View (Expandable)
+
+struct AlertsSummaryView: View {
+    let alerts: [AlertResponse]
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header - always visible, tappable
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("\(alerts.count) aviso\(alerts.count == 1 ? "" : "s")")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Preview: show first 2 alerts (collapsed)
+            if !isExpanded {
+                ForEach(alerts.prefix(2)) { alert in
+                    AlertBannerCompactView(alert: alert)
+                }
+                if alerts.count > 2 {
+                    Text("Toca para ver \(alerts.count - 2) mas...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // Expanded: show all alerts
+            if isExpanded {
+                ForEach(alerts) { alert in
+                    AlertBannerView(alert: alert)
+                }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Alert Banner Compact View
+
+struct AlertBannerCompactView: View {
+    let alert: AlertResponse
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(Color.orange)
+                .frame(width: 6, height: 6)
+                .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 2) {
+                if let header = alert.headerText, !header.isEmpty {
+                    Text(header)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+                if let description = alert.descriptionText, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Alert Banner View (Full)
+
+struct AlertBannerView: View {
+    let alert: AlertResponse
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 4) {
+                if let header = alert.headerText, !header.isEmpty {
+                    Text(header)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+                if let description = alert.descriptionText, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(10)
+    }
+}
+
+// MARK: - Line Stop Row View
+
+struct LineStopRowView: View {
+    let stop: Stop
+    let lineColor: Color
+    let isFirst: Bool
+    let isLast: Bool
+    let dataService: DataService
+
+    /// Format line name: "c4a" → "C4a", "l10b" → "L10b", "ml1" → "ML1"
+    private func formatLineName(_ name: String) -> String {
+        let lowercased = name.lowercased()
+
+        // Handle ML prefix specially (2 chars)
+        if lowercased.hasPrefix("ml") {
+            let rest = String(lowercased.dropFirst(2))
+            return "ML" + rest
+        }
+
+        // Handle single-char prefixes (C, L, R, T, S)
+        if let first = lowercased.first, first.isLetter {
+            let rest = String(lowercased.dropFirst())
+            return String(first).uppercased() + rest
+        }
+
+        return name
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Vertical line with stop circle
+            VStack(spacing: 0) {
+                if !isFirst {
+                    Rectangle()
+                        .fill(lineColor)
+                        .frame(width: 3, height: 20)
+                } else {
+                    Spacer()
+                        .frame(width: 3, height: 20)
+                }
+
+                Circle()
+                    .fill(lineColor)
+                    .frame(width: 14, height: 14)
+                    .overlay(
+                        Circle()
+                            .stroke(Color(.systemBackground), lineWidth: 2)
+                    )
+
+                if !isLast {
+                    Rectangle()
+                        .fill(lineColor)
+                        .frame(width: 3, height: 20)
+                } else {
+                    Spacer()
+                        .frame(width: 3, height: 20)
+                }
+            }
+
+            // Stop info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stop.name)
+                    .font(isFirst || isLast ? .headline : .body)
+                    .fontWeight(isFirst || isLast ? .bold : .regular)
+
+                // Show connections if any
+                if !stop.connectionLineIds.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(stop.connectionLineIds.prefix(5), id: \.self) { lineId in
+                            let badgeColor = dataService.getLine(by: lineId)?.color ?? .gray
+                            Text(formatLineName(lineId))
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(badgeColor)
+                                .cornerRadius(3)
+                        }
+                    }
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemBackground))
+    }
+}
+
+#Preview {
+    NavigationStack {
+        LineDetailView(
+            line: Line(
+                id: "c3",
+                name: "C3",
+                longName: "Sol - Aranjuez",
+                type: .cercanias,
+                colorHex: "#813380",
+                nucleo: "madrid",
+                routeIds: ["RENFE_C3_34"]
+            ),
+            dataService: DataService(),
+            locationService: LocationService()
+        )
+    }
+}

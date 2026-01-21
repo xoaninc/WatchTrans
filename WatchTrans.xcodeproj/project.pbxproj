@@ -1,0 +1,1280 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DE27E0302F17171500DD3818 /* WatchTrans Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DE27E02F2F17171500DD3818 /* WatchTrans Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DEC642682F1728F0002D9435 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEC642672F1728F0002D9435 /* WidgetKit.framework */; };
+		DEC6426A2F1728F0002D9435 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEC642692F1728F0002D9435 /* SwiftUI.framework */; };
+		DEC642772F1728F1002D9435 /* WatchTransWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DEC642652F1728F0002D9435 /* WatchTransWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DE12B34E2F2070CA001E6C39 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE12B33E2F2070C9001E6C39;
+			remoteInfo = "WatchTrans iOS";
+		};
+		DE12B3582F2070CA001E6C39 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE12B33E2F2070C9001E6C39;
+			remoteInfo = "WatchTrans iOS";
+		};
+		DE27E0312F17171500DD3818 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE27E02E2F17171500DD3818;
+			remoteInfo = "WatchTrans Watch App";
+		};
+		DE27E03F2F17171600DD3818 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE27E02E2F17171500DD3818;
+			remoteInfo = "WatchTrans Watch App";
+		};
+		DE27E0492F17171600DD3818 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE27E02E2F17171500DD3818;
+			remoteInfo = "WatchTrans Watch App";
+		};
+		DEC642752F1728F1002D9435 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE27E0232F17171400DD3818 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DEC642642F1728F0002D9435;
+			remoteInfo = WatchTransWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DE27E0552F17171600DD3818 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				DE27E0302F17171500DD3818 /* WatchTrans Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEC642782F1728F1002D9435 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DEC642772F1728F1002D9435 /* WatchTransWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		DE12B33F2F2070C9001E6C39 /* WatchTrans iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WatchTrans iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE12B34D2F2070CA001E6C39 /* WatchTrans iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE12B3572F2070CA001E6C39 /* WatchTrans iOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans iOSUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE27E0292F17171400DD3818 /* WatchTrans.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WatchTrans.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE27E02F2F17171500DD3818 /* WatchTrans Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WatchTrans Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE27E03E2F17171600DD3818 /* WatchTrans Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE27E0482F17171600DD3818 /* WatchTrans Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WatchTrans Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE9255C52F1C253300E2113D /* WatchTransWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WatchTransWidgetExtension.entitlements; sourceTree = "<group>"; };
+		DEC642652F1728F0002D9435 /* WatchTransWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WatchTransWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DEC642672F1728F0002D9435 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DEC642692F1728F0002D9435 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DEC6427B2F1728F1002D9435 /* Exceptions for "WatchTransWidget" folder in "WatchTransWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DEC642642F1728F0002D9435 /* WatchTransWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		DE12B3402F2070C9001E6C39 /* WatchTrans iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans iOS";
+			sourceTree = "<group>";
+		};
+		DE12B3502F2070CA001E6C39 /* WatchTrans iOSTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans iOSTests";
+			sourceTree = "<group>";
+		};
+		DE12B35A2F2070CA001E6C39 /* WatchTrans iOSUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans iOSUITests";
+			sourceTree = "<group>";
+		};
+		DE27E0332F17171500DD3818 /* WatchTrans Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans Watch App";
+			sourceTree = "<group>";
+		};
+		DE27E0412F17171600DD3818 /* WatchTrans Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans Watch AppTests";
+			sourceTree = "<group>";
+		};
+		DE27E04B2F17171600DD3818 /* WatchTrans Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "WatchTrans Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		DEC6426B2F1728F0002D9435 /* WatchTransWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DEC6427B2F1728F1002D9435 /* Exceptions for "WatchTransWidget" folder in "WatchTransWidgetExtension" target */,
+			);
+			path = WatchTransWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DE12B33C2F2070C9001E6C39 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B34A2F2070CA001E6C39 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B3542F2070CA001E6C39 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E02C2F17171500DD3818 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E03B2F17171600DD3818 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E0452F17171600DD3818 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEC642622F1728F0002D9435 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DEC6426A2F1728F0002D9435 /* SwiftUI.framework in Frameworks */,
+				DEC642682F1728F0002D9435 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DE27E0222F17171400DD3818 = {
+			isa = PBXGroup;
+			children = (
+				DE9255C52F1C253300E2113D /* WatchTransWidgetExtension.entitlements */,
+				DE27E0332F17171500DD3818 /* WatchTrans Watch App */,
+				DE27E0412F17171600DD3818 /* WatchTrans Watch AppTests */,
+				DE27E04B2F17171600DD3818 /* WatchTrans Watch AppUITests */,
+				DEC6426B2F1728F0002D9435 /* WatchTransWidget */,
+				DE12B3402F2070C9001E6C39 /* WatchTrans iOS */,
+				DE12B3502F2070CA001E6C39 /* WatchTrans iOSTests */,
+				DE12B35A2F2070CA001E6C39 /* WatchTrans iOSUITests */,
+				DEC642662F1728F0002D9435 /* Frameworks */,
+				DE27E02A2F17171400DD3818 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DE27E02A2F17171400DD3818 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DE27E0292F17171400DD3818 /* WatchTrans.app */,
+				DE27E02F2F17171500DD3818 /* WatchTrans Watch App.app */,
+				DE27E03E2F17171600DD3818 /* WatchTrans Watch AppTests.xctest */,
+				DE27E0482F17171600DD3818 /* WatchTrans Watch AppUITests.xctest */,
+				DEC642652F1728F0002D9435 /* WatchTransWidgetExtension.appex */,
+				DE12B33F2F2070C9001E6C39 /* WatchTrans iOS.app */,
+				DE12B34D2F2070CA001E6C39 /* WatchTrans iOSTests.xctest */,
+				DE12B3572F2070CA001E6C39 /* WatchTrans iOSUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DEC642662F1728F0002D9435 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DEC642672F1728F0002D9435 /* WidgetKit.framework */,
+				DEC642692F1728F0002D9435 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DE12B33E2F2070C9001E6C39 /* WatchTrans iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE12B3652F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOS" */;
+			buildPhases = (
+				DE12B33B2F2070C9001E6C39 /* Sources */,
+				DE12B33C2F2070C9001E6C39 /* Frameworks */,
+				DE12B33D2F2070C9001E6C39 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DE12B3402F2070C9001E6C39 /* WatchTrans iOS */,
+			);
+			name = "WatchTrans iOS";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans iOS";
+			productReference = DE12B33F2F2070C9001E6C39 /* WatchTrans iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DE12B34C2F2070CA001E6C39 /* WatchTrans iOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE12B3662F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOSTests" */;
+			buildPhases = (
+				DE12B3492F2070CA001E6C39 /* Sources */,
+				DE12B34A2F2070CA001E6C39 /* Frameworks */,
+				DE12B34B2F2070CA001E6C39 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE12B34F2F2070CA001E6C39 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DE12B3502F2070CA001E6C39 /* WatchTrans iOSTests */,
+			);
+			name = "WatchTrans iOSTests";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans iOSTests";
+			productReference = DE12B34D2F2070CA001E6C39 /* WatchTrans iOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DE12B3562F2070CA001E6C39 /* WatchTrans iOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE12B3672F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOSUITests" */;
+			buildPhases = (
+				DE12B3532F2070CA001E6C39 /* Sources */,
+				DE12B3542F2070CA001E6C39 /* Frameworks */,
+				DE12B3552F2070CA001E6C39 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE12B3592F2070CA001E6C39 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DE12B35A2F2070CA001E6C39 /* WatchTrans iOSUITests */,
+			);
+			name = "WatchTrans iOSUITests";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans iOSUITests";
+			productReference = DE12B3572F2070CA001E6C39 /* WatchTrans iOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DE27E0282F17171400DD3818 /* WatchTrans */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE27E0562F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans" */;
+			buildPhases = (
+				DE27E0272F17171400DD3818 /* Resources */,
+				DE27E0552F17171600DD3818 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE27E0322F17171500DD3818 /* PBXTargetDependency */,
+			);
+			name = WatchTrans;
+			packageProductDependencies = (
+			);
+			productName = WatchTrans;
+			productReference = DE27E0292F17171400DD3818 /* WatchTrans.app */;
+			productType = "com.apple.product-type.application.watchapp2-container";
+		};
+		DE27E02E2F17171500DD3818 /* WatchTrans Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE27E0522F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch App" */;
+			buildPhases = (
+				DE27E02B2F17171500DD3818 /* Sources */,
+				DE27E02C2F17171500DD3818 /* Frameworks */,
+				DE27E02D2F17171500DD3818 /* Resources */,
+				DEC642782F1728F1002D9435 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DEC642762F1728F1002D9435 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DE27E0332F17171500DD3818 /* WatchTrans Watch App */,
+			);
+			name = "WatchTrans Watch App";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans Watch App";
+			productReference = DE27E02F2F17171500DD3818 /* WatchTrans Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DE27E03D2F17171600DD3818 /* WatchTrans Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE27E0592F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch AppTests" */;
+			buildPhases = (
+				DE27E03A2F17171600DD3818 /* Sources */,
+				DE27E03B2F17171600DD3818 /* Frameworks */,
+				DE27E03C2F17171600DD3818 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE27E0402F17171600DD3818 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DE27E0412F17171600DD3818 /* WatchTrans Watch AppTests */,
+			);
+			name = "WatchTrans Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans Watch AppTests";
+			productReference = DE27E03E2F17171600DD3818 /* WatchTrans Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DE27E0472F17171600DD3818 /* WatchTrans Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE27E05C2F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch AppUITests" */;
+			buildPhases = (
+				DE27E0442F17171600DD3818 /* Sources */,
+				DE27E0452F17171600DD3818 /* Frameworks */,
+				DE27E0462F17171600DD3818 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE27E04A2F17171600DD3818 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DE27E04B2F17171600DD3818 /* WatchTrans Watch AppUITests */,
+			);
+			name = "WatchTrans Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "WatchTrans Watch AppUITests";
+			productReference = DE27E0482F17171600DD3818 /* WatchTrans Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DEC642642F1728F0002D9435 /* WatchTransWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DEC6427C2F1728F1002D9435 /* Build configuration list for PBXNativeTarget "WatchTransWidgetExtension" */;
+			buildPhases = (
+				DEC642612F1728F0002D9435 /* Sources */,
+				DEC642622F1728F0002D9435 /* Frameworks */,
+				DEC642632F1728F0002D9435 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DEC6426B2F1728F0002D9435 /* WatchTransWidget */,
+			);
+			name = WatchTransWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = WatchTransWidgetExtension;
+			productReference = DEC642652F1728F0002D9435 /* WatchTransWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DE27E0232F17171400DD3818 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					DE12B33E2F2070C9001E6C39 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					DE12B34C2F2070CA001E6C39 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = DE12B33E2F2070C9001E6C39;
+					};
+					DE12B3562F2070CA001E6C39 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = DE12B33E2F2070C9001E6C39;
+					};
+					DE27E0282F17171400DD3818 = {
+						CreatedOnToolsVersion = 26.1;
+					};
+					DE27E02E2F17171500DD3818 = {
+						CreatedOnToolsVersion = 26.1;
+					};
+					DE27E03D2F17171600DD3818 = {
+						CreatedOnToolsVersion = 26.1;
+						TestTargetID = DE27E02E2F17171500DD3818;
+					};
+					DE27E0472F17171600DD3818 = {
+						CreatedOnToolsVersion = 26.1;
+						TestTargetID = DE27E02E2F17171500DD3818;
+					};
+					DEC642642F1728F0002D9435 = {
+						CreatedOnToolsVersion = 26.1;
+					};
+				};
+			};
+			buildConfigurationList = DE27E0262F17171400DD3818 /* Build configuration list for PBXProject "WatchTrans" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DE27E0222F17171400DD3818;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = DE27E02A2F17171400DD3818 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DE27E0282F17171400DD3818 /* WatchTrans */,
+				DE27E02E2F17171500DD3818 /* WatchTrans Watch App */,
+				DE27E03D2F17171600DD3818 /* WatchTrans Watch AppTests */,
+				DE27E0472F17171600DD3818 /* WatchTrans Watch AppUITests */,
+				DEC642642F1728F0002D9435 /* WatchTransWidgetExtension */,
+				DE12B33E2F2070C9001E6C39 /* WatchTrans iOS */,
+				DE12B34C2F2070CA001E6C39 /* WatchTrans iOSTests */,
+				DE12B3562F2070CA001E6C39 /* WatchTrans iOSUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DE12B33D2F2070C9001E6C39 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B34B2F2070CA001E6C39 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B3552F2070CA001E6C39 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E0272F17171400DD3818 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E02D2F17171500DD3818 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E03C2F17171600DD3818 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E0462F17171600DD3818 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEC642632F1728F0002D9435 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DE12B33B2F2070C9001E6C39 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B3492F2070CA001E6C39 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE12B3532F2070CA001E6C39 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E02B2F17171500DD3818 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E03A2F17171600DD3818 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE27E0442F17171600DD3818 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEC642612F1728F0002D9435 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DE12B34F2F2070CA001E6C39 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE12B33E2F2070C9001E6C39 /* WatchTrans iOS */;
+			targetProxy = DE12B34E2F2070CA001E6C39 /* PBXContainerItemProxy */;
+		};
+		DE12B3592F2070CA001E6C39 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE12B33E2F2070C9001E6C39 /* WatchTrans iOS */;
+			targetProxy = DE12B3582F2070CA001E6C39 /* PBXContainerItemProxy */;
+		};
+		DE27E0322F17171500DD3818 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE27E02E2F17171500DD3818 /* WatchTrans Watch App */;
+			targetProxy = DE27E0312F17171500DD3818 /* PBXContainerItemProxy */;
+		};
+		DE27E0402F17171600DD3818 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE27E02E2F17171500DD3818 /* WatchTrans Watch App */;
+			targetProxy = DE27E03F2F17171600DD3818 /* PBXContainerItemProxy */;
+		};
+		DE27E04A2F17171600DD3818 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE27E02E2F17171500DD3818 /* WatchTrans Watch App */;
+			targetProxy = DE27E0492F17171600DD3818 /* PBXContainerItemProxy */;
+		};
+		DEC642762F1728F1002D9435 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DEC642642F1728F0002D9435 /* WatchTransWidgetExtension */;
+			targetProxy = DEC642752F1728F1002D9435 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		DE12B35F2F2070CA001E6C39 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "WatchTrans iOS/WatchTrans iOS.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WatchTrans necesita tu ubicación para mostrarte las paradas cercanas";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DE12B3602F2070CA001E6C39 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "WatchTrans iOS/WatchTrans iOS.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WatchTrans necesita tu ubicación para mostrarte las paradas cercanas";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DE12B3612F2070CA001E6C39 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WatchTrans iOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WatchTrans iOS";
+			};
+			name = Debug;
+		};
+		DE12B3622F2070CA001E6C39 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WatchTrans iOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WatchTrans iOS";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DE12B3632F2070CA001E6C39 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-iOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "WatchTrans iOS";
+			};
+			name = Debug;
+		};
+		DE12B3642F2070CA001E6C39 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-iOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "WatchTrans iOS";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DE27E0502F17171600DD3818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DE27E0512F17171600DD3818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		DE27E0532F17171600DD3818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=watchos*]" = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "WatchTrans Watch App/WatchTrans Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "WatchTrans-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WatchTrans needs your location to find nearby transport stops";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKWatchOnly = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		DE27E0542F17171600DD3818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=watchos*]" = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "WatchTrans Watch App/WatchTrans Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "WatchTrans-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "WatchTrans needs your location to find nearby transport stops";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKWatchOnly = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+		DE27E0572F17171600DD3818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DE27E0582F17171600DD3818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTrans;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DE27E05A2F17171600DD3818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WatchTrans Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WatchTrans Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		DE27E05B2F17171600DD3818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WatchTrans Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WatchTrans Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+		DE27E05D2F17171600DD3818 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "WatchTrans Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		DE27E05E2F17171600DD3818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "juan.WatchTrans-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "WatchTrans Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+		DEC642792F1728F1002D9435 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WatchTransWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchTransWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTransWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.watchkitapp.WatchTransWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		DEC6427A2F1728F1002D9435 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WatchTransWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L645S4SSLW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchTransWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchTransWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = juan.WatchTrans.watchkitapp.WatchTransWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DE12B3652F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE12B35F2F2070CA001E6C39 /* Debug */,
+				DE12B3602F2070CA001E6C39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE12B3662F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE12B3612F2070CA001E6C39 /* Debug */,
+				DE12B3622F2070CA001E6C39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE12B3672F2070CA001E6C39 /* Build configuration list for PBXNativeTarget "WatchTrans iOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE12B3632F2070CA001E6C39 /* Debug */,
+				DE12B3642F2070CA001E6C39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE27E0262F17171400DD3818 /* Build configuration list for PBXProject "WatchTrans" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE27E0502F17171600DD3818 /* Debug */,
+				DE27E0512F17171600DD3818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE27E0522F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE27E0532F17171600DD3818 /* Debug */,
+				DE27E0542F17171600DD3818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE27E0562F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE27E0572F17171600DD3818 /* Debug */,
+				DE27E0582F17171600DD3818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE27E0592F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE27E05A2F17171600DD3818 /* Debug */,
+				DE27E05B2F17171600DD3818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE27E05C2F17171600DD3818 /* Build configuration list for PBXNativeTarget "WatchTrans Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE27E05D2F17171600DD3818 /* Debug */,
+				DE27E05E2F17171600DD3818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DEC6427C2F1728F1002D9435 /* Build configuration list for PBXNativeTarget "WatchTransWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DEC642792F1728F1002D9435 /* Debug */,
+				DEC6427A2F1728F1002D9435 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DE27E0232F17171400DD3818 /* Project object */;
+}
