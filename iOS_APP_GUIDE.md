@@ -775,7 +775,76 @@ if let result = operatingHoursResult {
 
 ---
 
-## 9. Recursos
+## 9. Lógica de Visualización de Tiempos (GTFS-RT)
+
+### 9.1 Redes con GTFS-RT (Datos en Tiempo Real)
+
+Las siguientes redes proporcionan datos GTFS-RT con horarios precisos:
+
+| Red | Área | Líneas |
+|-----|------|--------|
+| Cercanías RENFE | Madrid, Barcelona, Sevilla, Valencia, Málaga, Bilbao, Asturias, Zaragoza | C1-C10, R1-R8 |
+| Rodalies de Catalunya | Barcelona | R1-R8 |
+| FGC (Ferrocarrils) | Barcelona | L6, L7, L8, S1, S2, R5, R6, R50, R60 |
+| Euskotren | País Vasco | E1, E2, E3 |
+| Metro Bilbao | Bilbao | L1, L2 |
+
+### 9.2 Redes SIN GTFS-RT (Solo Frecuencias)
+
+Estas redes solo proporcionan información de frecuencia, sin horarios precisos:
+
+| Red | Área | Líneas |
+|-----|------|--------|
+| Metro Madrid | Madrid | L1-L12, R |
+| Metro Ligero Madrid | Madrid | ML1, ML2, ML3 |
+| Metro Sevilla | Sevilla | L1 |
+| Tranvía | Varias ciudades | T1, T2, etc. |
+| TMB Metro Barcelona | Barcelona | L1-L11 |
+
+### 9.3 Lógica Implementada
+
+```swift
+/// Check if this line has GTFS-RT (real-time data with precise schedules)
+/// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, etc.
+/// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Tranvía (frequency-based only)
+var hasGTFSRT: Bool {
+    !frequencyBased
+}
+
+var arrivalTimeString: String {
+    let minutes = minutesUntilArrival
+
+    if minutes == 0 {
+        return "Now"
+    } else if minutes == 1 {
+        return "1 min"
+    } else if minutes >= 30 && hasGTFSRT {
+        // GTFS-RT lines: show actual time when >= 30 min away (e.g., "18:54")
+        return scheduledTimeString
+    } else if minutes > 30 {
+        // Frequency-based lines (no GTFS-RT): cap at +30 min
+        return "+ 30 min"
+    } else {
+        return "\(minutes) min"
+    }
+}
+```
+
+### 9.4 Comportamiento Visual
+
+| Tipo de Red | < 30 min | >= 30 min |
+|-------------|----------|-----------|
+| Con GTFS-RT (Cercanías, FGC, Euskotren...) | "5 min", "12 min" | "18:54" (hora real) |
+| Sin GTFS-RT (Metro, Tranvía...) | "5 min" + "(c/5)" frecuencia | "+ 30 min" |
+
+La barra de progreso cambia de color:
+- **Verde**: Tren a tiempo (GTFS-RT)
+- **Naranja**: Tren con retraso (GTFS-RT)
+- **Color de línea**: Metro/Tranvía (no hay info de retraso)
+
+---
+
+## 10. Recursos
 
 - **API Base URL**: `https://redcercanias.com/api/v1/gtfs`
 - **Repositorio API**: `/Users/juanmaciasgomez/Projects/renfeserver`
@@ -784,4 +853,4 @@ if let result = operatingHoursResult {
 ---
 
 *Documento creado: Enero 2026*
-*Última actualización: 21 Enero 2026 - Añadido soporte para servicios suspendidos*
+*Última actualización: 21 Enero 2026 - Añadida documentación completa de GTFS-RT*
