@@ -37,33 +37,29 @@ struct ArrivalCard: View {
                     .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
                     .frame(height: 4)
 
-                // Show frequency for Metro/ML/Tranvía, or time for Cercanías
-                // If arrival is > 30 min away (non-Cercanías), show "+ 30 min"
-                if arrival.frequencyBased, let headway = arrival.headwayMinutes {
-                    if arrival.minutesUntilArrival > 30 {
-                        let _ = print("⏱️ [ArrivalCard] \(arrival.lineName) freq-based, \(arrival.minutesUntilArrival) min > 30 → showing '+ 30 min'")
-                        Text("+ 30 min")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("c/\(headway) min")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                    }
-                } else if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
-                    // Non-Cercanías lines: cap at +30 min
-                    let _ = print("⏱️ [ArrivalCard] \(arrival.lineName) non-Cercanías, \(arrival.minutesUntilArrival) min > 30 → showing '+ 30 min'")
+                // Show actual minutes until arrival for all lines
+                // For frequency-based (Metro/ML): show minutes + frequency indicator
+                // For Cercanías >= 30 min: show actual time
+                // For non-Cercanías > 30 min: show "+ 30 min"
+                if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
                     Text("+ 30 min")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(arrival.arrivalTimeString)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 2) {
+                        Text(arrival.arrivalTimeString)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+
+                        // Show frequency indicator for Metro/ML/Tranvía
+                        if arrival.frequencyBased, let headway = arrival.headwayMinutes {
+                            Text("(c/\(headway))")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 // Platform badge (if available)

@@ -73,21 +73,24 @@ struct ArrivalRowView: View {
 
             // Time and platform
             VStack(alignment: .trailing, spacing: 4) {
-                // Time display
-                if arrival.frequencyBased, let headway = arrival.headwayMinutes {
-                    if arrival.minutesUntilArrival > 30 {
-                        Text("+ 30 min")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("c/\(headway) min")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    Text(arrival.arrivalTimeString)
+                // Time display - show actual minutes for all lines
+                if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
+                    Text("+ 30 min")
                         .font(.headline)
-                        .fontWeight(.bold)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(arrival.arrivalTimeString)
+                            .font(.headline)
+                            .fontWeight(.bold)
+
+                        // Show frequency indicator for Metro/ML/Tranvía
+                        if arrival.frequencyBased, let headway = arrival.headwayMinutes {
+                            Text("c/\(headway) min")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 // Platform badge (if available)
