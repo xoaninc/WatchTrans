@@ -86,7 +86,7 @@ struct ArrivalRowView: View {
 
                         // Show frequency indicator for Metro/ML/Tranvía
                         if arrival.frequencyBased, let headway = arrival.headwayMinutes {
-                            Text("c/\(headway) min")
+                            Text("freq. \(headway) min")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
