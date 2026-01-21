@@ -171,6 +171,12 @@ struct SearchResultRow: View {
     let locationService: LocationService
     let dataService: DataService
 
+    // Default colors for connection badges
+    private let defaultMetroColor = "#ED1C24"
+    private let defaultMlColor = "#3A7DDA"
+    private let defaultCercaniasColor = "#75B2E0"
+    private let defaultTranviaColor = "#E4002B"
+
     /// Format line name: "c4a" → "C4a", "l10b" → "L10b", "ml1" → "ML1"
     private func formatLineName(_ name: String) -> String {
         let lowercased = name.lowercased()
@@ -190,6 +196,50 @@ struct SearchResultRow: View {
         return name
     }
 
+    /// Parse comma-separated line string into array
+    private func parseLines(_ value: String?) -> [String] {
+        guard let value = value, !value.isEmpty else { return [] }
+        return value.split(separator: ",")
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// All connection badges: Cercanías → Metro → Metro Ligero → Tranvía
+    private var connectionBadges: [(name: String, color: Color)] {
+        var badges: [(String, Color)] = []
+
+        // Cercanías connections
+        for line in parseLines(stop.corCercanias) {
+            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
+            badges.append((line, color))
+        }
+
+        // Metro connections
+        for line in parseLines(stop.corMetro) {
+            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMetroColor) ?? .red
+            badges.append((line, color))
+        }
+
+        // Metro Ligero connections
+        for line in parseLines(stop.corMl) {
+            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
+            badges.append((line, color))
+        }
+
+        // Tranvía connections
+        for line in parseLines(stop.corTranvia) {
+            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red
+            badges.append((line, color))
+        }
+
+        return badges
+    }
+
+    /// Check if stop has any connections to show
+    private var hasConnections: Bool {
+        !connectionBadges.isEmpty
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Icon
@@ -203,22 +253,21 @@ struct SearchResultRow: View {
                     .font(.body)
                     .fontWeight(.medium)
 
-                // Connection lines
-                if !stop.connectionLineIds.isEmpty {
+                // Connection badges (Metro, Cercanías, Tranvía, ML)
+                if hasConnections {
                     HStack(spacing: 4) {
-                        ForEach(stop.connectionLineIds.prefix(6), id: \.self) { lineId in
-                            let badgeColor = dataService.getLine(by: lineId)?.color ?? .gray
-                            Text(formatLineName(lineId))
+                        ForEach(Array(connectionBadges.prefix(6).enumerated()), id: \.offset) { _, badge in
+                            Text(badge.name)
                                 .font(.caption2)
                                 .fontWeight(.bold)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(badgeColor)
+                                .background(badge.color)
                                 .cornerRadius(4)
                         }
-                        if stop.connectionLineIds.count > 6 {
-                            Text("+\(stop.connectionLineIds.count - 6)")
+                        if connectionBadges.count > 6 {
+                            Text("+\(connectionBadges.count - 6)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
