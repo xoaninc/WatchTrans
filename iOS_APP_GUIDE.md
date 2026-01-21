@@ -669,13 +669,119 @@ class SharedStorage {
 
 ---
 
-## 8. Recursos
+## 8. Detección de Servicios Suspendidos (Nuevo)
+
+### 8.1 API Response
+
+El endpoint `/api/v1/gtfs/routes/{route_id}/operating-hours` ahora incluye campos de suspensión:
+
+```json
+// Servicio SUSPENDIDO (ej: C9)
+{
+  "route_id": "RENFE_C9_41",
+  "route_short_name": "C9",
+  "weekday": null,
+  "friday": null,
+  "saturday": null,
+  "sunday": null,
+  "is_suspended": true,
+  "suspension_message": "#MadC9 Cercanías Madrid informa: por obras..."
+}
+
+// Servicio ACTIVO (ej: C5)
+{
+  "route_id": "RENFE_C5_38",
+  "route_short_name": "C5",
+  "weekday": { "first_departure": "05:01:00", "last_departure": "24:46:00", "total_trips": 3512 },
+  "friday": { ... },
+  "saturday": { ... },
+  "sunday": { ... },
+  "is_suspended": false,
+  "suspension_message": null
+}
+```
+
+### 8.2 Modelo Swift
+
+```swift
+// RenfeServerModels.swift
+struct RouteOperatingHoursResponse: Codable {
+    let routeId: String
+    let routeShortName: String
+    let weekday: DayOperatingHours?
+    let friday: DayOperatingHours?
+    let saturday: DayOperatingHours?
+    let sunday: DayOperatingHours?
+    let isSuspended: Bool?          // NUEVO
+    let suspensionMessage: String?  // NUEVO
+}
+
+// DataService.swift
+struct OperatingHoursResult {
+    let hoursString: String?
+    let isSuspended: Bool
+    let suspensionMessage: String?
+
+    static func hours(_ hours: String?) -> OperatingHoursResult {
+        OperatingHoursResult(hoursString: hours, isSuspended: false, suspensionMessage: nil)
+    }
+
+    static func suspended(message: String?) -> OperatingHoursResult {
+        OperatingHoursResult(hoursString: nil, isSuspended: true, suspensionMessage: message)
+    }
+}
+```
+
+### 8.3 Uso en la Vista
+
+```swift
+// LineDetailView.swift
+@State private var operatingHoursResult: OperatingHoursResult?
+
+// En el body:
+if let result = operatingHoursResult {
+    if result.isSuspended {
+        // Banner rojo de servicio suspendido
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "exclamationmark.octagon.fill")
+                    .foregroundStyle(.red)
+                Text("Servicio suspendido")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            if let message = result.suspensionMessage {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(10)
+    } else if let hours = result.hoursString {
+        // Horario normal
+        HStack {
+            Image(systemName: "clock")
+                .foregroundStyle(.blue)
+            Text("Apertura hoy: \(hours)")
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+}
+```
+
+---
+
+## 9. Recursos
 
 - **API Base URL**: `https://redcercanias.com/api/v1/gtfs`
 - **Repositorio API**: `/Users/juanmaciasgomez/Projects/renfeserver`
-- **App watchOS**: `/Users/juanmaciasgomez/Projects/watch_transport/WatchTransApp/WatchTrans`
+- **Repositorio App**: `https://github.com/xoaninc/WatchTrans`
 
 ---
 
 *Documento creado: Enero 2026*
-*Última actualización: Enero 2026*
+*Última actualización: 21 Enero 2026 - Añadido soporte para servicios suspendidos*
