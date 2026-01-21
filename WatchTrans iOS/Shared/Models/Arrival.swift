@@ -56,7 +56,16 @@ struct Arrival: Identifiable, Codable {
         return max(0, Int(interval / 60))
     }
 
+    /// Formatted scheduled time string (e.g., "18:54")
+    var scheduledTimeString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: scheduledTime)
+    }
+
     // Display string for arrival time
+    // For GTFS-RT lines (Cercanías): show minutes if <30, show time if >=30
+    // For frequency-based lines: show frequency or "+30 min"
     var arrivalTimeString: String {
         let minutes = minutesUntilArrival
 
@@ -64,6 +73,9 @@ struct Arrival: Identifiable, Codable {
             return "Now"
         } else if minutes == 1 {
             return "1 min"
+        } else if minutes >= 30 && isCercaniasLine {
+            // Cercanías with GTFS-RT: show actual time when >= 30 min away
+            return scheduledTimeString
         } else if minutes > 30 && !isCercaniasLine {
             // For all non-Cercanías lines (Metro, ML, Tranvía, etc.) cap at +30 min
             return "+ 30 min"
