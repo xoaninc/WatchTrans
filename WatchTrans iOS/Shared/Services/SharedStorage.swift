@@ -12,15 +12,15 @@ import Foundation
 ///
 /// SETUP REQUIRED IN XCODE:
 /// 1. Select WatchTrans iOS target -> Signing & Capabilities -> + Capability -> App Groups
-/// 2. Add group: "group.juan.WatchTrans.iOS"
+/// 2. Add group: "group.juan.WatchTrans"
 /// 3. Select iOS Widget Extension target -> Signing & Capabilities -> + Capability -> App Groups
-/// 4. Add same group: "group.juan.WatchTrans.iOS"
+/// 4. Add same group: "group.juan.WatchTrans"
 ///
 class SharedStorage {
     static let shared = SharedStorage()
 
     // App Group identifier - must match in Xcode capabilities
-    private let appGroupId = "group.juan.WatchTrans.iOS"
+    private let appGroupId = "group.juan.WatchTrans"
 
     // Keys for stored values
     private enum Keys {
