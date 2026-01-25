@@ -50,10 +50,20 @@ struct ArrivalProvider: AppIntentTimelineProvider {
     // Refresh interval: 2.5 minutes (150 seconds)
     private let refreshIntervalSeconds: TimeInterval = WidgetAPIConfig.refreshInterval
 
-    // Recommendations for widget gallery
-    // TODO: Once iOS companion app exists, improve this to read favorites from shared storage
+    // Recommendations for widget gallery - reads user's favorites from shared storage
     func recommendations() -> [AppIntentRecommendation<SelectStopIntent>] {
-        // Default recommendations with major hub stations
+        // Try to get user's favorites from shared storage
+        let favorites = SharedStorage.shared.getFavorites()
+
+        if !favorites.isEmpty {
+            // Use user's favorites as recommendations
+            return favorites.map { favorite in
+                let intent = SelectStopIntent(stop: StopEntity(id: favorite.stopId, name: favorite.stopName))
+                return AppIntentRecommendation(intent: intent, description: favorite.stopName)
+            }
+        }
+
+        // Fallback: Default recommendations with major hub stations
         let defaultStops = [
             ("RENFE_18000", "Atocha RENFE"),
             ("RENFE_17000", "Chamartín RENFE"),
@@ -339,7 +349,7 @@ enum WidgetError: Error, CustomStringConvertible {
 // cannot import code from the main app target in watchOS.
 // Keep in sync with WatchTrans Watch App/Services/SharedStorage.swift
 
-/// Shared storage for reading location from main app (read-only in widget)
+/// Shared storage for reading location and favorites from main app (read-only in widget)
 class SharedStorage {
     static let shared = SharedStorage()
 
@@ -350,6 +360,13 @@ class SharedStorage {
         static let lastLongitude = "lastLongitude"
         static let lastLocationTimestamp = "lastLocationTimestamp"
         static let lastNucleoName = "lastNucleoName"
+        static let favorites = "favorites"
+    }
+
+    /// Simple favorite structure for sharing via UserDefaults
+    struct SharedFavorite: Codable {
+        let stopId: String
+        let stopName: String
     }
 
     private var sharedDefaults: UserDefaults? {
@@ -384,6 +401,20 @@ class SharedStorage {
     /// Get last known nucleo name
     func getNucleoName() -> String? {
         defaults.string(forKey: Keys.lastNucleoName)
+    }
+
+    /// Get favorites from shared storage
+    func getFavorites() -> [SharedFavorite] {
+        guard let data = defaults.data(forKey: Keys.favorites) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedFavorite].self, from: data)
+        } catch {
+            print("⚠️ [Widget] Failed to decode favorites: \(error)")
+            return []
+        }
     }
 }
 

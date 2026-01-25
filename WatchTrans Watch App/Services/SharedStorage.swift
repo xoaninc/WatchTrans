@@ -29,6 +29,13 @@ class SharedStorage {
         static let lastLocationTimestamp = "lastLocationTimestamp"
         static let lastNucleoName = "lastNucleoName"
         static let lastNucleoId = "lastNucleoId"
+        static let favorites = "favorites"
+    }
+
+    /// Simple favorite structure for sharing via UserDefaults
+    struct SharedFavorite: Codable {
+        let stopId: String
+        let stopName: String
     }
 
     // Shared UserDefaults suite
@@ -120,5 +127,38 @@ class SharedStorage {
         defaults.removeObject(forKey: Keys.lastLocationTimestamp)
         defaults.removeObject(forKey: Keys.lastNucleoName)
         defaults.removeObject(forKey: Keys.lastNucleoId)
+        defaults.removeObject(forKey: Keys.favorites)
+    }
+
+    // MARK: - Favorites Storage
+
+    /// Save favorites to shared storage (call when favorites change)
+    func saveFavorites(_ favorites: [SharedFavorite]) {
+        do {
+            let data = try JSONEncoder().encode(favorites)
+            defaults.set(data, forKey: Keys.favorites)
+            print("📍 [SharedStorage] Saved \(favorites.count) favorites")
+        } catch {
+            print("⚠️ [SharedStorage] Failed to encode favorites: \(error)")
+        }
+    }
+
+    /// Get favorites from shared storage
+    func getFavorites() -> [SharedFavorite] {
+        guard let data = defaults.data(forKey: Keys.favorites) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedFavorite].self, from: data)
+        } catch {
+            print("⚠️ [SharedStorage] Failed to decode favorites: \(error)")
+            return []
+        }
+    }
+
+    /// Get last known nucleo name (convenience for widget)
+    func getNucleoName() -> String? {
+        defaults.string(forKey: Keys.lastNucleoName)
     }
 }

@@ -30,10 +30,21 @@ class FavoritesManager {
 
         do {
             favorites = try modelContext.fetch(descriptor)
+            syncToSharedStorage()
         } catch {
             print("Failed to load favorites: \(error)")
             favorites = []
         }
+    }
+
+    // MARK: - Shared Storage Sync
+
+    /// Sync favorites to SharedStorage for widget access
+    private func syncToSharedStorage() {
+        let sharedFavorites = favorites.map { favorite in
+            SharedStorage.SharedFavorite(stopId: favorite.stopId, stopName: favorite.stopName)
+        }
+        SharedStorage.shared.saveFavorites(sharedFavorites)
     }
 
     // Check if a stop is favorited
