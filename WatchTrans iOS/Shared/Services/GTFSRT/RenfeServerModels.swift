@@ -105,6 +105,7 @@ struct NetworkResponse: Codable, Identifiable {
     let description: String?
     let nucleoIdRenfe: Int?  // Legacy Renfe nucleo ID for compatibility
     let routeCount: Int
+    let transportType: String?  // "cercanias", "metro", "metro_ligero", "tranvia", "fgc", "euskotren", "other"
 
     var id: String { code }
 
@@ -115,6 +116,7 @@ struct NetworkResponse: Codable, Identifiable {
         case wikipediaUrl = "wikipedia_url"
         case nucleoIdRenfe = "nucleo_id_renfe"
         case routeCount = "route_count"
+        case transportType = "transport_type"
     }
 }
 
@@ -166,6 +168,7 @@ struct StopResponse: Codable, Identifiable {
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
     let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
+    let isHub: Bool?           // true if station has 2+ different transport types
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, code, province, accesibilidad, lineas
@@ -178,6 +181,7 @@ struct StopResponse: Codable, Identifiable {
         case corMl = "cor_ml"
         case corCercanias = "cor_cercanias"
         case corTranvia = "cor_tranvia"
+        case isHub = "is_hub"
     }
 
     /// Parse lineas string into array of line IDs
@@ -236,8 +240,15 @@ struct TripStopResponse: Codable {
 struct NetworkInfo: Codable, Identifiable {
     let code: String
     let name: String
+    let transportType: String?  // "cercanias", "metro", "metro_ligero", "tranvia", "fgc", "euskotren", "other"
 
     var id: String { code }
+
+    init(code: String, name: String, transportType: String? = nil) {
+        self.code = code
+        self.name = name
+        self.transportType = transportType
+    }
 }
 
 // MARK: - Alert Response

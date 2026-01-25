@@ -21,6 +21,7 @@ struct Stop: Identifiable, Equatable {
     let hasParking: Bool
     let hasBusConnection: Bool
     let hasMetroConnection: Bool
+    let isHub: Bool           // true if station has 2+ different transport types
 
     // Connection details - Metro, Metro Ligero, Cercanías, and Tram line numbers
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
@@ -31,6 +32,7 @@ struct Stop: Identifiable, Equatable {
     init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String],
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
+         isHub: Bool = false,
          corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil, corTranvia: String? = nil) {
         self.id = id
         self.name = name
@@ -42,6 +44,7 @@ struct Stop: Identifiable, Equatable {
         self.hasParking = hasParking
         self.hasBusConnection = hasBusConnection
         self.hasMetroConnection = hasMetroConnection
+        self.isHub = isHub
         self.corMetro = corMetro
         self.corMl = corMl
         self.corCercanias = corCercanias
@@ -77,7 +80,7 @@ extension Stop: Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, latitude, longitude, connectionLineIds
         case province, accesibilidad
-        case hasParking, hasBusConnection, hasMetroConnection
+        case hasParking, hasBusConnection, hasMetroConnection, isHub
         case corMetro, corMl, corCercanias, corTranvia
     }
 
@@ -93,6 +96,7 @@ extension Stop: Codable {
         hasParking = try container.decodeIfPresent(Bool.self, forKey: .hasParking) ?? false
         hasBusConnection = try container.decodeIfPresent(Bool.self, forKey: .hasBusConnection) ?? false
         hasMetroConnection = try container.decodeIfPresent(Bool.self, forKey: .hasMetroConnection) ?? false
+        isHub = try container.decodeIfPresent(Bool.self, forKey: .isHub) ?? false
         corMetro = try container.decodeIfPresent(String.self, forKey: .corMetro)
         corMl = try container.decodeIfPresent(String.self, forKey: .corMl)
         corCercanias = try container.decodeIfPresent(String.self, forKey: .corCercanias)
