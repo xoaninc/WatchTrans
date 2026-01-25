@@ -115,15 +115,20 @@ class DataService {
         // Try new coordinate-based API first, fall back to nucleo-based if needed
         do {
             // 0. Fetch networks to get transport types (only if not cached)
+            // This is non-critical - if it fails, we continue without transport type info
             if networkTransportTypes.isEmpty {
                 print("📍 [DataService] Step 0: Fetching networks for transport types...")
-                let networks = try await gtfsRealtimeService.fetchNetworks()
-                for network in networks {
-                    if let transportType = network.transportType {
-                        networkTransportTypes[network.code] = transportType
+                do {
+                    let networks = try await gtfsRealtimeService.fetchNetworks()
+                    for network in networks {
+                        if let transportType = network.transportType {
+                            networkTransportTypes[network.code] = transportType
+                        }
                     }
+                    print("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
+                } catch {
+                    print("⚠️ [DataService] Failed to fetch networks (non-critical): \(error)")
                 }
-                print("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
             }
 
             // 1. Fetch stops by coordinates (includes province detection)
