@@ -30,10 +30,17 @@ class SharedStorage {
         static let lastNucleoName = "lastNucleoName"
         static let lastNucleoId = "lastNucleoId"
         static let favorites = "favorites"
+        static let hubStops = "hubStops"
     }
 
     /// Simple favorite structure for sharing via UserDefaults
     struct SharedFavorite: Codable {
+        let stopId: String
+        let stopName: String
+    }
+
+    /// Hub stop structure for sharing via UserDefaults
+    struct SharedHubStop: Codable {
         let stopId: String
         let stopName: String
     }
@@ -160,5 +167,32 @@ class SharedStorage {
     /// Get last known nucleo name (convenience for widget)
     func getNucleoName() -> String? {
         defaults.string(forKey: Keys.lastNucleoName)
+    }
+
+    // MARK: - Hub Stops Storage
+
+    /// Save hub stops to shared storage (stations with 2+ transport types)
+    func saveHubStops(_ stops: [SharedHubStop]) {
+        do {
+            let data = try JSONEncoder().encode(stops)
+            defaults.set(data, forKey: Keys.hubStops)
+            print("📍 [SharedStorage] Saved \(stops.count) hub stops")
+        } catch {
+            print("⚠️ [SharedStorage] Failed to encode hub stops: \(error)")
+        }
+    }
+
+    /// Get hub stops from shared storage
+    func getHubStops() -> [SharedHubStop] {
+        guard let data = defaults.data(forKey: Keys.hubStops) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedHubStop].self, from: data)
+        } catch {
+            print("⚠️ [SharedStorage] Failed to decode hub stops: \(error)")
+            return []
+        }
     }
 }

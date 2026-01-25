@@ -63,7 +63,16 @@ struct ArrivalProvider: AppIntentTimelineProvider {
             }
         }
 
-        // Fallback: Default recommendations with major hub stations
+        // Try to get cached hub stops from shared storage
+        let cachedHubs = SharedStorage.shared.getHubStops()
+        if !cachedHubs.isEmpty {
+            return cachedHubs.prefix(3).map { hub in
+                let intent = SelectStopIntent(stop: StopEntity(id: hub.stopId, name: hub.stopName))
+                return AppIntentRecommendation(intent: intent, description: hub.stopName)
+            }
+        }
+
+        // Ultimate fallback: Default recommendations with major hub stations
         let defaultStops = [
             ("RENFE_18000", "Atocha RENFE"),
             ("RENFE_17000", "Chamartín RENFE"),
@@ -327,6 +336,12 @@ struct WidgetStop: Codable {
     let name: String
     let lat: Double
     let lon: Double
+    let isHub: Bool?  // true if station has 2+ different transport types
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, lat, lon
+        case isHub = "is_hub"
+    }
 }
 
 // Custom error type for better debugging
@@ -361,10 +376,17 @@ class SharedStorage {
         static let lastLocationTimestamp = "lastLocationTimestamp"
         static let lastNucleoName = "lastNucleoName"
         static let favorites = "favorites"
+        static let hubStops = "hubStops"
     }
 
     /// Simple favorite structure for sharing via UserDefaults
     struct SharedFavorite: Codable {
+        let stopId: String
+        let stopName: String
+    }
+
+    /// Hub stop structure for sharing via UserDefaults
+    struct SharedHubStop: Codable {
         let stopId: String
         let stopName: String
     }
@@ -413,6 +435,20 @@ class SharedStorage {
             return try JSONDecoder().decode([SharedFavorite].self, from: data)
         } catch {
             print("⚠️ [Widget] Failed to decode favorites: \(error)")
+            return []
+        }
+    }
+
+    /// Get hub stops from shared storage (stations with 2+ transport types)
+    func getHubStops() -> [SharedHubStop] {
+        guard let data = defaults.data(forKey: Keys.hubStops) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedHubStop].self, from: data)
+        } catch {
+            print("⚠️ [Widget] Failed to decode hub stops: \(error)")
             return []
         }
     }

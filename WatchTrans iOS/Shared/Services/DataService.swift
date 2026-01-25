@@ -166,6 +166,14 @@ class DataService {
             }
             print("📍 [DataService] ✅ Mapped \(stops.count) stops to Stop model")
 
+            // Save hub stops for widget recommendations
+            let hubStops = stops.filter { $0.isHub }.map {
+                SharedStorage.SharedHubStop(stopId: $0.id, stopName: $0.name)
+            }
+            if !hubStops.isEmpty {
+                SharedStorage.shared.saveHubStops(hubStops)
+            }
+
             // 2. Fetch routes by coordinates
             print("📍 [DataService] Step 2: Fetching routes by coordinates...")
             let routesStart = Date()
