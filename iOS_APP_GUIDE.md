@@ -781,13 +781,14 @@ if let result = operatingHoursResult {
 
 Las siguientes redes proporcionan datos GTFS-RT con horarios precisos:
 
-| Red | Área | Líneas |
-|-----|------|--------|
-| Cercanías RENFE | Madrid, Barcelona, Sevilla, Valencia, Málaga, Bilbao, Asturias, Zaragoza | C1-C10, R1-R8 |
-| Rodalies de Catalunya | Barcelona | R1-R8 |
-| FGC (Ferrocarrils) | Barcelona | L6, L7, L8, S1, S2, R5, R6, R50, R60 |
-| Euskotren | País Vasco | E1, E2, E3 |
-| Metro Bilbao | Bilbao | L1, L2 |
+| Red | Área | Líneas | Formato |
+|-----|------|--------|---------|
+| Cercanías RENFE | Madrid, Barcelona, Sevilla, Valencia, Málaga, Bilbao, Asturias, Zaragoza | C1-C10, R1-R8 | JSON |
+| Rodalies de Catalunya | Barcelona | R1-R8 | JSON |
+| FGC (Ferrocarrils) | Barcelona | L6, L7, L8, S1, S2, R5, R6, R50, R60 | Protobuf |
+| Euskotren | País Vasco | E1, E2, E3 | Protobuf |
+| Metro Bilbao | Bilbao | L1, L2 | Protobuf |
+| TMB Metro Barcelona | Barcelona | L1-L11 | API iMetro |
 
 ### 9.2 Redes SIN GTFS-RT (Solo Frecuencias)
 
@@ -799,14 +800,13 @@ Estas redes solo proporcionan información de frecuencia, sin horarios precisos:
 | Metro Ligero Madrid | Madrid | ML1, ML2, ML3 |
 | Metro Sevilla | Sevilla | L1 |
 | Tranvía | Varias ciudades | T1, T2, etc. |
-| TMB Metro Barcelona | Barcelona | L1-L11 |
 
 ### 9.3 Lógica Implementada
 
 ```swift
 /// Check if this line has GTFS-RT (real-time data with precise schedules)
-/// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, etc.
-/// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Tranvía (frequency-based only)
+/// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, TMB Metro Barcelona
+/// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Metro Ligero, Tranvía (frequency-based only)
 var hasGTFSRT: Bool {
     !frequencyBased
 }
@@ -834,8 +834,8 @@ var arrivalTimeString: String {
 
 | Tipo de Red | < 30 min | >= 30 min |
 |-------------|----------|-----------|
-| Con GTFS-RT (Cercanías, FGC, Euskotren...) | "5 min", "12 min" | "18:54" (hora real) |
-| Sin GTFS-RT (Metro, Tranvía...) | "5 min" + "(c/5)" frecuencia | "+ 30 min" |
+| Con GTFS-RT (Cercanías, FGC, Euskotren, TMB...) | "5 min", "12 min" | "18:54" (hora real) |
+| Sin GTFS-RT (Metro Madrid, ML, Tranvía...) | "5 min" + "(c/5)" frecuencia | "+ 30 min" |
 
 La barra de progreso cambia de color:
 - **Verde**: Tren a tiempo (GTFS-RT)
@@ -853,4 +853,4 @@ La barra de progreso cambia de color:
 ---
 
 *Documento creado: Enero 2026*
-*Última actualización: 21 Enero 2026 - Añadida documentación completa de GTFS-RT*
+*Última actualización: 25 Enero 2026 - Corregido: TMB Metro Barcelona SÍ tiene GTFS-RT (API iMetro)*

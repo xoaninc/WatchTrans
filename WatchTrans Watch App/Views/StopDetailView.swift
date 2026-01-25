@@ -18,6 +18,7 @@ struct StopDetailView: View {
     @State private var departures: [Arrival] = []
     @State private var alerts: [AlertResponse] = []
     @State private var isLoading = true
+    @State private var hasLoadedOnce = false
     @State private var refreshTimer: Timer?
     @State private var refreshTrigger = UUID()
 
@@ -219,11 +220,15 @@ struct StopDetailView: View {
     }
 
     private func loadData() async {
-        isLoading = true
+        // Solo mostrar spinner en la primera carga, no en auto-refresh
+        if !hasLoadedOnce {
+            isLoading = true
+        }
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         departures = await departuresTask
         alerts = await alertsTask
+        hasLoadedOnce = true
         isLoading = false
     }
 

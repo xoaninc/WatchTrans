@@ -353,6 +353,7 @@ struct StopCardView: View {
     @State private var arrivals: [Arrival] = []
     @State private var alerts: [AlertResponse] = []
     @State private var isLoadingArrivals = false
+    @State private var hasLoadedOnce = false
 
     var body: some View {
         NavigationLink(destination: StopDetailView(
@@ -461,11 +462,15 @@ struct StopCardView: View {
     }
 
     private func loadData() async {
-        isLoadingArrivals = true
+        // Solo mostrar spinner en la primera carga, no en auto-refresh
+        if !hasLoadedOnce {
+            isLoadingArrivals = true
+        }
         async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         arrivals = await arrivalsTask
         alerts = await alertsTask
+        hasLoadedOnce = true
         isLoadingArrivals = false
     }
 }

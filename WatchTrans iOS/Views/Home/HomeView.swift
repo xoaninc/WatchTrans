@@ -276,6 +276,7 @@ struct StopCardView: View {
 
     @State private var arrivals: [Arrival] = []
     @State private var isLoading = false
+    @State private var hasLoadedOnce = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -357,9 +358,13 @@ struct StopCardView: View {
 
     private func loadArrivals() async {
         print("📱 [StopCard] Cargando llegadas para: \(stop.name) (id: \(stop.id))")
-        isLoading = true
+        // Solo mostrar spinner en la primera carga, no en auto-refresh
+        if !hasLoadedOnce {
+            isLoading = true
+        }
         arrivals = await dataService.fetchArrivals(for: stop.id)
         print("📱 [StopCard] \(stop.name): \(arrivals.count) llegadas obtenidas")
+        hasLoadedOnce = true
         isLoading = false
     }
 }
