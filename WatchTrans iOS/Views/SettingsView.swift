@@ -62,25 +62,29 @@ struct SettingsView: View {
 
                 // Links section
                 Section {
-                    Link(destination: URL(string: "https://redcercanias.com")!) {
-                        HStack {
-                            Image(systemName: "globe")
-                            Text("Sitio web")
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    if let websiteURL = URL(string: "https://redcercanias.com") {
+                        Link(destination: websiteURL) {
+                            HStack {
+                                Image(systemName: "globe")
+                                Text("Sitio web")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
 
-                    Link(destination: URL(string: "https://github.com/anthropics/claude-code/issues")!) {
-                        HStack {
-                            Image(systemName: "exclamationmark.bubble")
-                            Text("Reportar problema")
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    if let issuesURL = URL(string: "https://github.com/anthropics/claude-code/issues") {
+                        Link(destination: issuesURL) {
+                            HStack {
+                                Image(systemName: "exclamationmark.bubble")
+                                Text("Reportar problema")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 } header: {
