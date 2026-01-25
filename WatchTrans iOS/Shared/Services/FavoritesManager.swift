@@ -8,6 +8,14 @@
 import Foundation
 import SwiftData
 
+/// Result of attempting to add a favorite
+enum AddFavoriteResult {
+    case success
+    case alreadyExists
+    case limitReached
+    case saveFailed(Error)
+}
+
 @Observable
 class FavoritesManager {
     private var modelContext: ModelContext
@@ -15,9 +23,17 @@ class FavoritesManager {
     var favorites: [Favorite] = []
     var maxFavorites: Int { APIConfiguration.maxFavorites }
 
+    /// Last error that occurred (observable for UI feedback)
+    var lastError: Error?
+
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         loadFavorites()
+    }
+
+    /// Clear the last error (call after showing error to user)
+    func clearError() {
+        lastError = nil
     }
 
     // MARK: - Public Methods
@@ -32,7 +48,8 @@ class FavoritesManager {
             favorites = try modelContext.fetch(descriptor)
             syncToSharedStorage()
         } catch {
-            print("Failed to load favorites: \(error)")
+            print("⚠️ [FavoritesManager] Failed to load favorites: \(error)")
+            lastError = error
             favorites = []
         }
     }
@@ -53,15 +70,15 @@ class FavoritesManager {
     }
 
     // Add a stop to favorites
-    func addFavorite(stop: Stop) -> Bool {
+    func addFavorite(stop: Stop) -> AddFavoriteResult {
         // Check if already favorited
         if isFavorite(stopId: stop.id) {
-            return false
+            return .alreadyExists
         }
 
         // Check if limit reached
         if favorites.count >= maxFavorites {
-            return false
+            return .limitReached
         }
 
         // Create and save favorite
@@ -77,10 +94,11 @@ class FavoritesManager {
         do {
             try modelContext.save()
             loadFavorites()
-            return true
+            return .success
         } catch {
-            print("Failed to save favorite: \(error)")
-            return false
+            print("⚠️ [FavoritesManager] Failed to save favorite: \(error)")
+            lastError = error
+            return .saveFailed(error)
         }
     }
 
@@ -96,7 +114,8 @@ class FavoritesManager {
             try modelContext.save()
             loadFavorites()
         } catch {
-            print("Failed to remove favorite: \(error)")
+            print("⚠️ [FavoritesManager] Failed to remove favorite: \(error)")
+            lastError = error
         }
     }
 
@@ -111,7 +130,8 @@ class FavoritesManager {
         do {
             try modelContext.save()
         } catch {
-            print("Failed to update usage count: \(error)")
+            print("⚠️ [FavoritesManager] Failed to update usage count: \(error)")
+            lastError = error
         }
     }
 

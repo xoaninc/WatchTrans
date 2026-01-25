@@ -23,6 +23,8 @@ struct StopDetailView: View {
     @State private var hasLoadedOnce = false
     @State private var refreshTimer: Timer?
     @State private var isAlertsExpanded = false
+    @State private var showFavoriteAlert = false
+    @State private var favoriteAlertMessage = ""
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -116,8 +118,20 @@ struct StopDetailView: View {
 
                         if manager.isFavorite(stopId: stop.id) {
                             manager.removeFavorite(stopId: stop.id)
-                        } else if manager.favorites.count < manager.maxFavorites {
-                            _ = manager.addFavorite(stop: stop)
+                        } else {
+                            let result = manager.addFavorite(stop: stop)
+                            switch result {
+                            case .success:
+                                break // Already handled by state update
+                            case .limitReached:
+                                favoriteAlertMessage = "Has alcanzado el limite de \(manager.maxFavorites) favoritos"
+                                showFavoriteAlert = true
+                            case .alreadyExists:
+                                break // Should not happen due to isFavorite check
+                            case .saveFailed(let error):
+                                favoriteAlertMessage = "Error al guardar: \(error.localizedDescription)"
+                                showFavoriteAlert = true
+                            }
                         }
                     } label: {
                         Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
@@ -125,6 +139,11 @@ struct StopDetailView: View {
                     }
                 }
             }
+        }
+        .alert("Favoritos", isPresented: $showFavoriteAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(favoriteAlertMessage)
         }
         .refreshable {
             dataService.clearArrivalCache()

@@ -16,6 +16,8 @@ struct HomeView: View {
 
     @State private var localRefreshTrigger = UUID()
     @State private var isRefreshing = false
+    @State private var showFavoriteAlert = false
+    @State private var favoriteAlertMessage = ""
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -73,6 +75,11 @@ struct HomeView: View {
             .refreshable {
                 dataService.clearArrivalCache()
                 localRefreshTrigger = UUID()
+            }
+            .alert("Favoritos", isPresented: $showFavoriteAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(favoriteAlertMessage)
             }
         }
     }
@@ -277,6 +284,8 @@ struct StopCardView: View {
     @State private var arrivals: [Arrival] = []
     @State private var isLoading = false
     @State private var hasLoadedOnce = false
+    @State private var showFavoriteAlert = false
+    @State private var favoriteAlertMessage = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -305,8 +314,20 @@ struct StopCardView: View {
 
                         if manager.isFavorite(stopId: stop.id) {
                             manager.removeFavorite(stopId: stop.id)
-                        } else if manager.favorites.count < manager.maxFavorites {
-                            _ = manager.addFavorite(stop: stop)
+                        } else {
+                            let result = manager.addFavorite(stop: stop)
+                            switch result {
+                            case .success:
+                                break
+                            case .limitReached:
+                                favoriteAlertMessage = "Has alcanzado el limite de \(manager.maxFavorites) favoritos"
+                                showFavoriteAlert = true
+                            case .alreadyExists:
+                                break
+                            case .saveFailed(let error):
+                                favoriteAlertMessage = "Error al guardar: \(error.localizedDescription)"
+                                showFavoriteAlert = true
+                            }
                         }
                     } label: {
                         Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
@@ -353,6 +374,11 @@ struct StopCardView: View {
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .task(id: refreshTrigger) {
             await loadArrivals()
+        }
+        .alert("Favoritos", isPresented: $showFavoriteAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(favoriteAlertMessage)
         }
     }
 

@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var favoritesManager: FavoritesManager?
     @State private var refreshTimer: Timer?
     @State private var refreshTrigger = UUID()  // Changes to trigger refresh
+    @State private var showFavoriteAlert = false
+    @State private var favoriteAlertMessage = ""
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -354,6 +356,8 @@ struct StopCardView: View {
     @State private var alerts: [AlertResponse] = []
     @State private var isLoadingArrivals = false
     @State private var hasLoadedOnce = false
+    @State private var showFavoriteAlert = false
+    @State private var favoriteAlertMessage = ""
 
     var body: some View {
         NavigationLink(destination: StopDetailView(
@@ -396,8 +400,20 @@ struct StopCardView: View {
 
                             if manager.isFavorite(stopId: stop.id) {
                                 manager.removeFavorite(stopId: stop.id)
-                            } else if manager.favorites.count < manager.maxFavorites {
-                                _ = manager.addFavorite(stop: stop)
+                            } else {
+                                let result = manager.addFavorite(stop: stop)
+                                switch result {
+                                case .success:
+                                    break
+                                case .limitReached:
+                                    favoriteAlertMessage = "Limite de \(manager.maxFavorites) favoritos"
+                                    showFavoriteAlert = true
+                                case .alreadyExists:
+                                    break
+                                case .saveFailed:
+                                    favoriteAlertMessage = "Error al guardar"
+                                    showFavoriteAlert = true
+                                }
                             }
                         } label: {
                             Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
@@ -458,6 +474,11 @@ struct StopCardView: View {
         .buttonStyle(.plain)
         .task(id: refreshTrigger) {
             await loadData()
+        }
+        .alert("Favoritos", isPresented: $showFavoriteAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(favoriteAlertMessage)
         }
     }
 
