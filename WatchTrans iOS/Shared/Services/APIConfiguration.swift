@@ -37,7 +37,7 @@ enum APIConfiguration {
     // MARK: - Limits
 
     /// Maximum favorites
-    static let maxFavorites = 5
+    static let maxFavorites = 3
 
     /// Default departures limit for API calls
     static let defaultDeparturesLimit = 20
