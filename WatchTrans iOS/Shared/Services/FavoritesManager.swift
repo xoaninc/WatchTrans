@@ -48,7 +48,7 @@ class FavoritesManager {
             favorites = try modelContext.fetch(descriptor)
             syncToSharedStorage()
         } catch {
-            print("⚠️ [FavoritesManager] Failed to load favorites: \(error)")
+            DebugLog.log("⚠️ [FavoritesManager] Failed to load favorites: \(error)")
             lastError = error
             favorites = []
         }
@@ -96,7 +96,7 @@ class FavoritesManager {
             loadFavorites()
             return .success
         } catch {
-            print("⚠️ [FavoritesManager] Failed to save favorite: \(error)")
+            DebugLog.log("⚠️ [FavoritesManager] Failed to save favorite: \(error)")
             lastError = error
             return .saveFailed(error)
         }
@@ -114,7 +114,7 @@ class FavoritesManager {
             try modelContext.save()
             loadFavorites()
         } catch {
-            print("⚠️ [FavoritesManager] Failed to remove favorite: \(error)")
+            DebugLog.log("⚠️ [FavoritesManager] Failed to remove favorite: \(error)")
             lastError = error
         }
     }
@@ -130,7 +130,7 @@ class FavoritesManager {
         do {
             try modelContext.save()
         } catch {
-            print("⚠️ [FavoritesManager] Failed to update usage count: \(error)")
+            DebugLog.log("⚠️ [FavoritesManager] Failed to update usage count: \(error)")
             lastError = error
         }
     }

@@ -50,7 +50,7 @@ class NetworkMonitor {
                 }
 
                 if let connected = self?.isConnected {
-                    print("📶 [NetworkMonitor] Connection: \(connected ? "Online" : "Offline")")
+                    DebugLog.log("📶 [NetworkMonitor] Connection: \(connected ? "Online" : "Offline")")
                 }
             }
         }

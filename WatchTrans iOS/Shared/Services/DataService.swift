@@ -105,12 +105,12 @@ class DataService {
         defer { isLoading = false }
 
         guard let lat = latitude, let lon = longitude else {
-            print("⚠️ [DataService] No coordinates provided - cannot load data")
+            DebugLog.log("⚠️ [DataService] No coordinates provided - cannot load data")
             return
         }
 
-        print("📍 [DataService] ========== LOADING DATA ==========")
-        print("📍 [DataService] Coordinates: (\(lat), \(lon))")
+        DebugLog.log("📍 [DataService] ========== LOADING DATA ==========")
+        DebugLog.log("📍 [DataService] Coordinates: (\(lat), \(lon))")
 
         let totalStart = Date()
 
@@ -119,7 +119,7 @@ class DataService {
             // 0. Fetch networks to get transport types (only if not cached)
             // This is non-critical - if it fails, we continue without transport type info
             if networkTransportTypes.isEmpty {
-                print("📍 [DataService] Step 0: Fetching networks for transport types...")
+                DebugLog.log("📍 [DataService] Step 0: Fetching networks for transport types...")
                 do {
                     let networks = try await gtfsRealtimeService.fetchNetworks()
                     for network in networks {
@@ -127,22 +127,22 @@ class DataService {
                             networkTransportTypes[network.code] = transportType
                         }
                     }
-                    print("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
+                    DebugLog.log("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
                 } catch {
-                    print("⚠️ [DataService] Failed to fetch networks (non-critical): \(error)")
+                    DebugLog.log("⚠️ [DataService] Failed to fetch networks (non-critical): \(error)")
                 }
             }
 
             // 1. Fetch stops by coordinates (includes province detection)
-            print("📍 [DataService] Step 1: Fetching stops by coordinates...")
+            DebugLog.log("📍 [DataService] Step 1: Fetching stops by coordinates...")
             let stopsStart = Date()
             let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
             let stopsTime = Date().timeIntervalSince(stopsStart)
-            print("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
+            DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
 
             // Debug: Show first 3 stops with province info
             for (i, stop) in stopResponses.prefix(3).enumerated() {
-                print("📍 [DataService]   [\(i)] \(stop.name) - province: \(stop.province ?? "nil")")
+                DebugLog.log("📍 [DataService]   [\(i)] \(stop.name) - province: \(stop.province ?? "nil")")
             }
 
             stops = stopResponses.map { response in
@@ -164,7 +164,7 @@ class DataService {
                     corTranvia: response.corTranvia
                 )
             }
-            print("📍 [DataService] ✅ Mapped \(stops.count) stops to Stop model")
+            DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops to Stop model")
 
             // Save hub stops for widget recommendations
             let hubStops = stops.filter { $0.isHub }.map {
@@ -175,21 +175,21 @@ class DataService {
             }
 
             // 2. Fetch routes by coordinates
-            print("📍 [DataService] Step 2: Fetching routes by coordinates...")
+            DebugLog.log("📍 [DataService] Step 2: Fetching routes by coordinates...")
             let routesStart = Date()
             let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: lat, longitude: lon)
             let routesTime = Date().timeIntervalSince(routesStart)
-            print("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
+            DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
 
             // Debug: Show networks found in routes
             let networkIds = Set(routeResponses.compactMap { $0.networkId })
-            print("📍 [DataService] Networks in routes: \(networkIds.sorted().joined(separator: ", "))")
+            DebugLog.log("📍 [DataService] Networks in routes: \(networkIds.sorted().joined(separator: ", "))")
 
             // Debug: Show route breakdown by agency
             let byAgency = Dictionary(grouping: routeResponses, by: { $0.agencyId })
             for (agency, routes) in byAgency.sorted(by: { $0.key < $1.key }) {
                 let shortNames = routes.map { $0.shortName }.sorted().joined(separator: ", ")
-                print("📍 [DataService]   \(agency): \(routes.count) routes (\(shortNames.prefix(50))...)")
+                DebugLog.log("📍 [DataService]   \(agency): \(routes.count) routes (\(shortNames.prefix(50))...)")
             }
 
             // Determine province name - from stops if available, otherwise detect from coordinates
@@ -200,15 +200,15 @@ class DataService {
                 // Use network to infer province (this is a fallback)
                 let networkIds = Set(routeResponses.compactMap { $0.networkId })
                 provinceName = inferProvinceFromNetworks(networkIds)
-                print("📍 [DataService] ⚠️ No stops returned, inferred province from networks: \(provinceName ?? "unknown")")
+                DebugLog.log("📍 [DataService] ⚠️ No stops returned, inferred province from networks: \(provinceName ?? "unknown")")
             }
 
             let finalProvinceName = provinceName ?? "WatchTrans"
-            print("📍 [DataService] Step 3: Processing routes with province: \(finalProvinceName)")
+            DebugLog.log("📍 [DataService] Step 3: Processing routes with province: \(finalProvinceName)")
             let processStart = Date()
             await processRoutes(routeResponses, provinceName: finalProvinceName)
             let processTime = Date().timeIntervalSince(processStart)
-            print("📍 [DataService] ✅ Processed routes in \(String(format: "%.2f", processTime))s")
+            DebugLog.log("📍 [DataService] ✅ Processed routes in \(String(format: "%.2f", processTime))s")
 
             // 3. Set current location context
             let networkCodes = Set(routeResponses.compactMap { $0.networkId })
@@ -221,25 +221,25 @@ class DataService {
                     networks: networks,
                     primaryNetworkName: primaryNetworkName
                 )
-                print("📍 [DataService] ✅ Location context set:")
-                print("📍 [DataService]   Province: \(province)")
-                print("📍 [DataService]   Primary network: \(primaryNetworkName ?? "none")")
-                print("📍 [DataService]   Networks: \(networkCodes.sorted().joined(separator: ", "))")
+                DebugLog.log("📍 [DataService] ✅ Location context set:")
+                DebugLog.log("📍 [DataService]   Province: \(province)")
+                DebugLog.log("📍 [DataService]   Primary network: \(primaryNetworkName ?? "none")")
+                DebugLog.log("📍 [DataService]   Networks: \(networkCodes.sorted().joined(separator: ", "))")
             } else {
-                print("📍 [DataService] ⚠️ Could not determine province - currentLocation is nil")
+                DebugLog.log("📍 [DataService] ⚠️ Could not determine province - currentLocation is nil")
             }
 
             let totalTime = Date().timeIntervalSince(totalStart)
-            print("📍 [DataService] ========== LOAD COMPLETE ==========")
-            print("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
-            print("⏱️ [DataService] TIMING SUMMARY:")
-            print("⏱️ [DataService]   Stops API: \(String(format: "%.2f", stopsTime))s")
-            print("⏱️ [DataService]   Routes API: \(String(format: "%.2f", routesTime))s")
-            print("⏱️ [DataService]   Processing: \(String(format: "%.2f", processTime))s")
-            print("⏱️ [DataService]   TOTAL: \(String(format: "%.2f", totalTime))s")
+            DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
+            DebugLog.log("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
+            DebugLog.log("⏱️ [DataService] TIMING SUMMARY:")
+            DebugLog.log("⏱️ [DataService]   Stops API: \(String(format: "%.2f", stopsTime))s")
+            DebugLog.log("⏱️ [DataService]   Routes API: \(String(format: "%.2f", routesTime))s")
+            DebugLog.log("⏱️ [DataService]   Processing: \(String(format: "%.2f", processTime))s")
+            DebugLog.log("⏱️ [DataService]   TOTAL: \(String(format: "%.2f", totalTime))s")
 
         } catch {
-            print("⚠️ [DataService] Failed to load transport data: \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to load transport data: \(error)")
             self.error = error
         }
     }
@@ -348,7 +348,7 @@ class DataService {
 
     /// Process route responses into Line models
     private func processRoutes(_ routeResponses: [RouteResponse], provinceName: String) async {
-        print("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
+        DebugLog.log("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
 
         // Group routes by short name to create lines, collecting all route IDs
         var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
@@ -403,10 +403,10 @@ class DataService {
 
         // Debug: Show lines by type
         let byType = Dictionary(grouping: lines, by: { $0.type })
-        print("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
+        DebugLog.log("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
         for (type, typeLines) in byType.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
             let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
-            print("🚃 [ProcessRoutes]   \(type.rawValue): \(typeLines.count) lines (\(names))")
+            DebugLog.log("🚃 [ProcessRoutes]   \(type.rawValue): \(typeLines.count) lines (\(names))")
         }
     }
 
@@ -414,19 +414,19 @@ class DataService {
     func fetchStopsForRoute(routeId: String) async -> [Stop] {
         do {
             let stopResponses = try await gtfsRealtimeService.fetchRouteStops(routeId: routeId)
-            print("🚏 [DataService] Fetched \(stopResponses.count) stops for route \(routeId)")
+            DebugLog.log("🚏 [DataService] Fetched \(stopResponses.count) stops for route \(routeId)")
             return stopResponses.map { response in
                 // DEBUG: Log correspondences - especially branch junction stations
                 let isBranchJunction = response.name.lowercased().contains("metropolitano") ||
                                        response.name.lowercased().contains("arganda") ||
                                        response.name.lowercased().contains("tres olivos")
                 if isBranchJunction || (response.corMetro != nil && response.corMetro!.contains("B")) {
-                    print("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
-                    print("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
-                    print("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
-                    print("🔗 [BRANCH]   cerc=\(response.corCercanias ?? "nil")")
+                    DebugLog.log("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
+                    DebugLog.log("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
+                    DebugLog.log("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
+                    DebugLog.log("🔗 [BRANCH]   cerc=\(response.corCercanias ?? "nil")")
                 } else if response.corMetro != nil || response.corCercanias != nil || response.corTranvia != nil || response.corMl != nil {
-                    print("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), cerc=\(response.corCercanias ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
+                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), cerc=\(response.corCercanias ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
                 }
                 return Stop(
                     id: response.id,
@@ -447,7 +447,7 @@ class DataService {
                 )
             }
         } catch {
-            print("⚠️ [DataService] Failed to fetch stops for route \(routeId): \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to fetch stops for route \(routeId): \(error)")
             return []
         }
     }
@@ -475,7 +475,7 @@ class DataService {
             dayType = "weekday"
             dayName = "L-J (weekday \(weekday))"
         }
-        print("📅 [HOURS] Fetching for \(routeId), dayType=\(dayType) (\(dayName))")
+        DebugLog.log("📅 [HOURS] Fetching for \(routeId), dayType=\(dayType) (\(dayName))")
 
         // Try frequencies first (Metro/ML/Tranvía)
         do {
@@ -484,15 +484,15 @@ class DataService {
             if !frequencies.isEmpty {
                 // DEBUG: Log all day types returned by API
                 let dayTypes = Set(frequencies.map { $0.dayType })
-                print("📅 [HOURS] API returned day types: \(dayTypes.sorted())")
+                DebugLog.log("📅 [HOURS] API returned day types: \(dayTypes.sorted())")
 
                 // Filter by current day type
                 let todayFrequencies = frequencies.filter { $0.dayType == dayType }
-                print("📅 [HOURS] Matched \(todayFrequencies.count) frequencies for '\(dayType)'")
+                DebugLog.log("📅 [HOURS] Matched \(todayFrequencies.count) frequencies for '\(dayType)'")
 
                 if !todayFrequencies.isEmpty {
                     let result = calculateOperatingHours(from: todayFrequencies)
-                    print("📅 [HOURS] ✅ From frequencies (\(dayType)): \(result)")
+                    DebugLog.log("📅 [HOURS] ✅ From frequencies (\(dayType)): \(result)")
                     return .hours(result)
                 }
 
@@ -502,13 +502,13 @@ class DataService {
                     let fallbackFrequencies = frequencies.filter { $0.dayType == fallback }
                     if !fallbackFrequencies.isEmpty {
                         let result = calculateOperatingHours(from: fallbackFrequencies)
-                        print("📅 [HOURS] ✅ From frequencies (\(fallback) fallback): \(result)")
+                        DebugLog.log("📅 [HOURS] ✅ From frequencies (\(fallback) fallback): \(result)")
                         return .hours(result)
                     }
                 }
             }
         } catch {
-            print("📅 [HOURS] Frequencies failed, trying operating-hours...")
+            DebugLog.log("📅 [HOURS] Frequencies failed, trying operating-hours...")
         }
 
         // Try operating-hours (Cercanías - from stop_times)
@@ -517,20 +517,20 @@ class DataService {
 
             // Check for suspended service first
             if hours.isSuspended == true {
-                print("📅 [HOURS] ⚠️ Service SUSPENDED for \(routeId): \(hours.suspensionMessage ?? "No message")")
+                DebugLog.log("📅 [HOURS] ⚠️ Service SUSPENDED for \(routeId): \(hours.suspensionMessage ?? "No message")")
                 return .suspended(message: hours.suspensionMessage)
             }
 
             // DEBUG: Log RAW API response
-            print("📅 [HOURS] RAW API response for \(routeId):")
+            DebugLog.log("📅 [HOURS] RAW API response for \(routeId):")
             if let wd = hours.weekday {
-                print("📅 [HOURS]   weekday: first=\(wd.firstDeparture), last=\(wd.lastDeparture), trips=\(wd.totalTrips)")
+                DebugLog.log("📅 [HOURS]   weekday: first=\(wd.firstDeparture), last=\(wd.lastDeparture), trips=\(wd.totalTrips)")
             }
             if let sat = hours.saturday {
-                print("📅 [HOURS]   saturday: first=\(sat.firstDeparture), last=\(sat.lastDeparture)")
+                DebugLog.log("📅 [HOURS]   saturday: first=\(sat.firstDeparture), last=\(sat.lastDeparture)")
             }
             if let sun = hours.sunday {
-                print("📅 [HOURS]   sunday: first=\(sun.firstDeparture), last=\(sun.lastDeparture)")
+                DebugLog.log("📅 [HOURS]   sunday: first=\(sun.firstDeparture), last=\(sun.lastDeparture)")
             }
 
             // Select the appropriate day
@@ -548,14 +548,14 @@ class DataService {
 
             if let dh = dayHours {
                 let result = dh.displayString
-                print("📅 [HOURS] ✅ From operating-hours (\(dayType)): \(result)")
+                DebugLog.log("📅 [HOURS] ✅ From operating-hours (\(dayType)): \(result)")
                 return .hours(result)
             }
         } catch {
-            print("📅 [HOURS] ❌ Both endpoints failed for \(routeId): \(error)")
+            DebugLog.log("📅 [HOURS] ❌ Both endpoints failed for \(routeId): \(error)")
         }
 
-        print("📅 [HOURS] ❌ No hours found for \(routeId)")
+        DebugLog.log("📅 [HOURS] ❌ No hours found for \(routeId)")
         return .hours(nil)
     }
 
@@ -581,10 +581,10 @@ class DataService {
         // DEBUG: Log raw times
         let rawStartTimes = frequencies.map { $0.startTime }
         let rawEndTimes = frequencies.map { $0.endTime }
-        print("📅 [HOURS] Raw start times: \(rawStartTimes)")
-        print("📅 [HOURS] Raw end times: \(rawEndTimes)")
-        print("📅 [HOURS] Opening (morning): \(openingTime / 60):\(String(format: "%02d", openingTime % 60))")
-        print("📅 [HOURS] maxEnd (minutes): \(maxEnd) = \(maxEnd / 60)h \(maxEnd % 60)m")
+        DebugLog.log("📅 [HOURS] Raw start times: \(rawStartTimes)")
+        DebugLog.log("📅 [HOURS] Raw end times: \(rawEndTimes)")
+        DebugLog.log("📅 [HOURS] Opening (morning): \(openingTime / 60):\(String(format: "%02d", openingTime % 60))")
+        DebugLog.log("📅 [HOURS] maxEnd (minutes): \(maxEnd) = \(maxEnd / 60)h \(maxEnd % 60)m")
 
         let startStr = formatMinutesToTime(openingTime)
         // Handle times > 24:00 (e.g., 25:30:00 = 01:30 next day)
@@ -592,10 +592,10 @@ class DataService {
 
         // DEBUG: Log conversion if time was > 24:00
         if maxEnd >= 24 * 60 {
-            print("📅 [HOURS] GTFS time >24h: \(maxEnd / 60):\(String(format: "%02d", maxEnd % 60)) → \(endStr)")
+            DebugLog.log("📅 [HOURS] GTFS time >24h: \(maxEnd / 60):\(String(format: "%02d", maxEnd % 60)) → \(endStr)")
         }
 
-        print("📅 [DataService] Operating hours: \(startStr) - \(endStr)")
+        DebugLog.log("📅 [DataService] Operating hours: \(startStr) - \(endStr)")
         return "\(startStr) - \(endStr)"
     }
 
@@ -617,22 +617,22 @@ class DataService {
 
     // Fetch arrivals for a specific stop using RenfeServer API
     func fetchArrivals(for stopId: String) async -> [Arrival] {
-        print("🔍 [DataService] Fetching arrivals for stop: \(stopId)")
+        DebugLog.log("🔍 [DataService] Fetching arrivals for stop: \(stopId)")
 
         // 1. Check cache first
         if let cached = getCachedArrivals(for: stopId) {
-            print("✅ [DataService] Cache hit! Returning \(cached.count) cached arrivals")
+            DebugLog.log("✅ [DataService] Cache hit! Returning \(cached.count) cached arrivals")
             return cached
         }
 
         // 2. Fetch from RenfeServer API (redcercanias.com)
         do {
-            print("📡 [DataService] Cache miss, calling RenfeServer API...")
+            DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
             let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 10)
-            print("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
+            DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
             let arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
-            print("✅ [DataService] Mapped to \(arrivals.count) arrivals")
+            DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
 
             // 3. Cache results
             cacheArrivals(arrivals, for: stopId)
@@ -640,16 +640,16 @@ class DataService {
             return arrivals
         } catch {
             // 4. Handle errors gracefully
-            print("⚠️ [DataService] RenfeServer API Error: \(error)")
+            DebugLog.log("⚠️ [DataService] RenfeServer API Error: \(error)")
 
             // Try stale cache as fallback
             if let stale = getStaleCachedArrivals(for: stopId) {
-                print("ℹ️ [DataService] Using stale cached data for stop \(stopId)")
+                DebugLog.log("ℹ️ [DataService] Using stale cached data for stop \(stopId)")
                 return stale
             }
 
             // Return empty array instead of mock data
-            print("ℹ️ [DataService] No data available for stop \(stopId)")
+            DebugLog.log("ℹ️ [DataService] No data available for stop \(stopId)")
             self.error = error
             return []
         }
@@ -735,7 +735,7 @@ class DataService {
         }
 
         // Debug: log only when not found
-        print("❌ [getLine] NOT FOUND '\(id)'. Available: \(lines.map { $0.name }.sorted().joined(separator: ", "))")
+        DebugLog.log("❌ [getLine] NOT FOUND '\(id)'. Available: \(lines.map { $0.name }.sorted().joined(separator: ", "))")
         return nil
     }
 
@@ -763,7 +763,7 @@ class DataService {
                 )
             }
         } catch {
-            print("⚠️ [DataService] Failed to search stops: \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to search stops: \(error)")
             return []
         }
     }
@@ -773,7 +773,7 @@ class DataService {
         do {
             return try await gtfsRealtimeService.fetchTrip(tripId: tripId)
         } catch {
-            print("⚠️ [DataService] Failed to fetch trip \(tripId): \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to fetch trip \(tripId): \(error)")
             return nil
         }
     }
@@ -785,10 +785,10 @@ class DataService {
         do {
             // Use direct endpoint instead of fetching all + filtering
             let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
-            print("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
+            DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
             return alerts
         } catch {
-            print("⚠️ [DataService] Failed to fetch alerts for stop \(stopId): \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to fetch alerts for stop \(stopId): \(error)")
             return []
         }
     }
@@ -797,10 +797,10 @@ class DataService {
     func fetchAlertsForRoute(routeId: String) async -> [AlertResponse] {
         do {
             let alerts = try await gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
-            print("✅ [DataService] Fetched \(alerts.count) alerts for route \(routeId)")
+            DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for route \(routeId)")
             return alerts
         } catch {
-            print("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
             return []
         }
     }
@@ -809,11 +809,11 @@ class DataService {
     func fetchAlertsForLine(_ line: Line) async -> [AlertResponse] {
         // Use the first routeId to fetch alerts via the new endpoint
         guard let routeId = line.routeIds.first else {
-            print("⚠️ [Alerts] No routeId for line \(line.name)")
+            DebugLog.log("⚠️ [Alerts] No routeId for line \(line.name)")
             return []
         }
 
-        print("🔔 [Alerts] Fetching alerts for line \(line.name) via route \(routeId)")
+        DebugLog.log("🔔 [Alerts] Fetching alerts for line \(line.name) via route \(routeId)")
         return await fetchAlertsForRoute(routeId: routeId)
     }
 

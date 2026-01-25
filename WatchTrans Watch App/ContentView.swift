@@ -122,7 +122,7 @@ struct ContentView: View {
     /// Check if location changed (different province) and reload data if needed
     private func checkAndUpdateNucleo() async {
         guard let currentLocation = locationService.currentLocation else {
-            print("🏠 [ContentView] checkAndUpdateNucleo: No hay ubicacion actual")
+            DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: No hay ubicacion actual")
             return
         }
 
@@ -131,7 +131,7 @@ struct ContentView: View {
 
         // If we don't have data yet, load it
         if dataService.currentLocation == nil {
-            print("🏠 [ContentView] checkAndUpdateNucleo: No hay datos, cargando...")
+            DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: No hay datos, cargando...")
             await loadData()
             return
         }
@@ -139,12 +139,12 @@ struct ContentView: View {
         // Check if province changed by reloading data with current coordinates
         let currentProvince = dataService.currentLocation?.provinceName
 
-        print("🏠 [ContentView] checkAndUpdateNucleo: Verificando cambio de ubicacion...")
+        DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: Verificando cambio de ubicacion...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
 
         let newProvince = dataService.currentLocation?.provinceName
         if newProvince != currentProvince {
-            print("🏠 [ContentView] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
+            DebugLog.log("🏠 [ContentView] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
 
             // Save new location for Widget
             SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
@@ -164,10 +164,10 @@ struct ContentView: View {
     }
 
     private func loadData() async {
-        print("🏠 [ContentView] ========== LOAD DATA ==========")
+        DebugLog.log("🏠 [ContentView] ========== LOAD DATA ==========")
 
         if locationService.authorizationStatus == .notDetermined {
-            print("🏠 [ContentView] Requesting location permission...")
+            DebugLog.log("🏠 [ContentView] Requesting location permission...")
             locationService.requestPermission()
         }
 
@@ -177,7 +177,7 @@ struct ContentView: View {
         // Pass user's coordinates to load nearby stops
         let lat = locationService.currentLocation?.coordinate.latitude
         let lon = locationService.currentLocation?.coordinate.longitude
-        print("🏠 [ContentView] Location: lat=\(lat ?? 0), lon=\(lon ?? 0)")
+        DebugLog.log("🏠 [ContentView] Location: lat=\(lat ?? 0), lon=\(lon ?? 0)")
 
         // Save location for Widget to use (via App Group shared storage)
         if let latitude = lat, let longitude = lon {
@@ -188,17 +188,17 @@ struct ContentView: View {
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
 
         // Debug: Show result
-        print("🏠 [ContentView] ========== LOAD RESULT ==========")
-        print("🏠 [ContentView] currentLocation: \(dataService.currentLocation?.provinceName ?? "nil")")
-        print("🏠 [ContentView] Lines: \(dataService.lines.count)")
-        print("🏠 [ContentView] Stops: \(dataService.stops.count)")
+        DebugLog.log("🏠 [ContentView] ========== LOAD RESULT ==========")
+        DebugLog.log("🏠 [ContentView] currentLocation: \(dataService.currentLocation?.provinceName ?? "nil")")
+        DebugLog.log("🏠 [ContentView] Lines: \(dataService.lines.count)")
+        DebugLog.log("🏠 [ContentView] Stops: \(dataService.stops.count)")
 
         // Save location info for Widget AFTER fetching (so we have the correct network name)
         if let location = dataService.currentLocation {
             // Save the primary network name (e.g., "Rodalies de Catalunya", "Cercanías Madrid")
             // This is used by the widget to determine fallback stops
             let networkName = location.primaryNetworkName ?? location.provinceName
-            print("🏠 [ContentView] Saving network to Widget: \(networkName)")
+            DebugLog.log("🏠 [ContentView] Saving network to Widget: \(networkName)")
             SharedStorage.shared.saveNucleo(name: networkName, id: 0)
         }
     }

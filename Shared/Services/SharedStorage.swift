@@ -70,7 +70,7 @@ class SharedStorage {
         UserDefaults.standard.set(longitude, forKey: Keys.lastLongitude)
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Keys.lastLocationTimestamp)
 
-        print("📍 [SharedStorage] Saved location: (\(latitude), \(longitude))")
+        DebugLog.log("📍 [SharedStorage] Saved location: (\(latitude), \(longitude))")
     }
 
     /// Get user's last known location
@@ -96,7 +96,7 @@ class SharedStorage {
             let age = Date().timeIntervalSince1970 - timestamp
             let maxAge: TimeInterval = 3600 // 1 hour
             if age > maxAge {
-                print("⚠️ [SharedStorage] Location is stale (\(Int(age/60)) min old)")
+                DebugLog.log("⚠️ [SharedStorage] Location is stale (\(Int(age/60)) min old)")
             }
         }
 
@@ -109,7 +109,7 @@ class SharedStorage {
     func saveNucleo(name: String, id: Int) {
         defaults.set(name, forKey: Keys.lastNucleoName)
         defaults.set(id, forKey: Keys.lastNucleoId)
-        print("📍 [SharedStorage] Saved nucleo: \(name) (id: \(id))")
+        DebugLog.log("📍 [SharedStorage] Saved nucleo: \(name) (id: \(id))")
     }
 
     /// Get last detected nucleo
@@ -144,9 +144,9 @@ class SharedStorage {
         do {
             let data = try JSONEncoder().encode(favorites)
             defaults.set(data, forKey: Keys.favorites)
-            print("📍 [SharedStorage] Saved \(favorites.count) favorites")
+            DebugLog.log("📍 [SharedStorage] Saved \(favorites.count) favorites")
         } catch {
-            print("⚠️ [SharedStorage] Failed to encode favorites: \(error)")
+            DebugLog.log("⚠️ [SharedStorage] Failed to encode favorites: \(error)")
         }
     }
 
@@ -159,7 +159,7 @@ class SharedStorage {
         do {
             return try JSONDecoder().decode([SharedFavorite].self, from: data)
         } catch {
-            print("⚠️ [SharedStorage] Failed to decode favorites: \(error)")
+            DebugLog.log("⚠️ [SharedStorage] Failed to decode favorites: \(error)")
             return []
         }
     }
@@ -176,9 +176,9 @@ class SharedStorage {
         do {
             let data = try JSONEncoder().encode(stops)
             defaults.set(data, forKey: Keys.hubStops)
-            print("📍 [SharedStorage] Saved \(stops.count) hub stops")
+            DebugLog.log("📍 [SharedStorage] Saved \(stops.count) hub stops")
         } catch {
-            print("⚠️ [SharedStorage] Failed to encode hub stops: \(error)")
+            DebugLog.log("⚠️ [SharedStorage] Failed to encode hub stops: \(error)")
         }
     }
 
@@ -191,7 +191,7 @@ class SharedStorage {
         do {
             return try JSONDecoder().decode([SharedHubStop].self, from: data)
         } catch {
-            print("⚠️ [SharedStorage] Failed to decode hub stops: \(error)")
+            DebugLog.log("⚠️ [SharedStorage] Failed to decode hub stops: \(error)")
             return []
         }
     }

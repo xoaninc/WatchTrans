@@ -80,6 +80,6 @@ class LocationService: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         locationError = error
-        print("Location error: \(error.localizedDescription)")
+        DebugLog.log("Location error: \(error.localizedDescription)")
     }
 }

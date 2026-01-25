@@ -79,14 +79,14 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
-                print("📱 [iOS] App activa - iniciando auto-refresh")
+                DebugLog.log("📱 [iOS] App activa - iniciando auto-refresh")
                 startAutoRefresh()
                 // Check if location changed while in background
                 Task {
                     await checkAndUpdateLocation()
                 }
             case .inactive, .background:
-                print("📱 [iOS] App en background - deteniendo auto-refresh")
+                DebugLog.log("📱 [iOS] App en background - deteniendo auto-refresh")
                 stopAutoRefresh()
             @unknown default:
                 break
@@ -117,7 +117,7 @@ struct MainTabView: View {
     /// Check if location changed (different province) and reload data if needed
     private func checkAndUpdateLocation() async {
         guard let currentLocation = locationService.currentLocation else {
-            print("📱 [iOS] checkAndUpdateLocation: No hay ubicacion actual")
+            DebugLog.log("📱 [iOS] checkAndUpdateLocation: No hay ubicacion actual")
             return
         }
 
@@ -126,7 +126,7 @@ struct MainTabView: View {
 
         // If we don't have data yet, load it
         if dataService.currentLocation == nil {
-            print("📱 [iOS] checkAndUpdateLocation: No hay datos, cargando...")
+            DebugLog.log("📱 [iOS] checkAndUpdateLocation: No hay datos, cargando...")
             await dataService.fetchTransportData(latitude: lat, longitude: lon)
             lastKnownProvince = dataService.currentLocation?.provinceName
             return
@@ -137,12 +137,12 @@ struct MainTabView: View {
         let currentProvince = dataService.currentLocation?.provinceName
 
         // Force reload to detect province change
-        print("📱 [iOS] checkAndUpdateLocation: Verificando cambio de ubicacion...")
+        DebugLog.log("📱 [iOS] checkAndUpdateLocation: Verificando cambio de ubicacion...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
 
         let newProvince = dataService.currentLocation?.provinceName
         if newProvince != currentProvince {
-            print("📱 [iOS] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
+            DebugLog.log("📱 [iOS] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
             lastKnownProvince = newProvince
 
             // Save new location for Widget
@@ -155,66 +155,66 @@ struct MainTabView: View {
     }
 
     private func loadData() async {
-        print("📱 [iOS] ========== INICIANDO APP ==========")
-        print("📱 [iOS] loadData() comenzando...")
+        DebugLog.log("📱 [iOS] ========== INICIANDO APP ==========")
+        DebugLog.log("📱 [iOS] loadData() comenzando...")
 
         // Request location permission if needed
-        print("📱 [iOS] Authorization status: \(locationService.authorizationStatus.rawValue)")
+        DebugLog.log("📱 [iOS] Authorization status: \(locationService.authorizationStatus.rawValue)")
         if locationService.authorizationStatus == .notDetermined {
-            print("📱 [iOS] Solicitando permisos de ubicacion...")
+            DebugLog.log("📱 [iOS] Solicitando permisos de ubicacion...")
             locationService.requestPermission()
         }
 
         // Wait for authorization (max 10 seconds)
         var authWaitCount = 0
         while locationService.authorizationStatus == CLAuthorizationStatus.notDetermined && authWaitCount < 20 {
-            print("📱 [iOS] Esperando autorizacion... (\(authWaitCount))")
+            DebugLog.log("📱 [iOS] Esperando autorizacion... (\(authWaitCount))")
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             authWaitCount += 1
         }
-        print("📱 [iOS] Authorization final: \(locationService.authorizationStatus.rawValue)")
+        DebugLog.log("📱 [iOS] Authorization final: \(locationService.authorizationStatus.rawValue)")
 
         // Start location updates if authorized
         if locationService.authorizationStatus == CLAuthorizationStatus.authorizedWhenInUse ||
            locationService.authorizationStatus == CLAuthorizationStatus.authorizedAlways {
-            print("📱 [iOS] Iniciando actualizacion de ubicacion...")
+            DebugLog.log("📱 [iOS] Iniciando actualizacion de ubicacion...")
             locationService.startUpdating()
 
             // Wait for location (max 5 seconds)
             var locationWaitCount = 0
             while locationService.currentLocation == nil && locationWaitCount < 10 {
-                print("📱 [iOS] Esperando ubicacion... (\(locationWaitCount))")
+                DebugLog.log("📱 [iOS] Esperando ubicacion... (\(locationWaitCount))")
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                 locationWaitCount += 1
             }
         } else {
-            print("📱 [iOS] ⚠️ Ubicacion no autorizada, continuando sin ubicacion...")
+            DebugLog.log("📱 [iOS] ⚠️ Ubicacion no autorizada, continuando sin ubicacion...")
         }
 
         // Get user's coordinates
         let lat = locationService.currentLocation?.coordinate.latitude
         let lon = locationService.currentLocation?.coordinate.longitude
-        print("📱 [iOS] Ubicacion obtenida: lat=\(lat ?? 0), lon=\(lon ?? 0)")
+        DebugLog.log("📱 [iOS] Ubicacion obtenida: lat=\(lat ?? 0), lon=\(lon ?? 0)")
 
         // Save location for Widget
         if let latitude = lat, let longitude = lon {
             SharedStorage.shared.saveLocation(latitude: latitude, longitude: longitude)
-            print("📱 [iOS] Ubicacion guardada en SharedStorage")
+            DebugLog.log("📱 [iOS] Ubicacion guardada en SharedStorage")
         }
 
         // Fetch transport data based on location
-        print("📱 [iOS] Obteniendo datos de transporte...")
+        DebugLog.log("📱 [iOS] Obteniendo datos de transporte...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
-        print("📱 [iOS] Datos obtenidos: \(dataService.stops.count) paradas, \(dataService.lines.count) lineas")
+        DebugLog.log("📱 [iOS] Datos obtenidos: \(dataService.stops.count) paradas, \(dataService.lines.count) lineas")
 
         // Save network info for Widget
         if let location = dataService.currentLocation {
             let networkName = location.primaryNetworkName ?? location.provinceName
             SharedStorage.shared.saveNucleo(name: networkName, id: 0)
-            print("📱 [iOS] Nucleo detectado: \(networkName)")
+            DebugLog.log("📱 [iOS] Nucleo detectado: \(networkName)")
         }
 
-        print("📱 [iOS] ========== APP LISTA ==========")
+        DebugLog.log("📱 [iOS] ========== APP LISTA ==========")
     }
 }
 

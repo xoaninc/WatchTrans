@@ -42,7 +42,7 @@ class NetworkService {
                 // These might be temporary - retry
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))  // Exponential backoff: 1s, 2s, 4s
-                    print("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for: \(url.lastPathComponent)")
+                    DebugLog.log("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for: \(url.lastPathComponent)")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     return try await fetchWithRetry(url, attempt: attempt + 1)
                 }
@@ -107,7 +107,7 @@ class NetworkService {
             case .noConnection, .timeout, .serverError, .decodingError, .unknown:
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))
-                    print("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for: \(url.lastPathComponent)")
+                    DebugLog.log("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for: \(url.lastPathComponent)")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     return try await fetchDataWithRetry(url, attempt: attempt + 1)
                 }

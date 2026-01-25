@@ -22,7 +22,15 @@ struct WatchTrans_Watch_AppApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If persistent storage fails, try in-memory fallback so app doesn't crash
+            DebugLog.log("⚠️ [App] ModelContainer failed: \(error). Using in-memory fallback.")
+            let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            do {
+                return try ModelContainer(for: schema, configurations: [fallbackConfig])
+            } catch {
+                // This should never happen, but if it does, we have no choice
+                fatalError("Could not create ModelContainer even in-memory: \(error)")
+            }
         }
     }()
 
@@ -42,7 +50,7 @@ class AppDelegate: NSObject, WKApplicationDelegate {
     func applicationDidFinishLaunching() {
         // Schedule the first background refresh
         BackgroundRefreshService.shared.scheduleNextRefresh()
-        print("✅ [AppDelegate] App launched, background refresh scheduled")
+        DebugLog.log("✅ [AppDelegate] App launched, background refresh scheduled")
     }
 
     /// Handle background tasks
@@ -51,7 +59,7 @@ class AppDelegate: NSObject, WKApplicationDelegate {
             switch task {
             case let refreshTask as WKApplicationRefreshBackgroundTask:
                 // Handle background refresh
-                print("🔄 [AppDelegate] Handling WKApplicationRefreshBackgroundTask")
+                DebugLog.log("🔄 [AppDelegate] Handling WKApplicationRefreshBackgroundTask")
                 Task {
                     await BackgroundRefreshService.shared.handleBackgroundRefresh(task: refreshTask)
                 }

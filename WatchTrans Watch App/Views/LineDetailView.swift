@@ -142,7 +142,7 @@ struct LineDetailView: View {
                         .padding(.horizontal, 8)
                     } else if let hours = result.hoursString {
                         // Normal operating hours
-                        let _ = print("🕐 [UI] Rendering operating hours: \(hours)")
+                        let _ = DebugLog.log("🕐 [UI] Rendering operating hours: \(hours)")
                         Text("Apertura hoy: \(hours)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -192,7 +192,7 @@ struct LineDetailView: View {
     private func loadData() async {
         isLoading = true
 
-        print("🚀 [LineDetail] Loading data for line \(line.name) (routeIds: \(line.routeIds))")
+        DebugLog.log("🚀 [LineDetail] Loading data for line \(line.name) (routeIds: \(line.routeIds))")
 
         // Fetch stops, alerts, and operating hours in parallel
         async let stopsTask: [Stop] = {
@@ -204,10 +204,10 @@ struct LineDetailView: View {
         async let alertsTask = dataService.fetchAlertsForLine(line)
         async let hoursTask: OperatingHoursResult? = {
             if let routeId = line.routeIds.first {
-                print("📅 [LineDetail] Requesting operating hours for routeId: \(routeId)")
+                DebugLog.log("📅 [LineDetail] Requesting operating hours for routeId: \(routeId)")
                 return await dataService.fetchOperatingHours(routeId: routeId)
             }
-            print("⚠️ [LineDetail] No routeId available for line \(line.name)")
+            DebugLog.log("⚠️ [LineDetail] No routeId available for line \(line.name)")
             return nil
         }()
 
@@ -215,7 +215,7 @@ struct LineDetailView: View {
         alerts = await alertsTask
         operatingHoursResult = await hoursTask
 
-        print("✅ [LineDetail] Loaded: \(stops.count) stops, \(alerts.count) alerts, suspended=\(operatingHoursResult?.isSuspended ?? false)")
+        DebugLog.log("✅ [LineDetail] Loaded: \(stops.count) stops, \(alerts.count) alerts, suspended=\(operatingHoursResult?.isSuspended ?? false)")
 
         isLoading = false
     }
@@ -320,7 +320,7 @@ struct AllConnectionBadges: View {
 
         // DEBUG: Log filtering
         if let exclude = excludeLineName {
-            print("🏷️ [Filter] excludeLineName='\(exclude)', excludeIds=\(excludeLineIds), cor_metro=\(corMetro ?? "nil"), cor_cerc=\(corCercanias ?? "nil")")
+            DebugLog.log("🏷️ [Filter] excludeLineName='\(exclude)', excludeIds=\(excludeLineIds), cor_metro=\(corMetro ?? "nil"), cor_cerc=\(corCercanias ?? "nil")")
         }
 
         // 1. Cercanías lines first
@@ -366,7 +366,7 @@ struct AllConnectionBadges: View {
         let badges = allBadges
         if !badges.isEmpty {
             // DEBUG: Log badges being displayed
-            let _ = print("🏷️ [AllConnectionBadges] Displaying \(badges.count) badges: \(badges.map { $0.name }.joined(separator: ", "))")
+            let _ = DebugLog.log("🏷️ [AllConnectionBadges] Displaying \(badges.count) badges: \(badges.map { $0.name }.joined(separator: ", "))")
 
             // Split into rows of max 5 badges each
             let rows = badges.chunked(into: 5)
@@ -497,7 +497,7 @@ struct StopRow: View {
 
         // DEBUG: Log filtering
         if !stop.connectionLineIds.isEmpty {
-            print("🔗 [StopRow] '\(stop.name)' lineas=\(stop.connectionLineIds), current='\(currentLineName)'(\(currentNormalized)), filtered=\(filtered)")
+            DebugLog.log("🔗 [StopRow] '\(stop.name)' lineas=\(stop.connectionLineIds), current='\(currentLineName)'(\(currentNormalized)), filtered=\(filtered)")
         }
         return filtered
     }

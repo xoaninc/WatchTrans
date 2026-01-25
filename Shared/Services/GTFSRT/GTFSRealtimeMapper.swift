@@ -21,7 +21,7 @@ class GTFSRealtimeMapper {
     /// The API already provides most of the data we need
     func mapToArrivals(departures: [DepartureResponse], stopId: String) -> [Arrival] {
         guard let dataService = dataService else {
-            print("⚠️ [Mapper] DataService is nil!")
+            DebugLog.log("⚠️ [Mapper] DataService is nil!")
             return []
         }
 
@@ -31,20 +31,20 @@ class GTFSRealtimeMapper {
         let now = Date()
         var arrivals: [Arrival] = []
 
-        print("🗺️ [Mapper] Processing \(departures.count) departures for stop \(stopId)")
+        DebugLog.log("🗺️ [Mapper] Processing \(departures.count) departures for stop \(stopId)")
 
         for departure in departures {
             // Skip if already passed - use realtime if available
             let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
             guard effectiveMinutes >= 0 else { continue }
 
-            print("🚂 [Mapper] \(departure.routeShortName) - headsign from API: \"\(departure.headsign ?? "nil")\" (trip: \(departure.tripId))")
+            DebugLog.log("🚂 [Mapper] \(departure.routeShortName) - headsign from API: \"\(departure.headsign ?? "nil")\" (trip: \(departure.tripId))")
 
             // Skip terminus trains (where headsign = current stop)
             if let headsign = departure.headsign,
                let stopName = currentStopName,
                headsign.localizedCaseInsensitiveCompare(stopName) == .orderedSame {
-                print("⏭️ [Mapper] Skipping terminus train: \(departure.routeShortName) -> \(headsign)")
+                DebugLog.log("⏭️ [Mapper] Skipping terminus train: \(departure.routeShortName) -> \(headsign)")
                 continue
             }
 
@@ -64,7 +64,7 @@ class GTFSRealtimeMapper {
             let destination = departure.headsign ?? "Unknown"
 
             if departure.headsign == nil {
-                print("⚠️ [Mapper] headsign was nil, using fallback: \"\(destination)\"")
+                DebugLog.log("⚠️ [Mapper] headsign was nil, using fallback: \"\(destination)\"")
             }
 
             let arrival = Arrival(
@@ -97,7 +97,7 @@ class GTFSRealtimeMapper {
             .sorted { $0.expectedTime < $1.expectedTime }
             .prefix(APIConfiguration.defaultDeparturesLimit)
 
-        print("✅ [Mapper] Mapped \(sortedArrivals.count) arrivals")
+        DebugLog.log("✅ [Mapper] Mapped \(sortedArrivals.count) arrivals")
         return Array(sortedArrivals)
     }
 

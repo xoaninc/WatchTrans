@@ -20,6 +20,22 @@ enum WidgetAPIConfig {
     static let nearestStopTimeout: TimeInterval = 5
 }
 
+// MARK: - Debug Logging (Widget-local copy)
+enum DebugLog {
+    static var isEnabled: Bool = {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }()
+
+    static func log(_ message: String) {
+        guard isEnabled else { return }
+        print(message)
+    }
+}
+
 // MARK: - Timeline Entry
 
 struct ArrivalEntry: TimelineEntry {
@@ -123,7 +139,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                 )
             }
         } catch {
-            print("⚠️ [Widget Snapshot] Error: \(error)")
+            DebugLog.log("⚠️ [Widget Snapshot] Error: \(error)")
         }
 
         // Fallback to placeholder
@@ -147,7 +163,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
             return Timeline(entries: entries, policy: .after(nextUpdate))
         } catch {
             // On error, show error info and retry in 30 seconds
-            print("⚠️ [Widget] Failed to fetch: \(error)")
+            DebugLog.log("⚠️ [Widget] Failed to fetch: \(error)")
             let errorMessage = String(describing: error).prefix(20)
             let fallbackEntry = ArrivalEntry(
                 date: Date(),
@@ -205,17 +221,17 @@ struct ArrivalProvider: AppIntentTimelineProvider {
             do {
                 let nearestStop = try await fetchNearestStop(latitude: location.latitude, longitude: location.longitude)
                 if let stopId = nearestStop {
-                    print("📍 [Widget] Using nearest stop: \(stopId)")
+                    DebugLog.log("📍 [Widget] Using nearest stop: \(stopId)")
                     return stopId
                 }
             } catch {
-                print("⚠️ [Widget] Failed to fetch nearest stop: \(error)")
+                DebugLog.log("⚠️ [Widget] Failed to fetch nearest stop: \(error)")
             }
         }
 
         // 3. Fallback based on last known nucleo
         let fallbackStop = getFallbackStop()
-        print("📍 [Widget] Using fallback stop: \(fallbackStop)")
+        DebugLog.log("📍 [Widget] Using fallback stop: \(fallbackStop)")
         return fallbackStop
     }
 
@@ -434,7 +450,7 @@ class SharedStorage {
         do {
             return try JSONDecoder().decode([SharedFavorite].self, from: data)
         } catch {
-            print("⚠️ [Widget] Failed to decode favorites: \(error)")
+            DebugLog.log("⚠️ [Widget] Failed to decode favorites: \(error)")
             return []
         }
     }
@@ -448,7 +464,7 @@ class SharedStorage {
         do {
             return try JSONDecoder().decode([SharedHubStop].self, from: data)
         } catch {
-            print("⚠️ [Widget] Failed to decode hub stops: \(error)")
+            DebugLog.log("⚠️ [Widget] Failed to decode hub stops: \(error)")
             return []
         }
     }

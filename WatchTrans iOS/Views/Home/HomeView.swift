@@ -383,13 +383,13 @@ struct StopCardView: View {
     }
 
     private func loadArrivals() async {
-        print("📱 [StopCard] Cargando llegadas para: \(stop.name) (id: \(stop.id))")
+        DebugLog.log("📱 [StopCard] Cargando llegadas para: \(stop.name) (id: \(stop.id))")
         // Solo mostrar spinner en la primera carga, no en auto-refresh
         if !hasLoadedOnce {
             isLoading = true
         }
         arrivals = await dataService.fetchArrivals(for: stop.id)
-        print("📱 [StopCard] \(stop.name): \(arrivals.count) llegadas obtenidas")
+        DebugLog.log("📱 [StopCard] \(stop.name): \(arrivals.count) llegadas obtenidas")
         hasLoadedOnce = true
         isLoading = false
     }

@@ -34,9 +34,9 @@ class BackgroundRefreshService {
             userInfo: nil
         ) { error in
             if let error = error {
-                print("⚠️ [BackgroundRefresh] Failed to schedule: \(error)")
+                DebugLog.log("⚠️ [BackgroundRefresh] Failed to schedule: \(error)")
             } else {
-                print("✅ [BackgroundRefresh] Scheduled for \(preferredDate)")
+                DebugLog.log("✅ [BackgroundRefresh] Scheduled for \(preferredDate)")
             }
         }
     }
@@ -45,7 +45,7 @@ class BackgroundRefreshService {
 
     /// Handle the background refresh task
     func handleBackgroundRefresh(task: WKApplicationRefreshBackgroundTask) async {
-        print("🔄 [BackgroundRefresh] Starting background refresh...")
+        DebugLog.log("🔄 [BackgroundRefresh] Starting background refresh...")
 
         defer {
             // Always schedule next refresh and complete the task
@@ -55,7 +55,7 @@ class BackgroundRefreshService {
 
         // Get the favorite stop ID to fetch departures for
         guard let stopId = getFavoriteStopId() else {
-            print("⚠️ [BackgroundRefresh] No favorite stop set")
+            DebugLog.log("⚠️ [BackgroundRefresh] No favorite stop set")
             return
         }
 
@@ -69,13 +69,13 @@ class BackgroundRefreshService {
             // Update last fetch time
             UserDefaults.standard.set(Date(), forKey: lastFetchKey)
 
-            print("✅ [BackgroundRefresh] Fetched \(departures.count) departures for \(stopId)")
+            DebugLog.log("✅ [BackgroundRefresh] Fetched \(departures.count) departures for \(stopId)")
 
             // Reload complications with new data
             reloadComplications()
 
         } catch {
-            print("⚠️ [BackgroundRefresh] Failed to fetch: \(error)")
+            DebugLog.log("⚠️ [BackgroundRefresh] Failed to fetch: \(error)")
         }
     }
 
@@ -89,7 +89,7 @@ class BackgroundRefreshService {
     /// Set the favorite stop ID for background updates
     func setFavoriteStopId(_ stopId: String) {
         UserDefaults.standard.set(stopId, forKey: favoriteStopIdKey)
-        print("✅ [BackgroundRefresh] Set favorite stop: \(stopId)")
+        DebugLog.log("✅ [BackgroundRefresh] Set favorite stop: \(stopId)")
     }
 
     /// Cache departures for later use by complications

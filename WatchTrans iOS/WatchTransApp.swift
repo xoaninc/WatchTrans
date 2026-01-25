@@ -20,7 +20,15 @@ struct WatchTransApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If persistent storage fails, try in-memory fallback so app doesn't crash
+            DebugLog.log("⚠️ [App] ModelContainer failed: \(error). Using in-memory fallback.")
+            let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            do {
+                return try ModelContainer(for: schema, configurations: [fallbackConfig])
+            } catch {
+                // This should never happen, but if it does, we have no choice
+                fatalError("Could not create ModelContainer even in-memory: \(error)")
+            }
         }
     }()
 

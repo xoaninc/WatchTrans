@@ -138,7 +138,7 @@ struct LogoImageView: View {
     var remoteURL: URL? {
         guard let filename = logoType.remoteFilename else { return nil }
         let url = URL(string: "\(Self.baseURL)\(filename).\(logoType.fileExtension)")
-        print("🖼️ [Logo] Loading: \(url?.absoluteString ?? "nil") for \(logoType)")
+        DebugLog.log("🖼️ [Logo] Loading: \(url?.absoluteString ?? "nil") for \(logoType)")
         return url
     }
 
@@ -152,13 +152,13 @@ struct LogoImageView: View {
                         .scaledToFit()
                         .frame(height: height)
                         .onAppear {
-                            print("🖼️ [Logo] ✅ Loaded: \(url.lastPathComponent)")
+                            DebugLog.log("🖼️ [Logo] ✅ Loaded: \(url.lastPathComponent)")
                         }
                 case .failure(let error):
                     // Fallback to local asset or SF Symbol
                     localImage
                         .onAppear {
-                            print("🖼️ [Logo] ❌ Failed: \(url.lastPathComponent) - \(error.localizedDescription)")
+                            DebugLog.log("🖼️ [Logo] ❌ Failed: \(url.lastPathComponent) - \(error.localizedDescription)")
                         }
                 case .empty:
                     // Show SF Symbol while loading (no spinner - faster UX)

@@ -36,7 +36,7 @@ class GTFSRealtimeService {
             urlString += "&route_id=\(routeId)"
         }
 
-        print("🚉 [DEP] Fetching: \(urlString)")
+        DebugLog.log("🚉 [DEP] Fetching: \(urlString)")
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
@@ -45,22 +45,22 @@ class GTFSRealtimeService {
         do {
             let rawData = try await networkService.fetchData(url)
             let rawString = String(data: rawData, encoding: .utf8) ?? "nil"
-            print("🚉 [DEP] 📦 RAW response (\(rawData.count) bytes): \(rawString.prefix(500))")
+            DebugLog.log("🚉 [DEP] 📦 RAW response (\(rawData.count) bytes): \(rawString.prefix(500))")
 
             let decoder = JSONDecoder()
             let departures = try decoder.decode([DepartureResponse].self, from: rawData)
 
             lastFetchTime = Date()
-            print("🚉 [DEP] ✅ Got \(departures.count) departures for \(stopId)")
+            DebugLog.log("🚉 [DEP] ✅ Got \(departures.count) departures for \(stopId)")
 
             for (i, dep) in departures.prefix(3).enumerated() {
                 let platformInfo = dep.platform.map { "vía \($0)\(dep.platformEstimated == true ? "?" : "")" } ?? ""
-                print("🚉 [DEP]   [\(i)] \(dep.routeShortName) → \(dep.headsign ?? "?") in \(dep.minutesUntil)min \(platformInfo) (freq:\(dep.frequencyBased ?? false))")
+                DebugLog.log("🚉 [DEP]   [\(i)] \(dep.routeShortName) → \(dep.headsign ?? "?") in \(dep.minutesUntil)min \(platformInfo) (freq:\(dep.frequencyBased ?? false))")
             }
 
             return departures
         } catch {
-            print("🚉 [DEP] ❌ FAILED for \(stopId): \(error)")
+            DebugLog.log("🚉 [DEP] ❌ FAILED for \(stopId): \(error)")
             throw error
         }
     }
@@ -80,7 +80,7 @@ class GTFSRealtimeService {
     /// Fetch frequencies for a route (Metro, ML, Tranvía - frequency-based)
     func fetchFrequencies(routeId: String) async throws -> [FrequencyResponse] {
         let urlString = "\(baseURL)/routes/\(routeId)/frequencies"
-        print("📅 [FREQ] Fetching: \(urlString)")
+        DebugLog.log("📅 [FREQ] Fetching: \(urlString)")
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
@@ -89,24 +89,24 @@ class GTFSRealtimeService {
         let data = try await networkService.fetchData(url)
 
         if let jsonString = String(data: data, encoding: .utf8) {
-            print("📅 [FREQ] Raw JSON (first 300 chars): \(String(jsonString.prefix(300)))")
+            DebugLog.log("📅 [FREQ] Raw JSON (first 300 chars): \(String(jsonString.prefix(300)))")
         }
 
         let decoder = JSONDecoder()
         do {
             let frequencies = try decoder.decode([FrequencyResponse].self, from: data)
-            print("📅 [FREQ] ✅ Decoded \(frequencies.count) entries for \(routeId)")
+            DebugLog.log("📅 [FREQ] ✅ Decoded \(frequencies.count) entries for \(routeId)")
 
             let byDayType = Dictionary(grouping: frequencies, by: { $0.dayType })
             for (dayType, freqs) in byDayType {
                 let starts = freqs.map { $0.startTime }.sorted()
                 let ends = freqs.map { $0.endTime }.sorted()
-                print("📅 [FREQ]   \(dayType): \(freqs.count) entries, \(starts.first ?? "?") - \(ends.last ?? "?")")
+                DebugLog.log("📅 [FREQ]   \(dayType): \(freqs.count) entries, \(starts.first ?? "?") - \(ends.last ?? "?")")
             }
 
             return frequencies
         } catch {
-            print("📅 [FREQ] ❌ Decode FAILED: \(error)")
+            DebugLog.log("📅 [FREQ] ❌ Decode FAILED: \(error)")
             throw NetworkError.decodingError(error)
         }
     }
@@ -117,17 +117,17 @@ class GTFSRealtimeService {
             throw NetworkError.badResponse
         }
 
-        print("📅 [RenfeServer] Calling: \(url.absoluteString)")
+        DebugLog.log("📅 [RenfeServer] Calling: \(url.absoluteString)")
         let hours: RouteOperatingHoursResponse = try await networkService.fetch(url)
-        print("📅 [RenfeServer] Operating hours for \(hours.routeShortName):")
+        DebugLog.log("📅 [RenfeServer] Operating hours for \(hours.routeShortName):")
         if let wd = hours.weekday {
-            print("   📅 weekday: \(wd.firstDeparture) - \(wd.lastDeparture) (\(wd.totalTrips) trips)")
+            DebugLog.log("   📅 weekday: \(wd.firstDeparture) - \(wd.lastDeparture) (\(wd.totalTrips) trips)")
         }
         if let sat = hours.saturday {
-            print("   📅 saturday: \(sat.firstDeparture) - \(sat.lastDeparture) (\(sat.totalTrips) trips)")
+            DebugLog.log("   📅 saturday: \(sat.firstDeparture) - \(sat.lastDeparture) (\(sat.totalTrips) trips)")
         }
         if let sun = hours.sunday {
-            print("   📅 sunday: \(sun.firstDeparture) - \(sun.lastDeparture) (\(sun.totalTrips) trips)")
+            DebugLog.log("   📅 sunday: \(sun.firstDeparture) - \(sun.lastDeparture) (\(sun.totalTrips) trips)")
         }
         return hours
     }
@@ -169,14 +169,14 @@ class GTFSRealtimeService {
     /// Returns all stops within radius_km, ordered by distance
     func fetchStopsByCoordinates(latitude: Double, longitude: Double, radiusKm: Int = 50, limit: Int = 600) async throws -> [StopResponse] {
         let urlString = "\(baseURL)/stops/by-coordinates?lat=\(latitude)&lon=\(longitude)&radius_km=\(radiusKm)&limit=\(limit)"
-        print("📍 [COORD] Fetching stops: \(urlString)")
+        DebugLog.log("📍 [COORD] Fetching stops: \(urlString)")
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
         }
 
         let stops: [StopResponse] = try await networkService.fetch(url)
-        print("📍 [COORD] ✅ Got \(stops.count) stops for coordinates (\(latitude), \(longitude))")
+        DebugLog.log("📍 [COORD] ✅ Got \(stops.count) stops for coordinates (\(latitude), \(longitude))")
         return stops
     }
 
@@ -184,14 +184,14 @@ class GTFSRealtimeService {
     /// Returns all routes in the detected province's transport networks
     func fetchRoutesByCoordinates(latitude: Double, longitude: Double, limit: Int = 600) async throws -> [RouteResponse] {
         let urlString = "\(baseURL)/coordinates/routes?lat=\(latitude)&lon=\(longitude)&limit=\(limit)"
-        print("📍 [COORD] Fetching routes: \(urlString)")
+        DebugLog.log("📍 [COORD] Fetching routes: \(urlString)")
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
         }
 
         let routes: [RouteResponse] = try await networkService.fetch(url)
-        print("📍 [COORD] ✅ Got \(routes.count) routes for coordinates (\(latitude), \(longitude))")
+        DebugLog.log("📍 [COORD] ✅ Got \(routes.count) routes for coordinates (\(latitude), \(longitude))")
         return routes
     }
 
@@ -204,7 +204,7 @@ class GTFSRealtimeService {
         }
 
         let networks: [NetworkResponse] = try await networkService.fetch(url)
-        print("🌐 [RT] Fetched \(networks.count) networks")
+        DebugLog.log("🌐 [RT] Fetched \(networks.count) networks")
         return networks
     }
 
@@ -249,7 +249,7 @@ class GTFSRealtimeService {
         }
 
         let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
-        print("📍 [RT] Fetched \(positions.count) estimated positions for network \(networkId)")
+        DebugLog.log("📍 [RT] Fetched \(positions.count) estimated positions for network \(networkId)")
         return positions
     }
 

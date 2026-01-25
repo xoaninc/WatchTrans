@@ -231,32 +231,32 @@ struct LinesView: View {
                 // Debug: Log sections on appear
                 Color.clear.frame(height: 0).onAppear {
                     let province = dataService.currentLocation?.provinceName ?? "unknown"
-                    print("📋 [LinesView] ========== LINES VIEW ==========")
-                    print("📋 [LinesView] Province: '\(province)'")
-                    print("📋 [LinesView] currentProvince (lowercased): '\(currentProvince ?? "nil")'")
-                    print("📋 [LinesView] Total lines in dataService: \(dataService.lines.count)")
+                    DebugLog.log("📋 [LinesView] ========== LINES VIEW ==========")
+                    DebugLog.log("📋 [LinesView] Province: '\(province)'")
+                    DebugLog.log("📋 [LinesView] currentProvince (lowercased): '\(currentProvince ?? "nil")'")
+                    DebugLog.log("📋 [LinesView] Total lines in dataService: \(dataService.lines.count)")
 
                     // Debug: Show all lines with their nucleo
                     let byNucleo = Dictionary(grouping: dataService.lines, by: { $0.nucleo.lowercased() })
-                    print("📋 [LinesView] Lines grouped by nucleo:")
+                    DebugLog.log("📋 [LinesView] Lines grouped by nucleo:")
                     for (nucleo, lines) in byNucleo.sorted(by: { $0.key < $1.key }) {
-                        print("📋 [LinesView]   '\(nucleo)': \(lines.count) lines")
+                        DebugLog.log("📋 [LinesView]   '\(nucleo)': \(lines.count) lines")
                     }
 
-                    print("📋 [LinesView] Filtered counts:")
-                    print("📋 [LinesView]   Cercanías: \(cercaniasLines.count)")
-                    print("📋 [LinesView]   Metro: \(metroLines.count)")
-                    print("📋 [LinesView]   Metro Ligero: \(metroLigeroLines.count)")
-                    print("📋 [LinesView]   Tram: \(tramLines.count)")
-                    print("📋 [LinesView]   FGC: \(fgcLines.count)")
+                    DebugLog.log("📋 [LinesView] Filtered counts:")
+                    DebugLog.log("📋 [LinesView]   Cercanías: \(cercaniasLines.count)")
+                    DebugLog.log("📋 [LinesView]   Metro: \(metroLines.count)")
+                    DebugLog.log("📋 [LinesView]   Metro Ligero: \(metroLigeroLines.count)")
+                    DebugLog.log("📋 [LinesView]   Tram: \(tramLines.count)")
+                    DebugLog.log("📋 [LinesView]   FGC: \(fgcLines.count)")
                     if !metroLines.isEmpty {
-                        print("📋 [LinesView] Metro lines: \(metroLines.map { $0.name }.joined(separator: ", "))")
+                        DebugLog.log("📋 [LinesView] Metro lines: \(metroLines.map { $0.name }.joined(separator: ", "))")
                     }
                     if !tramLines.isEmpty {
-                        print("📋 [LinesView] Tram lines: \(tramLines.map { $0.name }.joined(separator: ", "))")
+                        DebugLog.log("📋 [LinesView] Tram lines: \(tramLines.map { $0.name }.joined(separator: ", "))")
                     }
                     if !fgcLines.isEmpty {
-                        print("📋 [LinesView] FGC lines: \(fgcLines.map { $0.name }.joined(separator: ", "))")
+                        DebugLog.log("📋 [LinesView] FGC lines: \(fgcLines.map { $0.name }.joined(separator: ", "))")
                     }
                 }
 
