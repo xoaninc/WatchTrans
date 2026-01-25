@@ -60,22 +60,15 @@ class DataService {
 
     // MARK: - GTFS-Realtime Services
 
-    private let networkService = NetworkService()
-    private var _gtfsRealtimeService: GTFSRealtimeService?
-    private var _gtfsMapper: GTFSRealtimeMapper?
+    private let networkService: NetworkService
+    private let gtfsRealtimeService: GTFSRealtimeService
+    @ObservationIgnored private lazy var gtfsMapper = GTFSRealtimeMapper(dataService: self)
 
-    private var gtfsRealtimeService: GTFSRealtimeService {
-        if _gtfsRealtimeService == nil {
-            _gtfsRealtimeService = GTFSRealtimeService(networkService: networkService)
-        }
-        return _gtfsRealtimeService!
-    }
+    // MARK: - Initialization
 
-    private var gtfsMapper: GTFSRealtimeMapper {
-        if _gtfsMapper == nil {
-            _gtfsMapper = GTFSRealtimeMapper(dataService: self)
-        }
-        return _gtfsMapper!
+    init() {
+        self.networkService = NetworkService()
+        self.gtfsRealtimeService = GTFSRealtimeService(networkService: networkService)
     }
 
     // MARK: - Arrival Cache
