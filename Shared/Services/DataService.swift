@@ -77,11 +77,13 @@ class DataService {
         let arrivals: [Arrival]
         let timestamp: Date
 
+        /// Cache entry is fresh and can be used directly
         var isValid: Bool {
             Date().timeIntervalSince(timestamp) < APIConfiguration.arrivalCacheTTL
         }
 
-        var isStale: Bool {
+        /// Cache entry is old but still within grace period (can be used as fallback)
+        var isWithinGracePeriod: Bool {
             Date().timeIntervalSince(timestamp) < APIConfiguration.staleCacheGracePeriod
         }
     }
@@ -499,12 +501,10 @@ class DataService {
 
     /// Calculate operating hours string from frequency responses
     private func calculateOperatingHours(from frequencies: [FrequencyResponse]) -> String {
-        // Separate morning service (starts >= 04:00) from late-night service (starts < 04:00)
+        // Separate morning service from late-night service
         // Late-night service (e.g., 00:00-01:30) runs AFTER midnight, not at opening
-        let morningThreshold = 4 * 60  // 04:00 in minutes
-
         let morningStarts = frequencies.compactMap { parseTimeToMinutes($0.startTime) }
-            .filter { $0 >= morningThreshold }
+            .filter { $0 >= APIConfiguration.morningThresholdMinutes }
         let allEndTimes = frequencies.compactMap { parseTimeToMinutes($0.endTime) }
 
         // Opening = earliest morning start (ignore 00:00 late-night entries)
@@ -618,7 +618,7 @@ class DataService {
         cacheLock.lock()
         defer { cacheLock.unlock() }
 
-        guard let entry = arrivalCache[stopId], entry.isStale else {
+        guard let entry = arrivalCache[stopId], entry.isWithinGracePeriod else {
             return nil
         }
         return entry.arrivals

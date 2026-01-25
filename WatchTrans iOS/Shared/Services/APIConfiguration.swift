@@ -41,4 +41,12 @@ enum APIConfiguration {
 
     /// Default departures limit for API calls
     static let defaultDeparturesLimit = 20
+
+    // MARK: - GTFS Time Processing
+
+    /// Morning threshold in minutes (04:00 = 240 minutes)
+    /// Used to distinguish morning service from late-night service when processing frequencies.
+    /// Services starting before this time (e.g., 00:00-01:30) are considered late-night extensions,
+    /// not the start of the day's service.
+    static let morningThresholdMinutes = 4 * 60  // 04:00
 }
