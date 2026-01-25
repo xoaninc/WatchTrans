@@ -195,6 +195,19 @@ class GTFSRealtimeService {
         return routes
     }
 
+    // MARK: - Networks
+
+    /// Fetch all available networks with transport type info
+    func fetchNetworks() async throws -> [NetworkResponse] {
+        guard let url = URL(string: "\(baseURL)/networks") else {
+            throw NetworkError.badResponse
+        }
+
+        let networks: [NetworkResponse] = try await networkService.fetch(url)
+        print("🌐 [RT] Fetched \(networks.count) networks")
+        return networks
+    }
+
     // MARK: - Alerts
 
     /// Fetch all active alerts

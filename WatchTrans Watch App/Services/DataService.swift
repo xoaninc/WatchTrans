@@ -90,6 +90,12 @@ class DataService {
     private var arrivalCache: [String: CacheEntry] = [:]
     private let cacheLock = NSLock()
 
+    // MARK: - Network Transport Types Cache
+
+    /// Cache of network code -> transport type (fetched from /networks endpoint)
+    /// Used to determine primary network without hardcoded ID lists
+    private var networkTransportTypes: [String: String] = [:]
+
     // MARK: - Public Methods
 
     /// Initialize data - call this on app launch
@@ -108,6 +114,18 @@ class DataService {
 
         // Try new coordinate-based API first, fall back to nucleo-based if needed
         do {
+            // 0. Fetch networks to get transport types (only if not cached)
+            if networkTransportTypes.isEmpty {
+                print("📍 [DataService] Step 0: Fetching networks for transport types...")
+                let networks = try await gtfsRealtimeService.fetchNetworks()
+                for network in networks {
+                    if let transportType = network.transportType {
+                        networkTransportTypes[network.code] = transportType
+                    }
+                }
+                print("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
+            }
+
             // 1. Fetch stops by coordinates (includes province detection)
             print("📍 [DataService] Step 1: Fetching stops by coordinates...")
             let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
@@ -265,21 +283,34 @@ class DataService {
     }
 
     /// Get the primary (most relevant) network name from a set of network IDs
-    /// Prioritizes Cercanías/Rodalies over Metro over Tram
+    /// Prioritizes Cercanías/Rodalies over Metro over Tram using API transport types
     private func getPrimaryNetworkName(from networkIds: Set<String>) -> String? {
-        // Priority order: Cercanías/Rodalies first (most important for commuters)
-        let cercaniasIds = networkIds.filter { $0.hasSuffix("T") && !["11T", "12T", "32T"].contains($0) }
+        // Use cached transport types from API to categorize networks
+        let cercaniasIds = networkIds.filter { networkTransportTypes[$0] == "cercanias" }
         if let primaryId = cercaniasIds.first {
             return getNetworkName(for: primaryId)
         }
-        // Then Metro
-        let metroIds = networkIds.filter { $0.contains("METRO") || ["11T", "12T", "32T"].contains($0) || $0 == "TMB_METRO" }
+        // Then Metro/Metro Ligero
+        let metroIds = networkIds.filter {
+            let type = networkTransportTypes[$0]
+            return type == "metro" || type == "metro_ligero"
+        }
         if let metroId = metroIds.first {
             return getNetworkName(for: metroId)
         }
         // Then FGC/Euskotren
-        if networkIds.contains("FGC") { return getNetworkName(for: "FGC") }
-        if networkIds.contains("EUSKOTREN") { return getNetworkName(for: "EUSKOTREN") }
+        let fgcIds = networkIds.filter {
+            let type = networkTransportTypes[$0]
+            return type == "fgc" || type == "euskotren"
+        }
+        if let fgcId = fgcIds.first {
+            return getNetworkName(for: fgcId)
+        }
+        // Then Tram
+        let tramIds = networkIds.filter { networkTransportTypes[$0] == "tranvia" }
+        if let tramId = tramIds.first {
+            return getNetworkName(for: tramId)
+        }
         // Finally any other
         if let firstId = networkIds.first {
             return getNetworkName(for: firstId)
