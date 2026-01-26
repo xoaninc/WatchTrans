@@ -57,12 +57,22 @@ struct MainTabView: View {
             }
             .tag(2)
 
-            // Tab 4: Settings/More
+            // Tab 4: Journey Planner
+            JourneyPlannerView(
+                dataService: dataService,
+                locationService: locationService
+            )
+            .tabItem {
+                Label("Planificar", systemImage: "point.topleft.down.to.point.bottomright.curvepath.fill")
+            }
+            .tag(3)
+
+            // Tab 5: Settings/More
             SettingsView()
             .tabItem {
                 Label("Mas", systemImage: "ellipsis")
             }
-            .tag(3)
+            .tag(4)
         }
         .task {
             await loadData()
