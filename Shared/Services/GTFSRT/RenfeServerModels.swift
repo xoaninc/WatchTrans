@@ -497,6 +497,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let toStopId: String
     let toStopName: String
     let toLines: String         // "L3, L5, C5"
+    let toTransportTypes: [String]?  // ["metro", "cercanias", "tranvia"]
     let distanceM: Int          // Distance in meters
     let walkTimeS: Int          // Walk time in seconds
     let source: String          // "manual", "proximity", etc.
@@ -506,6 +507,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
         case toStopId = "to_stop_id"
         case toStopName = "to_stop_name"
         case toLines = "to_lines"
+        case toTransportTypes = "to_transport_types"
         case distanceM = "distance_m"
         case walkTimeS = "walk_time_s"
         case source
