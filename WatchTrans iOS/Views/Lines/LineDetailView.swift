@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MapKit
 
 struct LineDetailView: View {
     let line: Line
@@ -70,6 +71,15 @@ struct LineDetailView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(10)
                     }
+                }
+
+                // Route map
+                if !stops.isEmpty {
+                    RouteMapView(
+                        line: line,
+                        stops: stops,
+                        dataService: dataService
+                    )
                 }
 
                 // Stops list

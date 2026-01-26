@@ -536,3 +536,30 @@ struct CorrespondenceInfo: Codable, Identifiable {
         toLines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 }
+
+// MARK: - Route Shape Response (for map polylines)
+
+/// Response from GET /api/v1/gtfs/routes/{route_id}/shape
+/// Contains the polyline coordinates for drawing the route on a map
+struct RouteShapeResponse: Codable {
+    let routeId: String
+    let routeShortName: String?
+    let shape: [ShapePoint]
+
+    enum CodingKeys: String, CodingKey {
+        case routeId = "route_id"
+        case routeShortName = "route_short_name"
+        case shape
+    }
+}
+
+/// A single point in a route shape
+struct ShapePoint: Codable {
+    let lat: Double
+    let lon: Double
+    let sequence: Int
+
+    enum CodingKeys: String, CodingKey {
+        case lat, lon, sequence
+    }
+}

@@ -831,4 +831,19 @@ class DataService {
         }
     }
 
+    // MARK: - Route Shapes
+
+    /// Fetch shape (polyline) for a route
+    /// Returns array of shape points to draw the route on a map
+    func fetchRouteShape(routeId: String) async -> [ShapePoint] {
+        do {
+            let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId)
+            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)")
+            return response.shape.sorted { $0.sequence < $1.sequence }
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch shape for \(routeId): \(error)")
+            return []
+        }
+    }
+
 }

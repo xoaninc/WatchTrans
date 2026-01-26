@@ -288,4 +288,18 @@ class GTFSRealtimeService {
         DebugLog.log("🚶 [RT] Fetched \(response.correspondences.count) correspondences for \(stopId)")
         return response
     }
+
+    // MARK: - Route Shapes
+
+    /// Fetch shape (polyline) for a route
+    /// Returns the coordinates to draw the route on a map
+    func fetchRouteShape(routeId: String) async throws -> RouteShapeResponse {
+        guard let url = URL(string: "\(baseURL)/routes/\(routeId)/shape") else {
+            throw NetworkError.badResponse
+        }
+
+        let response: RouteShapeResponse = try await networkService.fetch(url)
+        DebugLog.log("🗺️ [RT] Fetched \(response.shape.count) shape points for \(routeId)")
+        return response
+    }
 }
