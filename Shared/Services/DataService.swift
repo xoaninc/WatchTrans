@@ -725,17 +725,22 @@ class DataService {
         return nil
     }
 
-    /// Search stops by name
+    /// Search stops by name (filtered to current province/network)
     func searchStops(query: String) async -> [Stop] {
         do {
-            let stopResponses = try await gtfsRealtimeService.fetchStops(search: query, limit: 50)
-            return stopResponses.map { response in
+            let stopResponses = try await gtfsRealtimeService.fetchStops(search: query, limit: 100)
+
+            // Get current province for filtering
+            let currentProvince = currentLocation?.provinceName
+
+            // Convert to Stop objects
+            let allStops = stopResponses.map { response in
                 Stop(
                     id: response.id,
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
+                    connectionLineIds: response.lineIds,
                     province: response.province,
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
@@ -748,10 +753,66 @@ class DataService {
                     corTranvia: response.corTranvia
                 )
             }
+
+            // Filter by current province if we have location context
+            guard let province = currentProvince else {
+                DebugLog.log("🔍 [DataService] searchStops: No province filter (no location context)")
+                return Array(allStops.prefix(50))
+            }
+
+            // Get provinces that belong to the same network region
+            let relatedProvinces = getRelatedProvinces(for: province)
+
+            let filteredStops = allStops.filter { stop in
+                guard let stopProvince = stop.province else { return false }
+                return relatedProvinces.contains(stopProvince)
+            }
+
+            DebugLog.log("🔍 [DataService] searchStops '\(query)': \(allStops.count) total -> \(filteredStops.count) in \(province) region")
+            return Array(filteredStops.prefix(50))
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to search stops: \(error)")
             return []
         }
+    }
+
+    /// Get provinces that belong to the same transport network region
+    private func getRelatedProvinces(for province: String) -> Set<String> {
+        // Define transport network regions (provinces that share transport networks)
+        let networkRegions: [[String]] = [
+            // Cataluña (Rodalies, FGC, TMB)
+            ["Barcelona", "Tarragona", "Lleida", "Girona"],
+            // Madrid (Cercanías Madrid, Metro Madrid)
+            ["Madrid"],
+            // País Vasco (Euskotren, Metro Bilbao, Cercanías Bilbao)
+            ["Vizcaya", "Guipúzcoa", "Álava", "Bizkaia", "Gipuzkoa", "Araba"],
+            // Valencia (Metrovalencia, Cercanías Valencia)
+            ["Valencia", "Alicante", "Castellón", "Castelló"],
+            // Andalucía (Metro Sevilla, Cercanías Sevilla/Málaga/Cádiz)
+            ["Sevilla", "Málaga", "Cádiz", "Granada"],
+            // Asturias
+            ["Asturias"],
+            // Galicia
+            ["A Coruña", "Pontevedra", "Lugo", "Ourense"],
+            // Murcia
+            ["Murcia"],
+            // Zaragoza
+            ["Zaragoza"],
+            // Cantabria
+            ["Cantabria"],
+            // Mallorca
+            ["Illes Balears", "Islas Baleares", "Mallorca"],
+        ]
+
+        // Find which region this province belongs to
+        for region in networkRegions {
+            if region.contains(province) {
+                return Set(region)
+            }
+        }
+
+        // If not found in any region, just return the province itself
+        return Set([province])
     }
 
     /// Get trip details

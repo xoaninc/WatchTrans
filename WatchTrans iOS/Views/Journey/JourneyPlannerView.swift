@@ -85,8 +85,23 @@ struct JourneyPlannerView: View {
 
     // MARK: - Search Card
 
+    private var currentRegionName: String {
+        dataService.currentLocation?.provinceName ?? "Tu zona"
+    }
+
     private var searchCard: some View {
         VStack(spacing: 16) {
+            // Region indicator
+            HStack {
+                Image(systemName: "location.fill")
+                    .foregroundStyle(.blue)
+                Text("Buscando en \(currentRegionName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+
             // Origin field
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
