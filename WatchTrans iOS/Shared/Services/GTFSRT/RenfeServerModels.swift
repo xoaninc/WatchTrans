@@ -437,3 +437,100 @@ struct FrequencyResponse: Codable, Identifiable {
         case headwaySecs = "headway_secs"
     }
 }
+
+// MARK: - Platform Response
+
+/// Response from GET /api/v1/gtfs/stops/{stop_id}/platforms
+/// Contains coordinates of each platform/line within a station
+struct PlatformsResponse: Codable {
+    let stopId: String
+    let stopName: String
+    let platforms: [PlatformInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case stopName = "stop_name"
+        case platforms
+    }
+}
+
+/// Information about a single platform within a station
+struct PlatformInfo: Codable, Identifiable {
+    let id: Int
+    let stopId: String
+    let lines: String           // "L10" or "L1, L2"
+    let lat: Double
+    let lon: Double
+    let source: String          // "osm", "manual", etc.
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case stopId = "stop_id"
+        case lines, lat, lon, source
+    }
+
+    /// Parse lines string into array
+    var linesList: [String] {
+        lines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+}
+
+// MARK: - Correspondence Response
+
+/// Response from GET /api/v1/gtfs/stops/{stop_id}/correspondences
+/// Contains walking connections to other nearby stations
+struct CorrespondencesResponse: Codable {
+    let stopId: String
+    let stopName: String
+    let correspondences: [CorrespondenceInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case stopName = "stop_name"
+        case correspondences
+    }
+}
+
+/// Information about a walking connection to another station
+struct CorrespondenceInfo: Codable, Identifiable {
+    let id: Int
+    let toStopId: String
+    let toStopName: String
+    let toLines: String         // "L3, L5, C5"
+    let distanceM: Int          // Distance in meters
+    let walkTimeS: Int          // Walk time in seconds
+    let source: String          // "manual", "proximity", etc.
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case toStopId = "to_stop_id"
+        case toStopName = "to_stop_name"
+        case toLines = "to_lines"
+        case distanceM = "distance_m"
+        case walkTimeS = "walk_time_s"
+        case source
+    }
+
+    /// Walk time formatted as "X min"
+    var walkTimeFormatted: String {
+        let minutes = walkTimeS / 60
+        if minutes < 1 {
+            return "<1 min"
+        }
+        return "\(minutes) min"
+    }
+
+    /// Distance formatted as "Xm" or "X.Xkm"
+    var distanceFormatted: String {
+        if distanceM < 1000 {
+            return "\(distanceM)m"
+        }
+        let km = Double(distanceM) / 1000.0
+        return String(format: "%.1fkm", km)
+    }
+
+    /// Parse lines string into array
+    var linesList: [String] {
+        toLines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+}

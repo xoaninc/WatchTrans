@@ -803,4 +803,32 @@ class DataService {
         return await fetchAlertsForRoute(routeId: routeId)
     }
 
+    // MARK: - Platforms & Correspondences
+
+    /// Fetch platform coordinates for a station
+    /// Returns the exact position of each platform/line within the station
+    func fetchPlatforms(stopId: String) async -> [PlatformInfo] {
+        do {
+            let response = try await gtfsRealtimeService.fetchPlatforms(stopId: stopId)
+            DebugLog.log("🚏 [DataService] Fetched \(response.platforms.count) platforms for \(stopId)")
+            return response.platforms
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch platforms for \(stopId): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch walking correspondences from a station
+    /// Returns nearby stations connected by walking passages (e.g., underground tunnels)
+    func fetchCorrespondences(stopId: String) async -> [CorrespondenceInfo] {
+        do {
+            let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId)
+            DebugLog.log("🚶 [DataService] Fetched \(response.correspondences.count) correspondences for \(stopId)")
+            return response.correspondences
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch correspondences for \(stopId): \(error)")
+            return []
+        }
+    }
+
 }

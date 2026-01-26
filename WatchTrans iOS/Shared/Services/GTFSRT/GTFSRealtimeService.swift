@@ -27,7 +27,7 @@ class GTFSRealtimeService {
     /// Fetch upcoming departures from a stop
     /// This is the main endpoint for showing arrivals in the app
     /// Includes: delay info, train position, platform, frequency data
-    func fetchDepartures(stopId: String, routeId: String? = nil, limit: Int = 20) async throws -> [DepartureResponse] {
+    func fetchDepartures(stopId: String, routeId: String? = nil, limit: Int = APIConfiguration.defaultDeparturesLimit) async throws -> [DepartureResponse] {
         isLoading = true
         defer { isLoading = false }
 
@@ -261,5 +261,31 @@ class GTFSRealtimeService {
 
         let positions: [EstimatedPositionResponse] = try await networkService.fetch(url)
         return positions
+    }
+
+    // MARK: - Platforms & Correspondences
+
+    /// Fetch platform coordinates for a station
+    /// Returns the exact coordinates of each platform/line within a station
+    func fetchPlatforms(stopId: String) async throws -> PlatformsResponse {
+        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/platforms") else {
+            throw NetworkError.badResponse
+        }
+
+        let response: PlatformsResponse = try await networkService.fetch(url)
+        DebugLog.log("🚏 [RT] Fetched \(response.platforms.count) platforms for \(stopId)")
+        return response
+    }
+
+    /// Fetch walking correspondences from a station
+    /// Returns nearby stations connected by walking passages
+    func fetchCorrespondences(stopId: String) async throws -> CorrespondencesResponse {
+        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/correspondences") else {
+            throw NetworkError.badResponse
+        }
+
+        let response: CorrespondencesResponse = try await networkService.fetch(url)
+        DebugLog.log("🚶 [RT] Fetched \(response.correspondences.count) correspondences for \(stopId)")
+        return response
     }
 }
