@@ -19,6 +19,9 @@ class RoutingService {
     private var stopCache: [String: Stop] = [:]
     private var lineCache: [String: Line] = [:]
 
+    // Shape cache for route polylines
+    private var shapeCache: [String: [CLLocationCoordinate2D]] = [:]
+
     // Configuration
     private let transferPenaltyMinutes: Double = 3.0  // Penalty for transfers
     private let walkingSpeedKmH: Double = 4.5         // Average walking speed
@@ -41,7 +44,7 @@ class RoutingService {
         stopCache.removeAll()
 
         // Get all lines
-        let lines = dataService.getCachedLines()
+        let lines = dataService.lines
         DebugLog.log("🗺️ [Routing] Found \(lines.count) lines")
 
         for line in lines {
@@ -205,8 +208,8 @@ class RoutingService {
             return nil
         }
 
-        // Convert path to journey segments
-        let segments = buildSegments(from: path)
+        // Convert path to journey segments (with real shape data)
+        let segments = await buildSegments(from: path)
 
         let journey = Journey(
             origin: originStop,
@@ -261,16 +264,21 @@ class RoutingService {
         return nil
     }
 
-    /// Build journey segments from path
-    private func buildSegments(from path: [TransitNode]) -> [JourneySegment] {
+    /// Build journey segments from path with real shape data
+    private func buildSegments(from path: [TransitNode]) async -> [JourneySegment] {
         var segments: [JourneySegment] = []
         var currentLineId: String?
         var segmentStops: [Stop] = []
         var segmentStart: Stop?
 
+        DebugLog.log("🛤️ [Routing] Building segments from path with \(path.count) nodes")
+
         for i in 0..<path.count {
             let node = path[i]
-            guard let stop = stopCache[node.stopId] else { continue }
+            guard let stop = stopCache[node.stopId] else {
+                DebugLog.log("⚠️ [Routing] Stop not found in cache: \(node.stopId)")
+                continue
+            }
 
             if node.lineId != currentLineId {
                 // Line changed - finish previous segment
@@ -281,6 +289,14 @@ class RoutingService {
                     // Determine transport mode from line type
                     let mode = transportMode(for: line)
 
+                    // Get real shape coordinates for this segment
+                    let coordinates = await getShapeCoordinates(
+                        for: line,
+                        from: start,
+                        to: lastStop,
+                        fallbackStops: segmentStops
+                    )
+
                     let segment = JourneySegment(
                         type: .transit,
                         transportMode: mode,
@@ -290,16 +306,18 @@ class RoutingService {
                         destination: lastStop,
                         intermediateStops: Array(segmentStops.dropLast()),
                         durationMinutes: estimateDuration(from: start, to: lastStop, stops: segmentStops.count),
-                        coordinates: segmentStops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                        coordinates: coordinates
                     )
                     segments.append(segment)
+                    DebugLog.log("🚇 [Routing] Added TRANSIT segment: \(line?.name ?? "?") from \(start.name) to \(lastStop.name) with \(coordinates.count) coords")
                 }
 
                 // Check if this is a transfer (walking)
                 if i > 0 && node.lineId != nil && currentLineId != nil {
                     let prevStop = stopCache[path[i-1].stopId]
                     if let prev = prevStop, prev.id != stop.id {
-                        // Walking transfer between different stops
+                        // Walking transfer between different stops - interpolate path
+                        let walkCoordinates = interpolateWalkingPath(from: prev, to: stop)
                         let walkSegment = JourneySegment(
                             type: .walking,
                             transportMode: .walking,
@@ -309,12 +327,10 @@ class RoutingService {
                             destination: stop,
                             intermediateStops: [],
                             durationMinutes: estimateWalkingTime(from: prev, to: stop),
-                            coordinates: [
-                                CLLocationCoordinate2D(latitude: prev.latitude, longitude: prev.longitude),
-                                CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
-                            ]
+                            coordinates: walkCoordinates
                         )
                         segments.append(walkSegment)
+                        DebugLog.log("🚶 [Routing] Added WALKING segment: \(prev.name) to \(stop.name)")
                     }
                 }
 
@@ -333,6 +349,14 @@ class RoutingService {
             let lastStop = segmentStops.last ?? start
             let mode = transportMode(for: line)
 
+            // Get real shape coordinates for last segment
+            let coordinates = await getShapeCoordinates(
+                for: line,
+                from: start,
+                to: lastStop,
+                fallbackStops: segmentStops
+            )
+
             let segment = JourneySegment(
                 type: .transit,
                 transportMode: mode,
@@ -342,12 +366,145 @@ class RoutingService {
                 destination: lastStop,
                 intermediateStops: Array(segmentStops.dropFirst().dropLast()),
                 durationMinutes: estimateDuration(from: start, to: lastStop, stops: segmentStops.count),
-                coordinates: segmentStops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                coordinates: coordinates
             )
             segments.append(segment)
+            DebugLog.log("🚇 [Routing] Added FINAL TRANSIT segment: \(line?.name ?? "?") from \(start.name) to \(lastStop.name) with \(coordinates.count) coords")
+        }
+
+        DebugLog.log("🛤️ [Routing] Total segments created: \(segments.count)")
+        for (idx, seg) in segments.enumerated() {
+            DebugLog.log("   [\(idx)] \(seg.type == .transit ? "🚇" : "🚶") \(seg.lineName ?? "Walking") - \(seg.coordinates.count) coords")
         }
 
         return segments
+    }
+
+    // MARK: - Shape Helpers
+
+    /// Get shape coordinates for a segment, loading from API if needed
+    private func getShapeCoordinates(
+        for line: Line?,
+        from origin: Stop,
+        to destination: Stop,
+        fallbackStops: [Stop]
+    ) async -> [CLLocationCoordinate2D] {
+        guard let line = line, let routeId = line.routeIds.first else {
+            // Fallback to stop coordinates
+            return fallbackStops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        }
+
+        // Load shape if not cached
+        if shapeCache[routeId] == nil {
+            let shapePoints = await dataService.fetchRouteShape(routeId: routeId)
+            if !shapePoints.isEmpty {
+                shapeCache[routeId] = shapePoints.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+            }
+        }
+
+        guard let fullShape = shapeCache[routeId], !fullShape.isEmpty else {
+            // Fallback to stop coordinates
+            return fallbackStops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        }
+
+        // Extract the portion of the shape between origin and destination
+        let originCoord = CLLocationCoordinate2D(latitude: origin.latitude, longitude: origin.longitude)
+        let destCoord = CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude)
+
+        return extractShapeSegment(from: fullShape, origin: originCoord, destination: destCoord)
+    }
+
+    /// Extract a portion of the shape between two coordinates
+    /// The shape points are already sorted by sequence from the API
+    private func extractShapeSegment(
+        from shape: [CLLocationCoordinate2D],
+        origin: CLLocationCoordinate2D,
+        destination: CLLocationCoordinate2D
+    ) -> [CLLocationCoordinate2D] {
+        guard shape.count > 1 else { return [origin, destination] }
+
+        // Find closest point to origin
+        var originIndex = 0
+        var minOriginDist = Double.infinity
+        for (index, coord) in shape.enumerated() {
+            let d = distance(from: coord, to: origin)
+            if d < minOriginDist {
+                minOriginDist = d
+                originIndex = index
+            }
+        }
+
+        // Find closest point to destination
+        var destIndex = shape.count - 1
+        var minDestDist = Double.infinity
+        for (index, coord) in shape.enumerated() {
+            let d = distance(from: coord, to: destination)
+            if d < minDestDist {
+                minDestDist = d
+                destIndex = index
+            }
+        }
+
+        // Extract segment - points are already in correct order by sequence
+        var segment: [CLLocationCoordinate2D]
+        if originIndex <= destIndex {
+            segment = Array(shape[originIndex...destIndex])
+        } else {
+            // Origin comes after destination in shape, so we're going "backwards"
+            // Extract and reverse to get origin -> destination order
+            segment = Array(shape[destIndex...originIndex].reversed())
+        }
+
+        // If segment is too short, interpolate more points for smoother animation
+        if segment.count < 10 {
+            segment = interpolatePoints(segment, targetCount: max(20, segment.count * 3))
+        }
+
+        return segment
+    }
+
+    /// Interpolate walking path between two stops
+    private func interpolateWalkingPath(from origin: Stop, to destination: Stop) -> [CLLocationCoordinate2D] {
+        let start = CLLocationCoordinate2D(latitude: origin.latitude, longitude: origin.longitude)
+        let end = CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude)
+
+        // Create interpolated points for smooth walking animation
+        return interpolatePoints([start, end], targetCount: 15)
+    }
+
+    /// Interpolate points to create smoother path
+    private func interpolatePoints(_ points: [CLLocationCoordinate2D], targetCount: Int) -> [CLLocationCoordinate2D] {
+        guard points.count >= 2, targetCount > points.count else { return points }
+
+        var result: [CLLocationCoordinate2D] = []
+        let segmentCount = points.count - 1
+        let pointsPerSegment = max(1, (targetCount - 1) / segmentCount)
+
+        for i in 0..<segmentCount {
+            let start = points[i]
+            let end = points[i + 1]
+
+            for j in 0..<pointsPerSegment {
+                let t = Double(j) / Double(pointsPerSegment)
+                let lat = start.latitude + (end.latitude - start.latitude) * t
+                let lon = start.longitude + (end.longitude - start.longitude) * t
+                result.append(CLLocationCoordinate2D(latitude: lat, longitude: lon))
+            }
+        }
+
+        // Add final point
+        if let last = points.last {
+            result.append(last)
+        }
+
+        return result
+    }
+
+    /// Calculate distance between two coordinates in meters
+    private func distance(from coord1: CLLocationCoordinate2D, to coord2: CLLocationCoordinate2D) -> Double {
+        let loc1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
+        let loc2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+        return loc1.distance(from: loc2)
     }
 
     private func transportMode(for line: Line?) -> TransportMode {
@@ -356,8 +513,8 @@ class RoutingService {
         case .metro: return .metro
         case .cercanias: return .cercanias
         case .tram: return .tranvia
-        case .bus: return .bus
-        case .other: return .metro
+        case .metroLigero: return .metroLigero
+        case .fgc: return .cercanias  // FGC behaves like cercanías
         }
     }
 

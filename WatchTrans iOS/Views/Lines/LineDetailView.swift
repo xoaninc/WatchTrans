@@ -16,6 +16,7 @@ struct LineDetailView: View {
     @State private var stops: [Stop] = []
     @State private var alerts: [AlertResponse] = []
     @State private var operatingHoursResult: OperatingHoursResult?
+    @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var isLoading = true
     @State private var isAlertsExpanded = false
 
@@ -78,7 +79,9 @@ struct LineDetailView: View {
                     RouteMapView(
                         line: line,
                         stops: stops,
-                        dataService: dataService
+                        dataService: dataService,
+                        shapePoints: shapePoints.isEmpty ? nil : shapePoints,
+                        isSuspended: operatingHoursResult?.isSuspended ?? false
                     )
                 }
 
@@ -144,9 +147,19 @@ struct LineDetailView: View {
             return nil
         }()
 
+        // Fetch shape points for the route
+        async let shapeTask: [CLLocationCoordinate2D] = {
+            if let routeId = line.routeIds.first {
+                let points = await dataService.fetchRouteShape(routeId: routeId)
+                return points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+            }
+            return []
+        }()
+
         stops = await stopsTask
         alerts = await alertsTask
         operatingHoursResult = await hoursTask
+        shapePoints = await shapeTask
         isLoading = false
     }
 }

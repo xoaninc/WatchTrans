@@ -8,6 +8,7 @@
 
 import SwiftUI
 import MapKit
+import QuartzCore
 
 struct Journey3DAnimationView: View {
     let journey: Journey
@@ -20,13 +21,21 @@ struct Journey3DAnimationView: View {
     @State private var isPaused = false
     @State private var currentSegmentIndex = 0
     @State private var currentPointIndex = 0
-    @State private var progress: Double = 0
-    @State private var animationTask: Task<Void, Never>?
     @State private var showControls = true
+    @State private var animatedMarkerPosition: CLLocationCoordinate2D?
+
+    // CADisplayLink animation controller
+    @State private var animationController: AnimationController?
 
     // Animation configuration
-    private let pointDuration: Double = 0.15  // Base duration per point
-    private let transitionDuration: Double = 1.0
+    // Base speed - start conservative, can increase with speed button
+    private let baseSpeedKmPerSec: Double = 0.15
+    @State private var speedMultiplier: Double = 1.0  // 1.0 = normal, 0.5 = slow
+
+    // Camera transition state
+    @State private var currentCameraAltitude: Double = 3000
+    @State private var currentCameraPitch: Double = 55
+    @State private var currentCameraHeading: Double = 0
 
     var currentSegment: JourneySegment? {
         guard currentSegmentIndex < journey.segments.count else { return nil }
@@ -46,14 +55,13 @@ struct Journey3DAnimationView: View {
                     }
                 }
 
-                // Current position marker
-                if let segment = currentSegment,
-                   currentPointIndex < segment.coordinates.count {
-                    let coord = segment.coordinates[currentPointIndex]
-
-                    Annotation("", coordinate: coord) {
+                // Current position marker (uses animated position for smooth movement)
+                // Using anchorPoint to ensure consistent positioning
+                if let markerCoord = animatedMarkerPosition {
+                    Annotation("", coordinate: markerCoord, anchor: .center) {
                         currentPositionMarker
                     }
+                    .annotationTitles(.hidden)
                 }
 
                 // Stop markers
@@ -116,7 +124,7 @@ struct Journey3DAnimationView: View {
             setupInitialCamera()
         }
         .onDisappear {
-            animationTask?.cancel()
+            animationController?.stop()
         }
     }
 
@@ -125,7 +133,7 @@ struct Journey3DAnimationView: View {
     private var topBar: some View {
         HStack {
             Button {
-                animationTask?.cancel()
+                animationController?.stop()
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -313,7 +321,25 @@ struct Journey3DAnimationView: View {
     }
 
     private var controlsBar: some View {
-        HStack(spacing: 30) {
+        HStack(spacing: 20) {
+            // Speed toggle: 1× → 2× → 4× → 1×
+            Button {
+                if speedMultiplier == 1.0 {
+                    speedMultiplier = 2.0
+                } else if speedMultiplier == 2.0 {
+                    speedMultiplier = 4.0
+                } else {
+                    speedMultiplier = 1.0
+                }
+            } label: {
+                Text(speedMultiplier == 1.0 ? "1×" : (speedMultiplier == 2.0 ? "2×" : "4×"))
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(speedMultiplier == 1.0 ? .gray.opacity(0.5) : (speedMultiplier == 2.0 ? .orange : .red)))
+            }
+
             // Restart
             Button {
                 restart()
@@ -386,26 +412,30 @@ struct Journey3DAnimationView: View {
     // MARK: - Camera Control
 
     private func setupInitialCamera() {
+        // Center on the start of the journey
         guard let firstSegment = journey.segments.first,
-              let firstCoord = firstSegment.coordinates.first else { return }
+              let startCoord = firstSegment.coordinates.first else { return }
 
+        // Initialize marker position
+        animatedMarkerPosition = startCoord
+
+        // Fixed north heading (rotation disabled)
         mapPosition = .camera(MapCamera(
-            centerCoordinate: firstCoord,
-            distance: firstSegment.transportMode.cameraAltitude * 10,
+            centerCoordinate: startCoord,
+            distance: 2500,
             heading: 0,
-            pitch: 0
+            pitch: 55
         ))
     }
 
     private func animateCamera(to coordinate: CLLocationCoordinate2D, mode: TransportMode, heading: Double = 0) {
-        withAnimation(.easeInOut(duration: pointDuration * mode.animationSpeed)) {
-            mapPosition = .camera(MapCamera(
-                centerCoordinate: coordinate,
-                distance: mode.cameraAltitude,
-                heading: heading,
-                pitch: mode.cameraPitch
-            ))
-        }
+        // Move camera instantly to follow the marker
+        mapPosition = .camera(MapCamera(
+            centerCoordinate: coordinate,
+            distance: mode.cameraAltitude,
+            heading: heading,
+            pitch: mode.cameraPitch
+        ))
     }
 
     private func calculateHeading(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
@@ -420,80 +450,349 @@ struct Journey3DAnimationView: View {
     // MARK: - Playback Control
 
     private func play() {
+        // Prevent double-play
+        guard !isPlaying || isPaused else { return }
+
         isPlaying = true
         isPaused = false
+        playSegment(at: currentSegmentIndex)
+    }
 
-        animationTask = Task {
-            for segmentIdx in currentSegmentIndex..<journey.segments.count {
-                guard !Task.isCancelled else { break }
-
-                currentSegmentIndex = segmentIdx
-                let segment = journey.segments[segmentIdx]
-
-                // Transition animation between segments
-                if segmentIdx > 0 {
-                    try? await Task.sleep(nanoseconds: UInt64(transitionDuration * 1_000_000_000))
-                }
-
-                let startIdx = segmentIdx == currentSegmentIndex ? currentPointIndex : 0
-
-                for pointIdx in startIdx..<segment.coordinates.count {
-                    guard !Task.isCancelled, !isPaused else { break }
-
-                    currentPointIndex = pointIdx
-                    let coord = segment.coordinates[pointIdx]
-
-                    // Calculate heading to next point
-                    var heading: Double = 0
-                    if pointIdx < segment.coordinates.count - 1 {
-                        heading = calculateHeading(from: coord, to: segment.coordinates[pointIdx + 1])
-                    }
-
-                    animateCamera(to: coord, mode: segment.transportMode, heading: heading)
-
-                    // Wait for animation
-                    let duration = pointDuration / segment.transportMode.animationSpeed
-                    try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-                }
-
-                // Reset point index for next segment
-                if !isPaused {
-                    currentPointIndex = 0
-                }
-            }
-
-            // Animation complete
-            await MainActor.run {
-                isPlaying = false
-            }
+    private func playSegment(at index: Int) {
+        guard index < journey.segments.count else {
+            // All segments complete
+            isPlaying = false
+            return
         }
+
+        // Stop any existing animation before starting new one
+        animationController?.stop()
+
+        currentSegmentIndex = index
+        let segment = journey.segments[index]
+
+        // Create new animation controller for this segment
+        let controller = AnimationController()
+        animationController = controller
+
+        // Target camera settings for this segment
+        let targetAltitude = segment.transportMode.cameraAltitude
+        let targetPitch = segment.transportMode.cameraPitch
+
+        controller.start(
+            coordinates: segment.coordinates,
+            speedKmPerSec: baseSpeedKmPerSec * segment.transportMode.animationSpeed * speedMultiplier,
+            onUpdate: { [self] coord, heading, progress, _ in
+                // Update marker position
+                animatedMarkerPosition = coord
+
+                // Gradually transition camera altitude and pitch (smooth blend)
+                let altitudeDelta = targetAltitude - currentCameraAltitude
+                let pitchDelta = targetPitch - currentCameraPitch
+                currentCameraAltitude += altitudeDelta * 0.05
+                currentCameraPitch += pitchDelta * 0.05
+
+                // Camera rotation disabled - causes polyline to disappear in MapKit
+                // TODO: API team will handle route calculations with proper camera hints
+                mapPosition = .camera(MapCamera(
+                    centerCoordinate: coord,
+                    distance: currentCameraAltitude,
+                    heading: 0,  // Fixed north
+                    pitch: currentCameraPitch
+                ))
+                currentPointIndex = Int(progress * Double(segment.coordinates.count - 1))
+            },
+            onComplete: { [self] in
+                // Play next segment immediately
+                if !isPaused {
+                    playSegment(at: index + 1)
+                }
+            }
+        )
     }
 
     private func pause() {
         isPaused = true
-        animationTask?.cancel()
+        animationController?.stop()
     }
 
     private func restart() {
-        animationTask?.cancel()
+        animationController?.stop()
         currentSegmentIndex = 0
         currentPointIndex = 0
         isPlaying = false
         isPaused = false
+        animatedMarkerPosition = nil
         setupInitialCamera()
     }
 
     private func skipToEnd() {
-        animationTask?.cancel()
+        animationController?.stop()
         currentSegmentIndex = journey.segments.count - 1
         if let lastSegment = journey.segments.last {
             currentPointIndex = lastSegment.coordinates.count - 1
             if let lastCoord = lastSegment.coordinates.last {
-                animateCamera(to: lastCoord, mode: lastSegment.transportMode)
+                animatedMarkerPosition = lastCoord
+                mapPosition = .camera(MapCamera(
+                    centerCoordinate: lastCoord,
+                    distance: 2500,
+                    heading: 0,
+                    pitch: 55
+                ))
             }
         }
         isPlaying = false
         isPaused = false
+    }
+}
+
+// MARK: - CADisplayLink Animation Controller
+
+/// Controller for smooth map marker animation along a route.
+///
+/// Uses techniques from Mapbox GL JS and Google Maps:
+/// - CADisplayLink for 60fps synchronized with display refresh (like requestAnimationFrame)
+/// - Distance-based interpolation along polyline (like turf.along)
+/// - Route normalization to subdivide sparse points (max 50m gaps)
+/// - Spherical interpolation (Slerp) for geographic accuracy
+///
+/// Usage:
+/// ```swift
+/// let controller = AnimationController()
+/// controller.start(
+///     coordinates: segment.coordinates,
+///     speedKmPerSec: 0.5,
+///     onUpdate: { coord, heading, progress in
+///         // Update marker and camera
+///     },
+///     onComplete: {
+///         // Animation finished
+///     }
+/// )
+/// ```
+class AnimationController {
+    private var displayLink: CADisplayLink?
+    private var startTime: CFTimeInterval = 0
+    private var currentDistance: Double = 0
+    private var totalDistance: Double = 0
+    private var speedKmPerSec: Double = 0.5
+    private var coordinates: [CLLocationCoordinate2D] = []
+    // onUpdate: (coord, heading, progress, unused)
+    private var onUpdate: ((CLLocationCoordinate2D, Double, Double, CLLocationCoordinate2D?) -> Void)?
+    private var onComplete: (() -> Void)?
+
+    func start(
+        coordinates: [CLLocationCoordinate2D],
+        speedKmPerSec: Double,
+        onUpdate: @escaping (CLLocationCoordinate2D, Double, Double, CLLocationCoordinate2D?) -> Void,
+        onComplete: @escaping () -> Void
+    ) {
+        // Normalize route: subdivide segments >50m for smooth animation
+        let normalizedCoords = Self.normalizeRoute(coordinates, maxSegmentMeters: 50.0)
+
+        self.coordinates = normalizedCoords
+        self.speedKmPerSec = speedKmPerSec
+        self.onUpdate = onUpdate
+        self.onComplete = onComplete
+        self.currentDistance = 0
+        self.totalDistance = Self.lineDistance(normalizedCoords)
+
+        // Reset state
+        frameCount = 0
+        smoothedHeading = 0
+        headingInitialized = false
+
+        startTime = CACurrentMediaTime()
+        displayLink = CADisplayLink(target: self, selector: #selector(update))
+        // Limit to 60fps to reduce jitter on ProMotion (120Hz) displays
+        displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        displayLink?.add(to: .main, forMode: .common)
+    }
+
+    func stop() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    private var frameCount = 0
+    private var smoothedHeading: Double = 0
+    private var headingInitialized = false
+
+    @objc private func update(displayLink: CADisplayLink) {
+        let elapsed = CACurrentMediaTime() - startTime
+        currentDistance = elapsed * speedKmPerSec
+        frameCount += 1
+
+        if currentDistance >= totalDistance {
+            // Animation complete
+            if let last = coordinates.last {
+                let heading = coordinates.count > 1
+                    ? Self.calculateHeading(from: coordinates[coordinates.count - 2], to: last)
+                    : 0
+                onUpdate?(last, heading, 1.0, nil)
+            }
+            stop()
+            onComplete?()
+            return
+        }
+
+        // Get position at current distance (like turf.along)
+        let (coord, targetHeading) = Self.coordinateAlong(coordinates, distance: currentDistance)
+        let progress = currentDistance / totalDistance
+
+        // Smooth heading to prevent vibration when turning
+        // Use very aggressive smoothing (0.03 = extremely smooth, more lag but no jitter)
+        if !headingInitialized {
+            smoothedHeading = targetHeading
+            headingInitialized = true
+        } else {
+            // Handle wrap-around at 0/360 degrees
+            var delta = targetHeading - smoothedHeading
+            if delta > 180 { delta -= 360 }
+            if delta < -180 { delta += 360 }
+            smoothedHeading += delta * 0.03  // Very smooth (0.03)
+            // Normalize to 0-360
+            if smoothedHeading < 0 { smoothedHeading += 360 }
+            if smoothedHeading >= 360 { smoothedHeading -= 360 }
+        }
+
+        // Update every frame for smooth motion on 120Hz ProMotion displays
+        // (Previously skipped frames caused vibration due to MapKit interpolation)
+        onUpdate?(coord, smoothedHeading, progress, nil)
+    }
+
+    // MARK: - Static Geometry Helpers
+
+    static func lineDistance(_ coordinates: [CLLocationCoordinate2D]) -> Double {
+        guard coordinates.count > 1 else { return 0 }
+        var total: Double = 0
+        for i in 0..<coordinates.count - 1 {
+            let from = CLLocation(latitude: coordinates[i].latitude, longitude: coordinates[i].longitude)
+            let to = CLLocation(latitude: coordinates[i + 1].latitude, longitude: coordinates[i + 1].longitude)
+            total += from.distance(from: to) / 1000.0
+        }
+        return total
+    }
+
+    static func coordinateAlong(_ coordinates: [CLLocationCoordinate2D], distance: Double) -> (CLLocationCoordinate2D, Double) {
+        guard coordinates.count > 1 else {
+            return (coordinates.first ?? CLLocationCoordinate2D(), 0)
+        }
+
+        var traveled: Double = 0
+
+        for i in 0..<coordinates.count - 1 {
+            let from = coordinates[i]
+            let to = coordinates[i + 1]
+            let fromLoc = CLLocation(latitude: from.latitude, longitude: from.longitude)
+            let toLoc = CLLocation(latitude: to.latitude, longitude: to.longitude)
+            let segmentDist = fromLoc.distance(from: toLoc) / 1000.0
+
+            if traveled + segmentDist >= distance {
+                let remaining = distance - traveled
+                let ratio = segmentDist > 0 ? remaining / segmentDist : 0
+                let lat = from.latitude + (to.latitude - from.latitude) * ratio
+                let lon = from.longitude + (to.longitude - from.longitude) * ratio
+                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let heading = calculateHeading(from: from, to: to)
+                return (coord, heading)
+            }
+
+            traveled += segmentDist
+        }
+
+        let last = coordinates[coordinates.count - 1]
+        let secondLast = coordinates[coordinates.count - 2]
+        let heading = calculateHeading(from: secondLast, to: last)
+        return (last, heading)
+    }
+
+    static func calculateHeading(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let deltaLon = to.longitude - from.longitude
+        let y = sin(deltaLon * .pi / 180)
+        let x = cos(from.latitude * .pi / 180) * tan(to.latitude * .pi / 180) -
+                sin(from.latitude * .pi / 180) * cos(deltaLon * .pi / 180)
+        let heading = atan2(y, x) * 180 / .pi
+        return (heading + 360).truncatingRemainder(dividingBy: 360)
+    }
+
+    // MARK: - Route Normalization (subdivide sparse points)
+
+    /// Normalizes a route by subdividing segments that are too long.
+    /// This ensures smooth animation even when polyline points are far apart.
+    /// - Parameter maxSegmentMeters: Maximum distance between consecutive points (default 50m)
+    /// - Returns: Normalized array with denser points where needed
+    static func normalizeRoute(_ coordinates: [CLLocationCoordinate2D], maxSegmentMeters: Double = 50.0) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 1 else { return coordinates }
+
+        var normalized: [CLLocationCoordinate2D] = []
+        normalized.append(coordinates[0])
+
+        for i in 0..<coordinates.count - 1 {
+            let from = coordinates[i]
+            let to = coordinates[i + 1]
+
+            let fromLoc = CLLocation(latitude: from.latitude, longitude: from.longitude)
+            let toLoc = CLLocation(latitude: to.latitude, longitude: to.longitude)
+            let segmentDistance = fromLoc.distance(from: toLoc)  // meters
+
+            if segmentDistance > maxSegmentMeters {
+                // Subdivide this segment
+                let subdivisions = Int(ceil(segmentDistance / maxSegmentMeters))
+
+                for j in 1..<subdivisions {
+                    let ratio = Double(j) / Double(subdivisions)
+                    // Spherical interpolation for accuracy on longer distances
+                    let interpolated = sphericalInterpolate(from: from, to: to, fraction: ratio)
+                    normalized.append(interpolated)
+                }
+            }
+
+            normalized.append(to)
+        }
+
+        return normalized
+    }
+
+    /// Spherical linear interpolation (Slerp) between two coordinates
+    /// More accurate than linear interpolation for geographic coordinates
+    static func sphericalInterpolate(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D, fraction: Double) -> CLLocationCoordinate2D {
+        let lat1 = from.latitude * .pi / 180
+        let lon1 = from.longitude * .pi / 180
+        let lat2 = to.latitude * .pi / 180
+        let lon2 = to.longitude * .pi / 180
+
+        // Calculate angular distance
+        let deltaLat = lat2 - lat1
+        let deltaLon = lon2 - lon1
+
+        let a = sin(deltaLat / 2) * sin(deltaLat / 2) +
+                cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
+        let angularDistance = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        // If points are very close, use linear interpolation
+        if angularDistance < 1e-10 {
+            return CLLocationCoordinate2D(
+                latitude: from.latitude + (to.latitude - from.latitude) * fraction,
+                longitude: from.longitude + (to.longitude - from.longitude) * fraction
+            )
+        }
+
+        // Spherical interpolation
+        let A = sin((1 - fraction) * angularDistance) / sin(angularDistance)
+        let B = sin(fraction * angularDistance) / sin(angularDistance)
+
+        let x = A * cos(lat1) * cos(lon1) + B * cos(lat2) * cos(lon2)
+        let y = A * cos(lat1) * sin(lon1) + B * cos(lat2) * sin(lon2)
+        let z = A * sin(lat1) + B * sin(lat2)
+
+        let interpolatedLat = atan2(z, sqrt(x * x + y * y))
+        let interpolatedLon = atan2(y, x)
+
+        return CLLocationCoordinate2D(
+            latitude: interpolatedLat * 180 / .pi,
+            longitude: interpolatedLon * 180 / .pi
+        )
     }
 }
 
