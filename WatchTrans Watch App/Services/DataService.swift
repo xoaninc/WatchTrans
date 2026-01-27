@@ -5,9 +5,11 @@
 //  Created by Juan Macias Gomez on 14/1/26.
 //
 //  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (redcercanias.com)
+//  UPDATED: 2026-01-27 - Added API route planner integration
 //
 
 import Foundation
+import CoreLocation
 
 /// Current location context - holds network/province info for the user's location
 struct LocationContext {
@@ -77,7 +79,6 @@ class DataService {
         let arrivals: [Arrival]
         let timestamp: Date
 
-        /// Cache entry is fresh and can be used directly
         var isValid: Bool {
             Date().timeIntervalSince(timestamp) < APIConfiguration.arrivalCacheTTL
         }
@@ -113,6 +114,8 @@ class DataService {
         DebugLog.log("📍 [DataService] ========== LOADING DATA ==========")
         DebugLog.log("📍 [DataService] Coordinates: (\(lat), \(lon))")
 
+        let totalStart = Date()
+
         // Try new coordinate-based API first, fall back to nucleo-based if needed
         do {
             // 0. Fetch networks to get transport types (only if not cached)
@@ -134,8 +137,10 @@ class DataService {
 
             // 1. Fetch stops by coordinates (includes province detection)
             DebugLog.log("📍 [DataService] Step 1: Fetching stops by coordinates...")
+            let stopsStart = Date()
             let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
-            DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops")
+            let stopsTime = Date().timeIntervalSince(stopsStart)
+            DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
 
             // Debug: Show first 3 stops with province info
             for (i, stop) in stopResponses.prefix(3).enumerated() {
@@ -173,8 +178,10 @@ class DataService {
 
             // 2. Fetch routes by coordinates
             DebugLog.log("📍 [DataService] Step 2: Fetching routes by coordinates...")
+            let routesStart = Date()
             let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: lat, longitude: lon)
-            DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes")
+            let routesTime = Date().timeIntervalSince(routesStart)
+            DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
 
             // Debug: Show networks found in routes
             let networkIds = Set(routeResponses.compactMap { $0.networkId })
@@ -200,7 +207,10 @@ class DataService {
 
             let finalProvinceName = provinceName ?? "WatchTrans"
             DebugLog.log("📍 [DataService] Step 3: Processing routes with province: \(finalProvinceName)")
+            let processStart = Date()
             await processRoutes(routeResponses, provinceName: finalProvinceName)
+            let processTime = Date().timeIntervalSince(processStart)
+            DebugLog.log("📍 [DataService] ✅ Processed routes in \(String(format: "%.2f", processTime))s")
 
             // 3. Set current location context
             let networkCodes = Set(routeResponses.compactMap { $0.networkId })
@@ -221,8 +231,14 @@ class DataService {
                 DebugLog.log("📍 [DataService] ⚠️ Could not determine province - currentLocation is nil")
             }
 
+            let totalTime = Date().timeIntervalSince(totalStart)
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
             DebugLog.log("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
+            DebugLog.log("⏱️ [DataService] TIMING SUMMARY:")
+            DebugLog.log("⏱️ [DataService]   Stops API: \(String(format: "%.2f", stopsTime))s")
+            DebugLog.log("⏱️ [DataService]   Routes API: \(String(format: "%.2f", routesTime))s")
+            DebugLog.log("⏱️ [DataService]   Processing: \(String(format: "%.2f", processTime))s")
+            DebugLog.log("⏱️ [DataService]   TOTAL: \(String(format: "%.2f", totalTime))s")
 
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to load transport data: \(error)")
@@ -900,15 +916,116 @@ class DataService {
 
     /// Fetch shape (polyline) for a route
     /// Returns array of shape points to draw the route on a map
-    func fetchRouteShape(routeId: String) async -> [ShapePoint] {
+    /// - Parameter maxGap: If provided, normalizes coordinates to have no gaps > maxGap meters
+    func fetchRouteShape(routeId: String, maxGap: Int? = nil) async -> [ShapePoint] {
         do {
-            let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId)
-            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)")
+            let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId, maxGap: maxGap)
+            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
             return response.shape.sorted { $0.sequence < $1.sequence }
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch shape for \(routeId): \(error)")
             return []
         }
+    }
+
+    // MARK: - Route Planner
+
+    /// Plan a journey between two stops using the API route planner
+    /// Returns a Journey object with all segments and coordinates
+    func planJourney(fromStopId: String, toStopId: String) async -> Journey? {
+        DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId)")
+
+        do {
+            let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId)
+
+            guard response.success, let apiJourney = response.journey else {
+                DebugLog.log("⚠️ [DataService] Route plan failed: \(response.message ?? "unknown error")")
+                return nil
+            }
+
+            // Convert API response to Journey model
+            let journey = convertToJourney(from: apiJourney)
+            DebugLog.log("🗺️ [DataService] ✅ Journey planned: \(journey.segments.count) segments, \(journey.totalDurationMinutes) min")
+            return journey
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to plan journey: \(error)")
+            return nil
+        }
+    }
+
+    /// Convert API route plan response to Journey model
+    private func convertToJourney(from apiJourney: RoutePlanJourney) -> Journey {
+        // Convert origin stop
+        let origin = Stop(
+            id: apiJourney.origin.id,
+            name: apiJourney.origin.name,
+            latitude: apiJourney.origin.lat,
+            longitude: apiJourney.origin.lon
+        )
+
+        // Convert destination stop
+        let destination = Stop(
+            id: apiJourney.destination.id,
+            name: apiJourney.destination.name,
+            latitude: apiJourney.destination.lat,
+            longitude: apiJourney.destination.lon
+        )
+
+        // Convert segments
+        let segments = apiJourney.segments.map { apiSegment -> JourneySegment in
+            let segmentOrigin = Stop(
+                id: apiSegment.origin.id,
+                name: apiSegment.origin.name,
+                latitude: apiSegment.origin.lat,
+                longitude: apiSegment.origin.lon
+            )
+
+            let segmentDestination = Stop(
+                id: apiSegment.destination.id,
+                name: apiSegment.destination.name,
+                latitude: apiSegment.destination.lat,
+                longitude: apiSegment.destination.lon
+            )
+
+            let intermediateStops = (apiSegment.intermediateStops ?? []).map { apiStop in
+                Stop(
+                    id: apiStop.id,
+                    name: apiStop.name,
+                    latitude: apiStop.lat,
+                    longitude: apiStop.lon
+                )
+            }
+
+            // Convert coordinates
+            let coordinates = apiSegment.coordinates.map { coord in
+                CLLocationCoordinate2D(latitude: coord.lat, longitude: coord.lon)
+            }
+
+            // Determine segment type and transport mode
+            let segmentType: SegmentType = apiSegment.type == "walking" ? .walking : .transit
+            let transportMode = TransportMode(rawValue: apiSegment.transportMode) ?? .metro
+
+            return JourneySegment(
+                type: segmentType,
+                transportMode: transportMode,
+                lineName: apiSegment.lineName,
+                lineColor: apiSegment.lineColor,
+                origin: segmentOrigin,
+                destination: segmentDestination,
+                intermediateStops: intermediateStops,
+                durationMinutes: apiSegment.durationMinutes,
+                coordinates: coordinates
+            )
+        }
+
+        return Journey(
+            origin: origin,
+            destination: destination,
+            segments: segments,
+            totalDurationMinutes: apiJourney.totalDurationMinutes,
+            totalWalkingMinutes: apiJourney.totalWalkingMinutes,
+            transferCount: apiJourney.transferCount
+        )
     }
 
 }

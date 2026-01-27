@@ -1,6 +1,6 @@
 //
 //  SharedStorage.swift
-//  WatchTrans Watch App
+//  WatchTrans iOS
 //
 //  Created by Claude on 17/1/26.
 //  Shared storage for App Group - allows widget to access app data
@@ -8,12 +8,12 @@
 
 import Foundation
 
-/// Shared storage using App Group for communication between app and widget
+/// Shared storage using App Group for communication between iOS app and widget
 ///
 /// SETUP REQUIRED IN XCODE:
-/// 1. Select WatchTrans Watch App target -> Signing & Capabilities -> + Capability -> App Groups
+/// 1. Select WatchTrans iOS target -> Signing & Capabilities -> + Capability -> App Groups
 /// 2. Add group: "group.juan.WatchTrans"
-/// 3. Select WatchTransWidgetExtension target -> Signing & Capabilities -> + Capability -> App Groups
+/// 3. Select iOS Widget Extension target -> Signing & Capabilities -> + Capability -> App Groups
 /// 4. Add same group: "group.juan.WatchTrans"
 ///
 class SharedStorage {

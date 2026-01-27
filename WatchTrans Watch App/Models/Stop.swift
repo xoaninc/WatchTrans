@@ -29,7 +29,7 @@ struct Stop: Identifiable, Equatable {
     let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
 
-    init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String],
+    init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String] = [],
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
