@@ -1,7 +1,9 @@
 # Investigación de Apps de Transporte Público
 
 Fecha: 2026-01-27
-Objetivo: Encontrar inspiración y features para WatchTrans
+Tipo: Documento de referencia (solo lectura)
+
+> **Nota:** Las features pendientes y decisiones técnicas están en `ROADMAP.md`
 
 ---
 
@@ -370,26 +372,7 @@ protocol NetworkProvider {
 
 ---
 
-## 10. PRÓXIMOS PASOS SUGERIDOS
-
-### Corto plazo
-1. Probar API de Transitous para comparar resultados con nuestra API
-2. Evaluar si Transitous puede ser fallback
-3. Implementar Siri Shortcuts básicos
-
-### Medio plazo
-1. Añadir widgets iOS interactivos
-2. Complicaciones Apple Watch
-3. Integrar alertas de servicio en rutas
-
-### Largo plazo
-1. Contribuir proveedor español a public-transport-enabler
-2. Evaluar migración a RAPTOR para routing
-3. Añadir bike-share (BiciMAD, Bicing)
-
----
-
-## 11. GUÍAS DE DESARROLLO Y ARQUITECTURA
+## 10. GUÍAS DE DESARROLLO Y ARQUITECTURA
 
 ### PubNub - Arquitectura Real-Time Transit
 **Fuente:** pubnub.com/blog
@@ -465,7 +448,7 @@ protocol NetworkProvider {
 
 ---
 
-## 12. ALGORITMO RAPTOR (Para el equipo API)
+## 11. ALGORITMO RAPTOR (Para el equipo API)
 
 **RAPTOR** = Round-Based Public Transit Routing Algorithm
 
@@ -491,89 +474,4 @@ Ronda N: Paradas alcanzables con N-1 transbordos
 
 ---
 
-## 13. RESUMEN EJECUTIVO
-
-### Apps analizadas: 15+
-### Librerías/tools: 20+
-### Feeds españoles disponibles: 150+ (via Transitous)
-
-### Top 5 features para implementar:
-1. **Siri Shortcuts** - "¿Cuándo pasa mi tren?"
-2. **Widgets iOS** - Próximas salidas en home screen
-3. **Complicaciones Watch** - Info en esfera
-4. **Paradas frecuentes** - Auto-detectar rutinas
-5. **Alertas en rutas** - Integrar avisos de servicio
-
-### Top 3 mejoras técnicas:
-1. **RAPTOR** - Algoritmo más eficiente para routing
-2. **Geohash** - Búsqueda de proximidad optimizada
-3. **WebSockets** - Updates real-time sin polling
-
----
-
-## 14. DECISIONES TÉCNICAS PENDIENTES
-
-### 14.1 Sincronización iCloud para Favoritos
-
-**Estado:** Documentado, pendiente de implementar
-
-**Decisión:** Usar AMBOS sistemas de storage
-
-| Storage | Rol | Razón |
-|---------|-----|-------|
-| **SharedStorage (App Groups)** | Fuente local | Widgets/Siri requieren <500ms, no pueden esperar red |
-| **iCloud (NSUbiquitousKeyValueStore)** | Sync entre dispositivos | iPhone ↔ iPad ↔ Mac |
-
-**Arquitectura propuesta:**
-```
-┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
-│   iCloud    │ ←→  │  SharedStorage  │ ←→  │ Widget/Siri │
-│  (backup)   │     │  (fuente local) │     │    (UI)     │
-└─────────────┘     └─────────────────┘     └─────────────┘
-```
-
-**Flujo de datos:**
-1. Usuario añade favorito → escribe a SharedStorage + iCloud
-2. iCloud notifica cambio (otro dispositivo) → actualiza SharedStorage
-3. Widget/Siri siempre leen de SharedStorage (local, rápido)
-
-**Implementación técnica:**
-```swift
-// NSUbiquitousKeyValueStore para sync
-let iCloudStore = NSUbiquitousKeyValueStore.default
-
-// Observer de cambios externos
-NotificationCenter.default.addObserver(
-    forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-    object: iCloudStore,
-    queue: .main
-) { notification in
-    // Sincronizar con SharedStorage local
-    let favorites = iCloudStore.array(forKey: "favorites")
-    SharedStorage.shared.saveFavorites(favorites)
-}
-```
-
-**Límites de NSUbiquitousKeyValueStore:**
-- 1MB total de almacenamiento
-- 1KB máximo por clave
-- Suficiente para: favoritos, hub stops, preferencias
-
-**Datos a sincronizar:**
-- ✅ Favoritos (lista de stopId + stopName)
-- ✅ Hub stops guardados
-- ❌ Ubicación (sensible, no sincronizar)
-- ❌ Cache de datos (local only)
-
-**Entitlements necesarios:**
-```xml
-<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
-```
-
-**Prioridad:** Baja (funcionalidad nice-to-have)
-
----
-
-*Documento creado para referencia del equipo WatchTrans*
-*Última actualización: 2026-01-27*
+*Documento de referencia - ver `ROADMAP.md` para tareas pendientes*

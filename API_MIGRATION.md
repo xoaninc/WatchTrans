@@ -1,8 +1,11 @@
 # Migración de Lógica de App a API
 
-## Estado: COMPLETADO (2026-01-27)
+## Estado: ✅ COMPLETADO (2026-01-27)
 
-Este documento describe la funcionalidad que se ha migrado del cliente iOS al servidor API.
+> **Documento histórico** - Esta migración ya está completada.
+> Ver `ROADMAP.md` para tareas pendientes actuales.
+
+Este documento describe la funcionalidad que se migró del cliente iOS al servidor API.
 
 ---
 

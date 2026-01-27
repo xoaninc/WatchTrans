@@ -2,7 +2,9 @@
 
 **Base URL:** `https://redcercanias.com/api/v1/gtfs`
 
-**Fecha última verificación:** 26 Enero 2026
+**Última verificación:** 26 Enero 2026
+
+> **Nota:** Bugs y mejoras pendientes están en `ROADMAP.md`
 
 ---
 
@@ -154,51 +156,6 @@ MapCamera update - Actualiza marcador y cámara
 ✅ [Animation] COMPLETE after 3920 frames, 65.3s
 🏁 [Journey] ALL SEGMENTS COMPLETE
 ```
-
----
-
-## Bugs Encontrados
-
-### BUG CRÍTICO: C10 Madrid mezcla parada de Zaragoza
-
-**Endpoint afectado:** `GET /routes/RENFE_C10_42/stops`
-
-**Problema:** La lista de paradas de la C10 de Madrid incluye una parada de Zaragoza:
-- `RENFE_4040` - Delicias (Zaragoza) - **lat: 41.658** (incorrecto)
-- Todas las demás paradas tienen lat ~40.4 (Madrid)
-
-**Paradas devueltas (extracto):**
-```
-Villalba de Guadarrama - lat:40.626 - RENFE_10200   ✅ Madrid
-Delicias               - lat:40.400 - RENFE_18004  ✅ Madrid (Delicias correcto)
-Delicias               - lat:41.658 - RENFE_4040   ❌ ZARAGOZA (incorrecto!)
-Chamartín RENFE        - lat:40.471 - RENFE_17000  ✅ Madrid
-```
-
-**Impacto:** El mapa muestra una ruta desde Madrid hasta Aragón (~200km).
-
-**Solución sugerida:** Filtrar `RENFE_4040` del resultado o corregir la asignación en la base de datos.
-
-**Nota:** El endpoint `/routes/RENFE_C10_42/shape` devuelve correctamente solo puntos de Madrid (486 puntos, lat range 40.39-40.62).
-
----
-
-## Mejoras Sugeridas para API
-
-### Alta Prioridad
-0. **BUG C10 Madrid**: Eliminar `RENFE_4040` (Delicias Zaragoza) de la ruta `RENFE_C10_42`
-1. **Correspondencias Espanya**: Conectar `FGC_PE4` con TMB Metro L1/L3
-2. **Correspondencias Passeig de Gràcia**: Añadir conexiones L2/L3/L4 + Rodalies
-3. **Correspondencias Arc de Triomf**: Añadir conexiones L1 + Rodalies
-4. **Correspondencias Diagonal**: Añadir conexiones con TRAM
-
-### Media Prioridad
-5. Añadir campo `color` a `PlatformInfo` (color de la línea)
-6. Añadir campo `description` a `PlatformInfo` (sentido/dirección)
-
-### Baja Prioridad
-7. Enlaces Wikipedia de operadores
-8. Código técnico de paradas
 
 ---
 
