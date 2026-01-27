@@ -8,13 +8,20 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- Animacion 3D mejorada del planificador de rutas con shapes reales de la API
-- Pausas entre segmentos y en estaciones intermedias
-- Velocidad de animacion moderada para mejor visualizacion del recorrido
+- Siri Shortcuts para "Proximo tren en [parada]" (pendiente de configurar en Xcode)
+- Deteccion automatica de paradas frecuentes basada en patrones de uso
+- Seccion "Frecuentes" en Home con badge de patron (ej: "~08:00 L-V")
+- Abrir ubicaciones en Apple Maps, Google Maps, Citymapper o Waze
+- Info.plist con LSApplicationQueriesSchemes para detectar apps instaladas
+- ROADMAP.md unificado con todas las tareas pendientes
 
 ### Changed
-- RoutingService ahora carga los polylines reales de cada linea
-- Interpolacion de puntos para animaciones mas suaves
+- Migracion de calculo de rutas del cliente a la API (eliminado RoutingService.swift)
+- Documentacion reorganizada y consolidada
+
+### Removed
+- RoutingService.swift (~530 lineas) - routing ahora se hace en servidor
+- API_CHANGES_v2.md (contenido movido a ROADMAP.md)
 
 ## [1.1.0] - 2026-01-26
 

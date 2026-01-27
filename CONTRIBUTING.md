@@ -93,7 +93,10 @@ Usa prefijos descriptivos:
 - `LocationService`: Ubicacion del usuario
 - `GTFSRealtimeService`: Comunicacion con API
 - `FavoritesManager`: Persistencia de favoritos
-- `RoutingService`: Calculo de rutas
+- `FrequentStopsService`: Deteccion de paradas frecuentes
+- `MapLauncher`: Abrir ubicaciones en apps de mapas externas
+
+> Nota: El calculo de rutas se hace en la API, no en el cliente.
 
 ### Modelos
 
