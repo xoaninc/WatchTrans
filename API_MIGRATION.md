@@ -6,6 +6,255 @@ Este documento describe la funcionalidad que actualmente está en la app iOS y q
 
 ---
 
+## 0. ALGORITMO COMPLETO DE BÚSQUEDA DE RUTAS (RoutingService.swift)
+
+### Resumen
+La app implementa un planificador de rutas completo usando Dijkstra sobre un grafo de transporte público. El código está en `WatchTrans iOS/Services/RoutingService.swift` (~530 líneas).
+
+### Paso 1: Construcción del Grafo (`buildGraph()`)
+
+```swift
+// Configuración
+let transferPenaltyMinutes: Double = 3.0  // Penalización por transbordo
+let walkingSpeedKmH: Double = 4.5         // Velocidad andando
+let averageTrainSpeedKmH: Double = 30.0   // Velocidad media metro/tren
+
+// Estructura del grafo
+struct TransitNode: Hashable {
+    let stopId: String    // ID de la parada
+    let lineId: String?   // ID de la línea (nil para nodos de transbordo)
+}
+
+struct TransitEdge {
+    let from: TransitNode
+    let to: TransitNode
+    let weight: Double        // Tiempo en minutos
+    let type: EdgeType        // .ride, .transfer, .boarding, .alighting
+    let lineId: String?
+    let lineName: String?
+    let lineColor: String?
+}
+```
+
+**Proceso de construcción:**
+1. Para cada línea en `dataService.lines`:
+   - Obtener paradas: `fetchStopsForRoute(routeId)`
+   - Crear nodo por cada parada+línea: `TransitNode(stopId, lineId)`
+   - Crear aristas bidireccionales entre paradas consecutivas
+   - Peso = distancia / velocidad_media * 60 (mínimo 1 minuto)
+
+2. Añadir aristas de transbordo:
+   - Agrupar nodos por `stopId`
+   - Si hay múltiples líneas en la misma parada → transbordo directo (3 min)
+   - Cargar correspondencias de API: `fetchCorrespondences(stopId)`
+   - Crear aristas de transbordo andando: peso = tiempo_andando + penalización
+
+### Paso 2: Algoritmo Dijkstra (`dijkstra()`)
+
+```swift
+func dijkstra(from start: TransitNode, to goals: Set<TransitNode>) -> ([TransitNode], Double)? {
+    var distances: [TransitNode: Double] = [start: 0]
+    var previous: [TransitNode: TransitNode] = [:]
+    var unvisited = nodes  // Todos los nodos del grafo
+
+    while !unvisited.isEmpty {
+        // Encontrar nodo no visitado con menor distancia
+        guard let current = unvisited.min(by: {
+            (distances[$0] ?? .infinity) < (distances[$1] ?? .infinity)
+        }),
+        let currentDist = distances[current],
+        currentDist < .infinity else {
+            break
+        }
+
+        // ¿Llegamos al destino?
+        if goals.contains(current) {
+            // Reconstruir camino
+            var path: [TransitNode] = []
+            var node: TransitNode? = current
+            while let n = node {
+                path.insert(n, at: 0)
+                node = previous[n]
+            }
+            return (path, currentDist)
+        }
+
+        unvisited.remove(current)
+
+        // Actualizar distancias a vecinos
+        for edge in edges[current] ?? [] {
+            let alt = currentDist + edge.weight
+            if alt < (distances[edge.to] ?? .infinity) {
+                distances[edge.to] = alt
+                previous[edge.to] = current
+            }
+        }
+    }
+    return nil
+}
+```
+
+### Paso 3: Construir Segmentos del Viaje (`buildSegments()`)
+
+Una vez tenemos el camino de nodos, construimos los segmentos:
+
+```swift
+// Para cada cambio de línea:
+1. Cerrar segmento anterior
+2. Si hay cambio de parada → añadir segmento WALKING
+3. Abrir nuevo segmento con la nueva línea
+
+// Para cada segmento TRANSIT:
+- Obtener shape de la línea: fetchRouteShape(routeId)
+- Extraer porción entre origen y destino del segmento
+- Si hay pocos puntos → interpolar para animación suave
+```
+
+### Paso 4: Extracción de Shape (`extractShapeSegment()`)
+
+```swift
+func extractShapeSegment(from shape: [Coordinate], origin: Coordinate, destination: Coordinate) -> [Coordinate] {
+    // 1. Encontrar punto más cercano al origen
+    var originIndex = 0
+    var minOriginDist = infinity
+    for (index, coord) in shape.enumerated() {
+        let d = distance(coord, origin)
+        if d < minOriginDist {
+            minOriginDist = d
+            originIndex = index
+        }
+    }
+
+    // 2. Encontrar punto más cercano al destino
+    var destIndex = shape.count - 1
+    var minDestDist = infinity
+    for (index, coord) in shape.enumerated() {
+        let d = distance(coord, destination)
+        if d < minDestDist {
+            minDestDist = d
+            destIndex = index
+        }
+    }
+
+    // 3. Extraer segmento (respetando dirección)
+    if originIndex <= destIndex {
+        return shape[originIndex...destIndex]
+    } else {
+        // Vamos "al revés" en la ruta
+        return shape[destIndex...originIndex].reversed()
+    }
+}
+```
+
+### Paso 5: Interpolación de Caminos Andando
+
+```swift
+func interpolateWalkingPath(from origin: Stop, to destination: Stop) -> [Coordinate] {
+    let start = origin.coordinate
+    let end = destination.coordinate
+
+    // Crear 15 puntos interpolados para animación suave
+    var result: [Coordinate] = []
+    for i in 0..<15 {
+        let t = Double(i) / 14.0
+        let lat = start.lat + (end.lat - start.lat) * t
+        let lon = start.lon + (end.lon - start.lon) * t
+        result.append(Coordinate(lat, lon))
+    }
+    return result
+}
+```
+
+---
+
+## 0.5 BÚSQUEDA DE PARADAS POR NOMBRE (DataService.swift)
+
+### Lógica Actual
+
+```swift
+func searchStops(query: String) async -> [Stop] {
+    // 1. Llamar a la API con el query
+    let stopResponses = try await gtfsRealtimeService.fetchStops(search: query, limit: 100)
+
+    // 2. Convertir respuestas a modelo Stop
+    let allStops = stopResponses.map { response in
+        Stop(
+            id: response.id,
+            name: response.name,
+            latitude: response.lat,
+            longitude: response.lon,
+            // ... más campos
+        )
+    }
+
+    // 3. FILTRAR por provincia/región actual del usuario
+    guard let province = currentLocation?.provinceName else {
+        return allStops.prefix(50)  // Sin filtro si no hay ubicación
+    }
+
+    // 4. Obtener provincias relacionadas (misma red de transporte)
+    let relatedProvinces = getRelatedProvinces(for: province)
+
+    // 5. Filtrar paradas que estén en la región
+    let filteredStops = allStops.filter { stop in
+        guard let stopProvince = stop.province else { return false }
+        return relatedProvinces.contains(stopProvince)
+    }
+
+    return filteredStops.prefix(50)
+}
+```
+
+### Regiones de Red de Transporte
+
+La app agrupa provincias por red de transporte para evitar mostrar estaciones lejanas:
+
+```swift
+let networkRegions: [[String]] = [
+    // Cataluña (Rodalies, FGC, TMB)
+    ["Barcelona", "Tarragona", "Lleida", "Girona"],
+    // Madrid (Cercanías Madrid, Metro Madrid)
+    ["Madrid"],
+    // País Vasco (Euskotren, Metro Bilbao)
+    ["Vizcaya", "Guipúzcoa", "Álava", "Bizkaia", "Gipuzkoa", "Araba"],
+    // Valencia (Metrovalencia, Cercanías Valencia)
+    ["Valencia", "Alicante", "Castellón", "Castelló"],
+    // Andalucía - Separadas para evitar estaciones lejanas
+    ["Sevilla"],
+    ["Málaga"],
+    ["Cádiz"],
+    ["Granada"],
+    // Asturias
+    ["Asturias"],
+    // Galicia
+    ["A Coruña", "Pontevedra", "Lugo", "Ourense"],
+    // Murcia
+    ["Murcia"],
+    // Zaragoza
+    ["Zaragoza"],
+    // Cantabria
+    ["Cantabria"],
+    // Mallorca
+    ["Illes Balears", "Islas Baleares", "Mallorca"],
+]
+```
+
+### Endpoint Propuesto (si se quiere mover al servidor)
+
+```
+GET /api/v1/gtfs/stops/search?q=Sol&province=Madrid&limit=50
+```
+
+O mejor, que el servidor haga el filtrado automático:
+
+```
+GET /api/v1/gtfs/stops/search?q=Sol&lat=40.41&lon=-3.70&radius_km=100
+```
+
+Así el servidor filtra por proximidad y la app no necesita la lógica de regiones.
+
+---
+
 ## 1. Normalización de Shapes (LISTO PARA MIGRAR)
 
 ### Estado actual en la app
