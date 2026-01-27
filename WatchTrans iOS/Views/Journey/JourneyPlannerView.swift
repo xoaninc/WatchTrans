@@ -21,9 +21,11 @@ struct JourneyPlannerView: View {
     @State private var destinationSuggestions: [Stop] = []
     @State private var isSearchingOrigin = false
     @State private var isSearchingDestination = false
-    @State private var journey: Journey?
+    @State private var routePlanResult: DataService.RoutePlanResult?
+    @State private var selectedJourney: Journey?  // Currently displayed journey
     @State private var isCalculating = false
     @State private var showAnimation = false
+    @State private var showAlternatives = false
     @State private var errorMessage: String?
 
     @FocusState private var focusedField: Field?
@@ -54,7 +56,7 @@ struct JourneyPlannerView: View {
                     }
 
                     // Journey result
-                    if let journey = journey {
+                    if let journey = selectedJourney {
                         JourneyResultView(
                             journey: journey,
                             dataService: dataService,
@@ -62,6 +64,11 @@ struct JourneyPlannerView: View {
                                 showAnimation = true
                             }
                         )
+
+                        // Alternatives section (collapsible)
+                        if let result = routePlanResult, result.alternativeJourneys.count > 0 {
+                            alternativesSection(alternatives: result.alternativeJourneys)
+                        }
                     }
 
                     Spacer(minLength: 100)
@@ -71,7 +78,7 @@ struct JourneyPlannerView: View {
             .navigationTitle("Planificar viaje")
             .navigationBarTitleDisplayMode(.large)
             .fullScreenCover(isPresented: $showAnimation) {
-                if let journey = journey {
+                if let journey = selectedJourney {
                     Journey3DAnimationView(journey: journey, dataService: dataService)
                 }
             }
@@ -120,7 +127,8 @@ struct JourneyPlannerView: View {
                         Button {
                             originText = ""
                             selectedOrigin = nil
-                            journey = nil
+                            routePlanResult = nil
+                            selectedJourney = nil
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -175,7 +183,8 @@ struct JourneyPlannerView: View {
                         Button {
                             destinationText = ""
                             selectedDestination = nil
-                            journey = nil
+                            routePlanResult = nil
+                            selectedJourney = nil
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -315,7 +324,8 @@ struct JourneyPlannerView: View {
             destinationSuggestions = []
             focusedField = nil
         }
-        journey = nil
+        routePlanResult = nil
+        selectedJourney = nil
     }
 
     private func swapOriginDestination() {
@@ -328,7 +338,8 @@ struct JourneyPlannerView: View {
         selectedDestination = tempStop
         destinationText = tempText
 
-        journey = nil
+        routePlanResult = nil
+        selectedJourney = nil
     }
 
     private func calculateRoute() async {
@@ -337,21 +348,141 @@ struct JourneyPlannerView: View {
 
         isCalculating = true
         errorMessage = nil
+        showAlternatives = false
 
         // Use API route planner via DataService
-        if let result = await dataService.planJourney(fromStopId: origin.id, toStopId: destination.id) {
+        if let result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id) {
             await MainActor.run {
-                journey = result
+                routePlanResult = result
+                selectedJourney = result.bestJourney
                 isCalculating = false
             }
         } else {
             await MainActor.run {
+                routePlanResult = nil
+                selectedJourney = nil
                 errorMessage = "No se encontro ruta entre estas estaciones"
                 isCalculating = false
             }
         }
     }
+
+    // MARK: - Alternatives Section
+
+    private func alternativesSection(alternatives: [Journey]) -> some View {
+        VStack(spacing: 0) {
+            // Header (tap to expand/collapse)
+            Button {
+                withAnimation(.spring(response: 0.3)) {
+                    showAlternatives.toggle()
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.triangle.branch")
+                        .foregroundStyle(.blue)
+                    Text("\(alternatives.count) alternativa\(alternatives.count > 1 ? "s" : "")")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: showAlternatives ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+
+            // Alternatives list (collapsible)
+            if showAlternatives {
+                VStack(spacing: 8) {
+                    ForEach(Array(alternatives.enumerated()), id: \.element.id) { index, alternative in
+                        AlternativeRowView(
+                            journey: alternative,
+                            index: index + 2,  // "Ruta 2", "Ruta 3", etc.
+                            isSelected: selectedJourney?.id == alternative.id,
+                            onSelect: {
+                                withAnimation {
+                                    selectedJourney = alternative
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
 }
+
+// MARK: - Alternative Row View
+
+struct AlternativeRowView: View {
+    let journey: Journey
+    let index: Int
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ruta \(index)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    HStack(spacing: 12) {
+                        Label("\(journey.totalDurationMinutes) min", systemImage: "clock")
+                        if journey.transferCount > 0 {
+                            Label("\(journey.transferCount)", systemImage: "arrow.triangle.branch")
+                        }
+                        if journey.totalWalkingMinutes > 0 {
+                            Label("\(journey.totalWalkingMinutes) min", systemImage: "figure.walk")
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                    // Line badges
+                    HStack(spacing: 4) {
+                        ForEach(journey.segments.filter { $0.type == .transit }, id: \.id) { segment in
+                            if let lineName = segment.lineName {
+                                Text(lineName)
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(Color(hex: segment.lineColor ?? "#007AFF") ?? .blue)
+                                    )
+                            }
+                        }
+                    }
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.blue)
+                }
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? Color.blue.opacity(0.1) : Color(.systemGray6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+    }
 
 // MARK: - Journey Result View
 

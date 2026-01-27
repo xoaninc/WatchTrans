@@ -930,27 +930,53 @@ class DataService {
 
     // MARK: - Route Planner
 
+    /// Result of route planning including alternatives and alerts
+    struct RoutePlanResult {
+        let journeys: [Journey]       // All alternatives (best first)
+        let alerts: [RouteAlert]      // Service alerts affecting the route
+
+        var bestJourney: Journey? { journeys.first }
+        var alternativeJourneys: [Journey] { Array(journeys.dropFirst()) }
+    }
+
     /// Plan a journey between two stops using the API route planner
-    /// Returns a Journey object with all segments and coordinates
-    func planJourney(fromStopId: String, toStopId: String) async -> Journey? {
+    /// Returns all Pareto-optimal alternatives and any service alerts
+    func planJourneys(fromStopId: String, toStopId: String) async -> RoutePlanResult? {
         DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId)")
 
         do {
             let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId)
 
-            guard response.success, let apiJourney = response.journey else {
+            guard response.success else {
                 DebugLog.log("⚠️ [DataService] Route plan failed: \(response.message ?? "unknown error")")
                 return nil
             }
 
-            // Convert API response to Journey model
-            let journey = convertToJourney(from: apiJourney)
-            DebugLog.log("🗺️ [DataService] ✅ Journey planned: \(journey.segments.count) segments, \(journey.totalDurationMinutes) min")
-            return journey
+            let apiJourneys = response.allJourneys
+            guard !apiJourneys.isEmpty else {
+                DebugLog.log("⚠️ [DataService] No journeys returned")
+                return nil
+            }
+
+            // Convert all API journeys to Journey models
+            let journeys = apiJourneys.map { convertToJourney(from: $0) }
+
+            DebugLog.log("🗺️ [DataService] ✅ Found \(journeys.count) route(s). Best: \(journeys[0].segments.count) segments, \(journeys[0].totalDurationMinutes) min")
+
+            return RoutePlanResult(
+                journeys: journeys,
+                alerts: response.alerts ?? []
+            )
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to plan journey: \(error)")
             return nil
         }
+    }
+
+    /// Convenience: Plan journey and return only the best route
+    func planJourney(fromStopId: String, toStopId: String) async -> Journey? {
+        let result = await planJourneys(fromStopId: fromStopId, toStopId: toStopId)
+        return result?.bestJourney
     }
 
     /// Convert API route plan response to Journey model

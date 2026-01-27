@@ -153,7 +153,18 @@ Response incluye: `journeys[]`, `departure`, `arrival`, `suggested_heading`, `al
 ---
 
 ### 2.2 Route Planner v2
-**Estado:** ✅ IMPLEMENTADO
+**Estado:** ✅ IMPLEMENTADO (App actualizada 28 Enero 2026)
+
+**Modelos Swift actualizados:**
+- `RoutePlanResponse` ahora acepta `journeys[]` (array) y mantiene compatibilidad con `journey` (singular)
+- `RoutePlanJourney` incluye `departure` y `arrival` (ISO8601)
+- `RoutePlanSegment` incluye `suggestedHeading` (0-360)
+- Nuevo modelo `RouteAlert` para alertas
+
+**UI actualizada:**
+- `JourneyPlannerView` muestra la mejor ruta arriba
+- Sección colapsable "X alternativas" para rutas Pareto-óptimas
+- Usuario puede seleccionar cualquier alternativa
 
 **Endpoint:**
 ```

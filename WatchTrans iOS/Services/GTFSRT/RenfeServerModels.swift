@@ -567,11 +567,44 @@ struct ShapePoint: Codable {
 // MARK: - Route Planner Response
 
 /// Response from GET /api/v1/gtfs/route-planner
-/// Contains complete journey with segments, times, and normalized coordinates
+/// Contains complete journeys (Pareto-optimal alternatives) with segments, times, and normalized coordinates
+/// API v2 returns journeys[] (plural), alerts[], departure/arrival timestamps
 struct RoutePlanResponse: Codable {
     let success: Bool
     let message: String?
+    let journeys: [RoutePlanJourney]?  // Array of Pareto-optimal alternatives (best first)
+    let alerts: [RouteAlert]?          // Service alerts affecting this route
+
+    // Backwards compatibility: also accept singular journey
     let journey: RoutePlanJourney?
+
+    /// Get all journeys (handles both old and new API format)
+    var allJourneys: [RoutePlanJourney] {
+        if let journeys = journeys, !journeys.isEmpty {
+            return journeys
+        }
+        if let journey = journey {
+            return [journey]
+        }
+        return []
+    }
+
+    /// Best journey (first in array = fastest/optimal)
+    var bestJourney: RoutePlanJourney? {
+        allJourneys.first
+    }
+}
+
+/// Service alert affecting a route
+struct RouteAlert: Codable {
+    let lineId: String?
+    let message: String
+    let severity: String  // "info", "warning", "error"
+
+    enum CodingKeys: String, CodingKey {
+        case lineId = "line_id"
+        case message, severity
+    }
 }
 
 /// Complete journey from origin to destination
@@ -584,12 +617,28 @@ struct RoutePlanJourney: Codable {
     let transferCount: Int
     let segments: [RoutePlanSegment]
 
+    // API v2 new fields
+    let departure: String?  // ISO8601 timestamp "2026-01-28T08:32:00"
+    let arrival: String?    // ISO8601 timestamp "2026-01-28T09:07:00"
+
     enum CodingKeys: String, CodingKey {
-        case origin, destination, segments
+        case origin, destination, segments, departure, arrival
         case totalDurationMinutes = "total_duration_minutes"
         case totalWalkingMinutes = "total_walking_minutes"
         case totalTransitMinutes = "total_transit_minutes"
         case transferCount = "transfer_count"
+    }
+
+    /// Parsed departure time
+    var departureDate: Date? {
+        guard let departure = departure else { return nil }
+        return ISO8601DateFormatter().date(from: departure)
+    }
+
+    /// Parsed arrival time
+    var arrivalDate: Date? {
+        guard let arrival = arrival else { return nil }
+        return ISO8601DateFormatter().date(from: arrival)
     }
 }
 
@@ -615,6 +664,7 @@ struct RoutePlanSegment: Codable {
     let durationMinutes: Int
     let distanceMeters: Int?
     let coordinates: [RoutePlanCoordinate]
+    let suggestedHeading: Double?       // API v2: camera heading 0-360 degrees (0=north)
 
     enum CodingKeys: String, CodingKey {
         case type, origin, destination, coordinates, headsign
@@ -625,6 +675,7 @@ struct RoutePlanSegment: Codable {
         case intermediateStops = "intermediate_stops"
         case durationMinutes = "duration_minutes"
         case distanceMeters = "distance_meters"
+        case suggestedHeading = "suggested_heading"
     }
 }
 
