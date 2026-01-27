@@ -19,6 +19,7 @@ struct StopDetailView: View {
 
     @State private var departures: [Arrival] = []
     @State private var alerts: [AlertResponse] = []
+    @State private var correspondences: [CorrespondenceInfo] = []
     @State private var isLoading = true
     @State private var hasLoadedOnce = false
     @State private var refreshTimer: Timer?
@@ -94,6 +95,11 @@ struct StopDetailView: View {
                     // Connection badges
                     if hasConnections {
                         ConnectionsSectionView(stop: stop, dataService: dataService)
+                    }
+
+                    // Nearby stations (correspondences)
+                    if !correspondences.isEmpty {
+                        NearbyStationsSectionView(correspondences: correspondences)
                     }
 
                     // Departures section
@@ -204,8 +210,11 @@ struct StopDetailView: View {
         }
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
+        async let correspondencesTask = dataService.fetchCorrespondences(stopId: stop.id)
+
         departures = await departuresTask
         alerts = await alertsTask
+        correspondences = await correspondencesTask
         hasLoadedOnce = true
         isLoading = false
     }
@@ -225,7 +234,14 @@ struct StopHeaderView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                HStack(spacing: 16) {
+                // Province
+                if let province = stop.province, !province.isEmpty {
+                    Text(province)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 12) {
                     if let location = locationService.currentLocation {
                         Label(stop.formattedDistance(from: location), systemImage: "location")
                             .font(.subheadline)
@@ -236,6 +252,12 @@ struct StopHeaderView: View {
                         Label("Metro", systemImage: "tram.tunnel.fill")
                             .font(.caption)
                             .foregroundStyle(.blue)
+                    }
+
+                    if stop.hasBusConnection {
+                        Label("Bus", systemImage: "bus.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                     }
 
                     if stop.hasParking {
@@ -532,6 +554,62 @@ struct FlowLayout: Layout {
         }
 
         return (CGSize(width: maxWidth, height: totalHeight), positions)
+    }
+}
+
+// MARK: - Nearby Stations Section (Correspondences)
+
+struct NearbyStationsSectionView: View {
+    let correspondences: [CorrespondenceInfo]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "figure.walk")
+                    .foregroundStyle(.green)
+                Text("Estaciones cercanas a pie")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+
+            ForEach(correspondences, id: \.id) { correspondence in
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(correspondence.toStopName)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        Text(correspondence.toLines)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                            Text("\(max(1, correspondence.walkTimeS / 60)) min")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+
+                        Text("\(correspondence.distanceM) m")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 

@@ -125,4 +125,4 @@ La app muestra un banner rojo de "Servicio suspendido" cuando `is_suspended: tru
 
 ## Licencia
 
-Proyecto privado - Todos los derechos reservados.
+Este proyecto esta licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para mas detalles.

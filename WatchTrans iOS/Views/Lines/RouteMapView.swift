@@ -13,9 +13,8 @@ struct RouteMapView: View {
     let line: Line
     let stops: [Stop]
     let dataService: DataService
-
-    // Shape points for the route polyline (from API when available)
     var shapePoints: [CLLocationCoordinate2D]?
+    var isSuspended: Bool
 
     @State private var mapPosition: MapCameraPosition
     @State private var selectedStop: Stop?
@@ -25,13 +24,13 @@ struct RouteMapView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
-    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil) {
+    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, isSuspended: Bool = false) {
         self.line = line
         self.stops = stops
         self.dataService = dataService
         self.shapePoints = shapePoints
+        self.isSuspended = isSuspended
 
-        // Calculate the region to fit all stops
         let coordinates = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
         let region = Self.regionToFit(coordinates: coordinates)
         _mapPosition = State(initialValue: .region(region))
@@ -40,64 +39,11 @@ struct RouteMapView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Map header
-            HStack {
-                Image(systemName: "map")
-                    .foregroundStyle(lineColor)
-                Text("Recorrido")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button {
-                    isFullScreen = true
-                } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
-            .background(Color(.systemBackground))
+            mapHeader
 
-            // Map
-            Map(position: $mapPosition, selection: $selectedStop) {
-                // Route polyline
-                if let shapePoints = shapePoints, !shapePoints.isEmpty {
-                    // Use actual shape data from API
-                    MapPolyline(coordinates: shapePoints)
-                        .stroke(lineColor, lineWidth: 4)
-                } else if stops.count > 1 {
-                    // Fallback: connect stops in order (temporary until shapes API ready)
-                    let coordinates = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-                    MapPolyline(coordinates: coordinates)
-                        .stroke(lineColor.opacity(0.7), style: StrokeStyle(lineWidth: 3, dash: [8, 4]))
-                }
-
-                // Stop markers
-                ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
-                    let isTerminal = index == 0 || index == stops.count - 1
-
-                    Annotation(
-                        stop.name,
-                        coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
-                        anchor: .bottom
-                    ) {
-                        StopMarkerView(
-                            stop: stop,
-                            lineColor: lineColor,
-                            isTerminal: isTerminal,
-                            isSelected: selectedStop?.id == stop.id
-                        )
-                    }
-                    .tag(stop)
-                }
-            }
-            .mapStyle(.standard(elevation: .realistic, emphasis: .automatic, pointsOfInterest: .excludingAll, showsTraffic: false))
-            .mapControls {
-                MapCompass()
-                MapScaleView()
-            }
-            .frame(height: 280)
+            // Map content
+            mapContent
+                .frame(height: 280)
 
             // Selected stop info
             if let stop = selectedStop {
@@ -115,12 +61,71 @@ struct RouteMapView: View {
                 stops: stops,
                 shapePoints: shapePoints,
                 lineColor: lineColor,
-                initialPosition: mapPosition
+                initialPosition: mapPosition,
+                isSuspended: isSuspended
             )
         }
     }
 
-    // MARK: - Calculate region to fit all coordinates
+    private var mapHeader: some View {
+        HStack {
+            Image(systemName: "map")
+                .foregroundStyle(lineColor)
+            Text("Recorrido")
+                .font(.headline)
+                .fontWeight(.semibold)
+            Spacer()
+            Button {
+                isFullScreen = true
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+    }
+
+    private var mapContent: some View {
+        Map(position: $mapPosition) {
+            // Route polyline - dashed only if suspended
+            if let shapePoints = shapePoints, !shapePoints.isEmpty {
+                if isSuspended {
+                    MapPolyline(coordinates: shapePoints)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, dash: [8, 4]))
+                } else {
+                    MapPolyline(coordinates: shapePoints)
+                        .stroke(lineColor, lineWidth: 4)
+                }
+            } else {
+                let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                if isSuspended {
+                    MapPolyline(coordinates: coords)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 3, dash: [8, 4]))
+                } else {
+                    MapPolyline(coordinates: coords)
+                        .stroke(lineColor, lineWidth: 3)
+                }
+            }
+
+            // Stop markers - small circles (all same color)
+            ForEach(stops) { stop in
+                let isTerminal = stop.id == stops.first?.id || stop.id == stops.last?.id
+                Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
+                    Circle()
+                        .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                        .frame(width: isTerminal ? 10 : 6, height: isTerminal ? 10 : 6)
+                }
+            }
+        }
+        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: false))
+        .mapControls {
+            MapCompass()
+            MapScaleView()
+        }
+    }
 
     static func regionToFit(coordinates: [CLLocationCoordinate2D], padding: Double = 1.3) -> MKCoordinateRegion {
         guard !coordinates.isEmpty else {
@@ -149,53 +154,6 @@ struct RouteMapView: View {
         )
 
         return MKCoordinateRegion(center: center, span: span)
-    }
-}
-
-// MARK: - Stop Marker View
-
-struct StopMarkerView: View {
-    let stop: Stop
-    let lineColor: Color
-    let isTerminal: Bool
-    let isSelected: Bool
-
-    var body: some View {
-        VStack(spacing: 2) {
-            // Circle marker
-            ZStack {
-                Circle()
-                    .fill(isTerminal ? lineColor : .white)
-                    .frame(width: isTerminal ? 24 : 16, height: isTerminal ? 24 : 16)
-
-                Circle()
-                    .stroke(lineColor, lineWidth: isTerminal ? 3 : 2)
-                    .frame(width: isTerminal ? 24 : 16, height: isTerminal ? 24 : 16)
-
-                if isTerminal {
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 8, height: 8)
-                }
-            }
-            .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-
-            // Name label (only for terminals or selected)
-            if isTerminal || isSelected {
-                Text(stop.name)
-                    .font(.caption2)
-                    .fontWeight(isTerminal ? .bold : .medium)
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
-                    )
-                    .lineLimit(1)
-            }
-        }
     }
 }
 
@@ -246,10 +204,10 @@ struct FullScreenMapView: View {
     let shapePoints: [CLLocationCoordinate2D]?
     let lineColor: Color
     let initialPosition: MapCameraPosition
+    let isSuspended: Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var mapPosition: MapCameraPosition
-    @State private var selectedStop: Stop?
     @State private var mapStyle: MapStyleOption = .standard
 
     enum MapStyleOption: String, CaseIterable {
@@ -258,48 +216,19 @@ struct FullScreenMapView: View {
         case hybrid = "Hibrido"
     }
 
-    init(line: Line, stops: [Stop], shapePoints: [CLLocationCoordinate2D]?, lineColor: Color, initialPosition: MapCameraPosition) {
+    init(line: Line, stops: [Stop], shapePoints: [CLLocationCoordinate2D]?, lineColor: Color, initialPosition: MapCameraPosition, isSuspended: Bool = false) {
         self.line = line
         self.stops = stops
         self.shapePoints = shapePoints
         self.lineColor = lineColor
         self.initialPosition = initialPosition
+        self.isSuspended = isSuspended
         _mapPosition = State(initialValue: initialPosition)
     }
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                Map(position: $mapPosition, selection: $selectedStop) {
-                    // Route polyline
-                    if let shapePoints = shapePoints, !shapePoints.isEmpty {
-                        MapPolyline(coordinates: shapePoints)
-                            .stroke(lineColor, lineWidth: 5)
-                    } else if stops.count > 1 {
-                        let coordinates = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-                        MapPolyline(coordinates: coordinates)
-                            .stroke(lineColor.opacity(0.7), style: StrokeStyle(lineWidth: 4, dash: [10, 5]))
-                    }
-
-                    // Stop markers
-                    ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
-                        let isTerminal = index == 0 || index == stops.count - 1
-
-                        Annotation(
-                            stop.name,
-                            coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
-                            anchor: .bottom
-                        ) {
-                            StopMarkerView(
-                                stop: stop,
-                                lineColor: lineColor,
-                                isTerminal: isTerminal,
-                                isSelected: selectedStop?.id == stop.id
-                            )
-                        }
-                        .tag(stop)
-                    }
-                }
+            mapContent
                 .mapStyle(currentMapStyle)
                 .mapControls {
                     MapCompass()
@@ -307,45 +236,66 @@ struct FullScreenMapView: View {
                     MapUserLocationButton()
                 }
                 .ignoresSafeArea(edges: .bottom)
-
-                // Selected stop panel
-                if let stop = selectedStop {
-                    VStack(spacing: 0) {
-                        SelectedStopInfoView(stop: stop, lineColor: lineColor)
+                .navigationTitle(line.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cerrar") {
+                            dismiss()
+                        }
                     }
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12, corners: [.topLeft, .topRight])
-                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: -2)
-                    .transition(.move(edge: .bottom))
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: selectedStop?.id)
-            .navigationTitle(line.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cerrar") {
-                        dismiss()
-                    }
-                }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        ForEach(MapStyleOption.allCases, id: \.self) { style in
-                            Button {
-                                mapStyle = style
-                            } label: {
-                                HStack {
-                                    Text(style.rawValue)
-                                    if mapStyle == style {
-                                        Image(systemName: "checkmark")
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu {
+                            ForEach(MapStyleOption.allCases, id: \.self) { style in
+                                Button {
+                                    mapStyle = style
+                                } label: {
+                                    HStack {
+                                        Text(style.rawValue)
+                                        if mapStyle == style {
+                                            Image(systemName: "checkmark")
+                                        }
                                     }
                                 }
                             }
+                        } label: {
+                            Image(systemName: "map")
                         }
-                    } label: {
-                        Image(systemName: "map")
                     }
+                }
+        }
+    }
+
+    private var mapContent: some View {
+        Map(position: $mapPosition) {
+            // Route polyline - dashed only if suspended
+            if let shapePoints = shapePoints, !shapePoints.isEmpty {
+                if isSuspended {
+                    MapPolyline(coordinates: shapePoints)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, dash: [10, 5]))
+                } else {
+                    MapPolyline(coordinates: shapePoints)
+                        .stroke(lineColor, lineWidth: 5)
+                }
+            } else {
+                let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                if isSuspended {
+                    MapPolyline(coordinates: coords)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, dash: [10, 5]))
+                } else {
+                    MapPolyline(coordinates: coords)
+                        .stroke(lineColor, lineWidth: 4)
+                }
+            }
+
+            // Stop markers - small circles (all same color)
+            ForEach(stops) { stop in
+                let isTerminal = stop.id == stops.first?.id || stop.id == stops.last?.id
+                Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
+                    Circle()
+                        .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                        .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
                 }
             }
         }
@@ -354,34 +304,12 @@ struct FullScreenMapView: View {
     private var currentMapStyle: MapStyle {
         switch mapStyle {
         case .standard:
-            return .standard(elevation: .realistic, emphasis: .automatic, pointsOfInterest: .excludingAll, showsTraffic: false)
+            return .standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: false)
         case .satellite:
             return .imagery(elevation: .realistic)
         case .hybrid:
             return .hybrid(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: false)
         }
-    }
-}
-
-// MARK: - Corner Radius Extension
-
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
     }
 }
 

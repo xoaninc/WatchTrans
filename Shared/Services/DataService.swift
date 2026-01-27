@@ -779,6 +779,7 @@ class DataService {
     /// Get provinces that belong to the same transport network region
     private func getRelatedProvinces(for province: String) -> Set<String> {
         // Define transport network regions (provinces that share transport networks)
+        // Note: Andalucía provinces are separated to avoid showing distant stations
         let networkRegions: [[String]] = [
             // Cataluña (Rodalies, FGC, TMB)
             ["Barcelona", "Tarragona", "Lleida", "Girona"],
@@ -788,8 +789,11 @@ class DataService {
             ["Vizcaya", "Guipúzcoa", "Álava", "Bizkaia", "Gipuzkoa", "Araba"],
             // Valencia (Metrovalencia, Cercanías Valencia)
             ["Valencia", "Alicante", "Castellón", "Castelló"],
-            // Andalucía (Metro Sevilla, Cercanías Sevilla/Málaga/Cádiz)
-            ["Sevilla", "Málaga", "Cádiz", "Granada"],
+            // Andalucía - Separated by province to avoid distant stations
+            ["Sevilla"],
+            ["Málaga"],
+            ["Cádiz"],
+            ["Granada"],
             // Asturias
             ["Asturias"],
             // Galicia

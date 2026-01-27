@@ -27,7 +27,7 @@ class GTFSRealtimeService {
     /// Fetch upcoming departures from a stop
     /// This is the main endpoint for showing arrivals in the app
     /// Includes: delay info, train position, platform, frequency data
-    func fetchDepartures(stopId: String, routeId: String? = nil, limit: Int = APIConfiguration.defaultDeparturesLimit) async throws -> [DepartureResponse] {
+    func fetchDepartures(stopId: String, routeId: String? = nil, limit: Int = 20) async throws -> [DepartureResponse] {
         isLoading = true
         defer { isLoading = false }
 

@@ -1,0 +1,218 @@
+# WatchTrans API Status
+
+**Base URL:** `https://redcercanias.com/api/v1/gtfs`
+
+**Fecha última verificación:** 26 Enero 2026
+
+---
+
+## Endpoints Utilizados
+
+### Datos de Transporte
+| Endpoint | Método | Estado | Descripción |
+|----------|--------|--------|-------------|
+| `/transport?lat={lat}&lon={lon}` | GET | ✅ | Datos de transporte por ubicación |
+| `/stops/{stop_id}/departures` | GET | ✅ | Próximas salidas de una parada |
+| `/routes/{route_id}/stops` | GET | ✅ | Paradas de una línea |
+| `/routes/{route_id}/shape` | GET | ✅ | Recorrido de una línea (polyline) |
+| `/stops?search={query}` | GET | ✅ | Búsqueda de paradas |
+
+### Plataformas y Correspondencias
+| Endpoint | Método | Estado | Descripción |
+|----------|--------|--------|-------------|
+| `/stops/{stop_id}/platforms` | GET | ✅ | Ubicación de andenes |
+| `/stops/{stop_id}/correspondences` | GET | ✅ | Estaciones cercanas a pie |
+
+### Alertas y Tiempo Real
+| Endpoint | Método | Estado | Descripción |
+|----------|--------|--------|-------------|
+| `/realtime/alerts` | GET | ✅ | Alertas activas |
+| `/realtime/stops/{stop_id}/alerts` | GET | ✅ | Alertas de una parada |
+
+---
+
+## Estado de Shapes por Red
+
+| Red | Rutas con Shapes | Puntos | Estado |
+|-----|------------------|--------|--------|
+| Metro Madrid | 121 | ✅ | OK |
+| TMB Metro BCN | 11 | ✅ | OK |
+| Renfe Cercanías | 63 | ✅ | OK |
+| FGC | 20 | ✅ | OK |
+| TRAM Barcelona | 55 | ✅ | OK |
+| Euskotren | 13 | ✅ | OK |
+| Metro Bilbao | L1, L2 | ✅ | OK |
+| Metro Ligero | 4 | ✅ | OK |
+| SFM Mallorca | 4 | ✅ | OK |
+| Metro Sevilla | L1 | 272 | ✅ OK |
+
+**Total:** ~293,638 puntos de shapes
+
+---
+
+## Estado de Correspondencias Barcelona
+
+### Funcionando ✅
+| Estación | Stop ID | Correspondencias |
+|----------|---------|------------------|
+| Catalunya | `TMB_METRO_1.126` | 3 (L3, FGC, Rodalies) |
+| Sants | `RENFE_71801` | 2 (Metro L3, L5) |
+| La Sagrera | `TMB_METRO_1.526` | 3 (L1, L5, Rodalies) |
+| Clot | `RENFE_79009` | 2 |
+
+### Pendientes ❌
+| Estación | Stop ID | Correspondencias | Debería tener |
+|----------|---------|------------------|---------------|
+| Espanya FGC | `FGC_PE4` | 0 | TMB L1, L3 |
+| Passeig de Gràcia | ? | ? | L2, L3, L4, Rodalies |
+| Arc de Triomf | ? | ? | L1, Rodalies |
+| Diagonal | ? | ? | L3, L5, TRAM |
+
+---
+
+## Estado de Plataformas
+
+| Estación | Stop ID | Platforms | Estado |
+|----------|---------|-----------|--------|
+| Catalunya | `TMB_METRO_1.126` | 2 (L1, L3) | ✅ |
+| Sants | `RENFE_71801` | 1 | ✅ |
+| Torrassa | `TMB_METRO_1.117` | ✅ | OK |
+
+---
+
+## Funcionalidades Implementadas en la App
+
+### StopDetailView
+- [x] Indicador de conexión Bus (`hasBusConnection`)
+- [x] Provincia de la estación (`province`)
+- [x] Sección "Estaciones cercanas a pie" (correspondences)
+- [x] Sección "Andenes" (platforms)
+- [x] Indicadores de Metro, Parking, Accesibilidad
+
+### LineDetailView
+- [x] Mapa con recorrido de la línea (shapes)
+- [x] Lista de paradas con conexiones
+- [x] Horarios de funcionamiento
+- [x] Alertas activas
+
+### JourneyPlannerView
+- [x] Búsqueda origen/destino
+- [x] Cálculo de rutas (Dijkstra)
+- [x] Visualización 3D del viaje
+- [x] Filtrado por provincia/red
+
+### Journey3DAnimationView (Animación 3D)
+
+Sistema de animación de marcador sobre rutas usando técnicas de Mapbox/Google Maps.
+
+**Arquitectura:**
+```
+Segmento de ruta (coordinates)
+    ↓
+normalizeRoute() - Subdivide segmentos >50m
+    ↓
+sphericalInterpolate() - Interpolación esférica (Slerp)
+    ↓
+CADisplayLink (60fps) - Sincronizado con pantalla
+    ↓
+coordinateAlong(distance) - Posición exacta en la línea
+    ↓
+MapCamera update - Actualiza marcador y cámara
+```
+
+**Componentes clave:**
+
+| Componente | Descripción |
+|------------|-------------|
+| `AnimationController` | Clase que gestiona CADisplayLink y cálculos |
+| `normalizeRoute()` | Subdivide puntos muy separados (máx 50m) |
+| `sphericalInterpolate()` | Interpolación esférica para precisión geográfica |
+| `coordinateAlong()` | Obtiene punto a X km de la línea (como `turf.along`) |
+| `calculateHeading()` | Calcula rumbo entre 2 puntos para orientar cámara |
+
+**Configuración:**
+- Velocidad base: `0.08 km/s` × multiplicador por modo de transporte
+- Frame rate: 60 FPS (CADisplayLink), actualiza cada 2 frames (30fps efectivo)
+- Distancia máxima entre puntos: 50m (normalización)
+- Pausa entre segmentos: 1.0s
+- Suavizado de heading: factor 0.03 (muy suave para evitar vibración)
+
+**Velocidades por modo de transporte:**
+
+| Modo | Vel. Real | Multiplicador | Animación | Tiempo/km |
+|------|-----------|---------------|-----------|-----------|
+| Metro | ~30 km/h | 1.0× | 0.08 km/s | ~12.5s |
+| Cercanías | ~45 km/h | 1.5× | 0.12 km/s | ~8.3s |
+| Metro Ligero | ~22 km/h | 0.75× | 0.06 km/s | ~16.7s |
+| Tranvía | ~18 km/h | 0.6× | 0.048 km/s | ~20.8s |
+| Andando | ~4.5 km/h | 0.15× | 0.012 km/s | ~83s |
+
+**Logs de debug (ejemplo):**
+```
+▶️ [Segment 1/2] L1 | Olivar → Cartuja | 47 pts
+🎬 [Animation] 47→156 pts | 5.23 km | ~65.4s
+✅ [Animation] COMPLETE after 3920 frames, 65.3s
+🏁 [Journey] ALL SEGMENTS COMPLETE
+```
+
+---
+
+## Bugs Encontrados
+
+### BUG CRÍTICO: C10 Madrid mezcla parada de Zaragoza
+
+**Endpoint afectado:** `GET /routes/RENFE_C10_42/stops`
+
+**Problema:** La lista de paradas de la C10 de Madrid incluye una parada de Zaragoza:
+- `RENFE_4040` - Delicias (Zaragoza) - **lat: 41.658** (incorrecto)
+- Todas las demás paradas tienen lat ~40.4 (Madrid)
+
+**Paradas devueltas (extracto):**
+```
+Villalba de Guadarrama - lat:40.626 - RENFE_10200   ✅ Madrid
+Delicias               - lat:40.400 - RENFE_18004  ✅ Madrid (Delicias correcto)
+Delicias               - lat:41.658 - RENFE_4040   ❌ ZARAGOZA (incorrecto!)
+Chamartín RENFE        - lat:40.471 - RENFE_17000  ✅ Madrid
+```
+
+**Impacto:** El mapa muestra una ruta desde Madrid hasta Aragón (~200km).
+
+**Solución sugerida:** Filtrar `RENFE_4040` del resultado o corregir la asignación en la base de datos.
+
+**Nota:** El endpoint `/routes/RENFE_C10_42/shape` devuelve correctamente solo puntos de Madrid (486 puntos, lat range 40.39-40.62).
+
+---
+
+## Mejoras Sugeridas para API
+
+### Alta Prioridad
+0. **BUG C10 Madrid**: Eliminar `RENFE_4040` (Delicias Zaragoza) de la ruta `RENFE_C10_42`
+1. **Correspondencias Espanya**: Conectar `FGC_PE4` con TMB Metro L1/L3
+2. **Correspondencias Passeig de Gràcia**: Añadir conexiones L2/L3/L4 + Rodalies
+3. **Correspondencias Arc de Triomf**: Añadir conexiones L1 + Rodalies
+4. **Correspondencias Diagonal**: Añadir conexiones con TRAM
+
+### Media Prioridad
+5. Añadir campo `color` a `PlatformInfo` (color de la línea)
+6. Añadir campo `description` a `PlatformInfo` (sentido/dirección)
+
+### Baja Prioridad
+7. Enlaces Wikipedia de operadores
+8. Código técnico de paradas
+
+---
+
+## Changelog
+
+### 26 Enero 2026
+- Migración de `renfeapp.fly.dev` a `redcercanias.com`
+- Implementación de sección "Estaciones cercanas a pie"
+- Implementación de sección "Andenes"
+- Implementación de indicador de Bus
+- Implementación de mostrar provincia
+- Verificación de shapes para todas las redes
+- Verificación de correspondencias Barcelona
+- **Bug encontrado**: C10 Madrid incluye `RENFE_4040` (Delicias Zaragoza) en sus paradas
+- **Nuevo:** Metro Sevilla L1 añadido con shapes completos (272 puntos, 21 paradas)
+  - Ruta: `METRO_SEV_L1_CE_OQ` (Ciudad Expo - Olivar de Quintos)
+  - Color: `#0D6928` (verde)

@@ -415,10 +415,13 @@ struct JourneyResultView: View {
                     SegmentRowView(
                         segment: segment,
                         isFirst: index == 0,
-                        isLast: index == journey.segments.count - 1,
+                        isLast: false,  // Never show inline destination
                         dataService: dataService
                     )
                 }
+
+                // Final destination row
+                DestinationRowView(destination: journey.destination)
             }
             .background(Color(.systemBackground))
             .cornerRadius(12)
@@ -502,18 +505,6 @@ struct SegmentRowView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
-                // Destination (for last segment)
-                if isLast {
-                    HStack {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundStyle(.red)
-                        Text(segment.destination.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .padding(.top, 8)
-                }
             }
             .padding(.vertical, 8)
 
@@ -541,6 +532,61 @@ struct SegmentRowView: View {
 
     private var iconColor: Color {
         segment.type == .walking ? .primary : .white
+    }
+}
+
+// MARK: - Destination Row View
+
+struct DestinationRowView: View {
+    let destination: Stop
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Timeline
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.red.opacity(0.5))
+                    .frame(width: 3, height: 20)
+
+                // Destination icon
+                ZStack {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+
+                Spacer().frame(width: 3, height: 20)
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Destino")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(destination.name)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+
+                if destination.isHub {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.caption2)
+                        Text("Intercambiador")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 8)
+
+            Spacer()
+        }
+        .padding(.horizontal)
     }
 }
 

@@ -103,26 +103,34 @@ enum TransportMode: String, CaseIterable {
     }
 
     /// Animation speed multiplier for 3D preview
+    /// Base speed is 0.08 km/s, multiplied by this value
+    ///
+    /// Proportional to real-world commercial speeds (Spain):
+    /// - Cercanías Renfe: ~45 km/h (regional rail, long inter-station distances)
+    /// - Metro Madrid/BCN: ~30 km/h (urban metro)
+    /// - Metro Ligero: ~22 km/h (light rail, some surface sections)
+    /// - Tranvía/TRAM: ~18 km/h (street-running trams)
+    /// - Walking: ~4.5 km/h (pedestrian speed)
     var animationSpeed: Double {
         switch self {
-        case .metro: return 1.5      // Fast underground
-        case .cercanias: return 1.8  // Fastest
-        case .metroLigero: return 1.2
-        case .tranvia: return 1.0
-        case .bus: return 0.8
-        case .walking: return 0.3    // Slow walking
+        case .metro: return 2.0        // Fast urban transit
+        case .cercanias: return 2.5    // Faster regional
+        case .metroLigero: return 1.8
+        case .tranvia: return 1.5
+        case .bus: return 1.5
+        case .walking: return 0.3      // Slow for short walks
         }
     }
 
-    /// Camera altitude for 3D preview
+    /// Camera altitude for 3D preview (meters)
     var cameraAltitude: Double {
         switch self {
-        case .metro: return 200      // Low, close to ground
-        case .cercanias: return 400  // Higher for longer distances
-        case .metroLigero: return 250
-        case .tranvia: return 150    // Street level
-        case .bus: return 150
-        case .walking: return 100    // Very close, pedestrian view
+        case .metro: return 3000       // City overview (was 2000, too close)
+        case .cercanias: return 4500   // Regional view
+        case .metroLigero: return 3000
+        case .tranvia: return 2500     // City view
+        case .bus: return 2500
+        case .walking: return 2000     // Neighborhood view (was 1200, too close)
         }
     }
 
