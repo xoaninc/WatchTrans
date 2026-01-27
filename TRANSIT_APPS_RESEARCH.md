@@ -511,5 +511,69 @@ Ronda N: Paradas alcanzables con N-1 transbordos
 
 ---
 
+## 14. DECISIONES TÉCNICAS PENDIENTES
+
+### 14.1 Sincronización iCloud para Favoritos
+
+**Estado:** Documentado, pendiente de implementar
+
+**Decisión:** Usar AMBOS sistemas de storage
+
+| Storage | Rol | Razón |
+|---------|-----|-------|
+| **SharedStorage (App Groups)** | Fuente local | Widgets/Siri requieren <500ms, no pueden esperar red |
+| **iCloud (NSUbiquitousKeyValueStore)** | Sync entre dispositivos | iPhone ↔ iPad ↔ Mac |
+
+**Arquitectura propuesta:**
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
+│   iCloud    │ ←→  │  SharedStorage  │ ←→  │ Widget/Siri │
+│  (backup)   │     │  (fuente local) │     │    (UI)     │
+└─────────────┘     └─────────────────┘     └─────────────┘
+```
+
+**Flujo de datos:**
+1. Usuario añade favorito → escribe a SharedStorage + iCloud
+2. iCloud notifica cambio (otro dispositivo) → actualiza SharedStorage
+3. Widget/Siri siempre leen de SharedStorage (local, rápido)
+
+**Implementación técnica:**
+```swift
+// NSUbiquitousKeyValueStore para sync
+let iCloudStore = NSUbiquitousKeyValueStore.default
+
+// Observer de cambios externos
+NotificationCenter.default.addObserver(
+    forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+    object: iCloudStore,
+    queue: .main
+) { notification in
+    // Sincronizar con SharedStorage local
+    let favorites = iCloudStore.array(forKey: "favorites")
+    SharedStorage.shared.saveFavorites(favorites)
+}
+```
+
+**Límites de NSUbiquitousKeyValueStore:**
+- 1MB total de almacenamiento
+- 1KB máximo por clave
+- Suficiente para: favoritos, hub stops, preferencias
+
+**Datos a sincronizar:**
+- ✅ Favoritos (lista de stopId + stopName)
+- ✅ Hub stops guardados
+- ❌ Ubicación (sensible, no sincronizar)
+- ❌ Cache de datos (local only)
+
+**Entitlements necesarios:**
+```xml
+<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+```
+
+**Prioridad:** Baja (funcionalidad nice-to-have)
+
+---
+
 *Documento creado para referencia del equipo WatchTrans*
 *Última actualización: 2026-01-27*
