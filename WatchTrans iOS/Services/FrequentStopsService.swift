@@ -163,12 +163,16 @@ class FrequentStopsService: ObservableObject {
         }
 
         // Sort by visit count and take top N
-        frequentStops = newFrequentStops
+        let sortedStops = newFrequentStops
             .sorted { $0.visitCount > $1.visitCount }
             .prefix(maxFrequentStops)
             .map { $0 }
 
-        saveFrequentStops()
+        // Update on main thread since frequentStops is @Published
+        DispatchQueue.main.async {
+            self.frequentStops = sortedStops
+            self.saveFrequentStops()
+        }
     }
 
     private func relevanceScore(for stop: FrequentStop, hour: Int, dayOfWeek: Int, isWeekday: Bool) -> Double {

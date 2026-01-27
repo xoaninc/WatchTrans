@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>citymapper</string>
+		<string>waze</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WatchTrans necesita tu ubicacion para mostrar las estaciones mas cercanas.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>WatchTrans necesita tu ubicacion para mostrar las estaciones mas cercanas y enviar notificaciones de proximidad.</string>
+</dict>
+</plist>
