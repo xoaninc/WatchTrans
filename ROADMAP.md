@@ -2,28 +2,34 @@
 
 Documento unificado de features pendientes, bugs y mejoras técnicas.
 
-**Última actualización:** 2026-01-27
+**Última actualización:** 2026-01-28
 
 ---
 
 ## 1. FEATURES APP (iOS)
 
-### 1.1 Siri Shortcuts - IMPLEMENTADO
-**Estado:** ✅ Código listo, pendiente añadir a Xcode
+### 1.1 Siri Shortcuts
+**Estado:** ✅ COMPLETADO (28 Enero 2026)
 
-**Archivos creados:**
+**Archivos:**
 - `WatchTrans iOS/Intents/NextTrainIntent.swift`
 - `WatchTrans iOS/Intents/AppShortcuts.swift`
 
 **Frases configuradas:**
 - "Próximo tren en [parada] con WatchTrans"
 - "¿Cuándo pasa el tren en [parada]?"
+- "Salidas de [parada] con WatchTrans"
+- "Horarios de [parada] en WatchTrans"
 - "Next train at [stop] with WatchTrans"
+- "When is the next train at [stop] with WatchTrans?"
+- "Departures from [stop] with WatchTrans"
 
-**Pasos en Xcode:**
-1. Add Files → seleccionar carpeta `Intents`
-2. Verificar App Groups capability (`group.juan.WatchTrans`)
-3. Build and test
+**Funcionalidades:**
+- Búsqueda de paradas por nombre
+- Sugerencias automáticas (favoritos, hubs, cercanas)
+- Vista snippet con próximas salidas
+- Indicador de tiempo real
+- Soporte español e inglés
 
 ---
 
