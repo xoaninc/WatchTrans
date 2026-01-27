@@ -109,22 +109,31 @@ GET /api/v1/gtfs/stops/{stop_id}/departures?compact=true&limit=3
 ---
 
 ### 1.6 iCloud Sync para Favoritos
-**Estado:** 📋 Documentado, baja prioridad
+**Estado:** ✅ IMPLEMENTADO (28 Enero 2026) - Pendiente activar capability en Xcode
 
-**Decisión:** Usar SharedStorage (local) + iCloud (sync)
+**Archivo:** `WatchTrans iOS/Services/iCloudSyncService.swift`
 
 **Arquitectura:**
 ```
-iCloud ←→ SharedStorage ←→ Widget/Siri
+iCloud (NSUbiquitousKeyValueStore) ←→ SharedStorage ←→ Widget/Siri
 ```
 
-**Datos a sincronizar:**
-- ✅ Favoritos
+**Datos sincronizados:**
+- ✅ Favoritos (push automático al modificar)
 - ✅ Hub stops
-- ❌ Ubicación (sensible)
-- ❌ Cache
+- ❌ Ubicación (sensible, no se sincroniza)
+- ❌ Cache (local only)
 
-**Implementación:** Ver sección 7.1
+**Características:**
+- Sync automático al añadir/eliminar favoritos
+- Merge inteligente: union de favoritos locales y remotos
+- Detección de cambios externos (otros dispositivos)
+- Límites respetados: 64KB máx por clave
+
+**SETUP REQUERIDO EN XCODE:**
+1. Target WatchTrans iOS → Signing & Capabilities
+2. + Capability → iCloud
+3. Marcar "Key-value storage"
 
 ---
 

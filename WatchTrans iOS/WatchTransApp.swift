@@ -11,6 +11,11 @@ import SwiftData
 @main
 struct WatchTransApp: App {
 
+    init() {
+        // Initialize iCloud sync on app launch
+        iCloudSyncService.shared.syncOnLaunch()
+    }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Favorite.self,

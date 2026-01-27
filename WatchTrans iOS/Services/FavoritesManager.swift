@@ -56,12 +56,15 @@ class FavoritesManager {
 
     // MARK: - Shared Storage Sync
 
-    /// Sync favorites to SharedStorage for widget access
+    /// Sync favorites to SharedStorage for widget access and iCloud
     private func syncToSharedStorage() {
         let sharedFavorites = favorites.map { favorite in
             SharedStorage.SharedFavorite(stopId: favorite.stopId, stopName: favorite.stopName)
         }
         SharedStorage.shared.saveFavorites(sharedFavorites)
+
+        // Also sync to iCloud for cross-device sync
+        iCloudSyncService.shared.pushFavoritesToiCloud()
     }
 
     // Check if a stop is favorited
