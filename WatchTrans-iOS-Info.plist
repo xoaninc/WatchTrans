@@ -10,7 +10,5 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>WatchTrans necesita tu ubicacion para mostrar las estaciones mas cercanas.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>WatchTrans necesita tu ubicacion para mostrar las estaciones mas cercanas y enviar notificaciones de proximidad.</string>
 </dict>
 </plist>

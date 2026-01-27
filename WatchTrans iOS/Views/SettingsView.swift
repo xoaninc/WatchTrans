@@ -75,11 +75,24 @@ struct SettingsView: View {
                         }
                     }
 
-                    if let issuesURL = URL(string: "https://github.com/anthropics/claude-code/issues") {
+                    if let issuesURL = URL(string: "https://github.com/xoaninc/WatchTrans/issues") {
                         Link(destination: issuesURL) {
                             HStack {
                                 Image(systemName: "exclamationmark.bubble")
                                 Text("Reportar problema")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    if let privacyURL = URL(string: "https://github.com/xoaninc/WatchTrans/blob/main/PRIVACY_POLICY.md") {
+                        Link(destination: privacyURL) {
+                            HStack {
+                                Image(systemName: "hand.raised")
+                                Text("Politica de privacidad")
                                 Spacer()
                                 Image(systemName: "arrow.up.right")
                                     .font(.caption)
