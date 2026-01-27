@@ -116,22 +116,20 @@ iCloud ←→ SharedStorage ←→ Widget/Siri
 ## 2. CAMBIOS API PENDIENTES
 
 ### 2.1 RAPTOR Routing Engine
-**Estado:** ⏳ Pendiente (responsable: API)
+**Estado:** ✅ IMPLEMENTADO (27 Enero 2026)
 
-**Decisión:** Migrar de Dijkstra a RAPTOR
+Endpoint: `GET /route-planner?from=X&to=Y&departure_time=HH:MM`
 
-**Ventajas:**
-- Más eficiente para transit (explota estructura de horarios)
-- Complejidad: O(K × R × T) vs O(V²) de Dijkstra
+Parámetros:
+- `max_transfers` (default: 3)
+- `max_alternatives` (default: 3)
 
-**Implementaciones de referencia:**
-- OpenTripPlanner (Java)
-- R5 by Conveyal (Java)
+Response incluye: `journeys[]`, `departure`, `arrival`, `suggested_heading`, `alerts[]`
 
 ---
 
-### 2.2 Route Planner v2 - BREAKING CHANGE
-**Estado:** ⏳ Pendiente (responsable: API)
+### 2.2 Route Planner v2
+**Estado:** ✅ IMPLEMENTADO
 
 **Endpoint:**
 ```
@@ -183,41 +181,53 @@ Ver sección 1.2 para detalles.
 ---
 
 ### 2.4 Suggested Heading
-**Estado:** ⏳ Pendiente (responsable: API)
+**Estado:** ✅ IMPLEMENTADO (27 Enero 2026)
 
-**Propósito:** Dirección de cámara para animación 3D
+Incluido en cada segmento del route planner response:
+```json
+{
+  "segments": [
+    {
+      "suggested_heading": 45.5
+    }
+  ]
+}
+```
 
-**Formato:**
-- Tipo: `float`
-- Rango: 0-360 grados
-- Referencia: 0=norte, 90=este, 180=sur, 270=oeste
-
-**Resuelve:** Bug de MapKit donde polyline desaparece al rotar cámara
+Tipo: `float` (0-360 grados, 0=norte)
 
 ---
 
 ## 3. BUGS CONOCIDOS
 
 ### 3.1 C10 Madrid incluye parada de Zaragoza
-**Endpoint:** `GET /routes/RENFE_C10_42/stops`
-
-**Problema:** Lista incluye `RENFE_4040` (Delicias Zaragoza, lat: 41.658) mezclada con paradas de Madrid (lat: ~40.4)
-
-**Impacto:** Mapa muestra ruta de 200km hasta Aragón
-
-**Solución:** Filtrar `RENFE_4040` en API
+**Estado:** ✅ ARREGLADO (27 Enero 2026)
 
 ---
 
 ### 3.2 Correspondencias Barcelona incompletas
-**Pendientes:**
+**Estado:** ✅ ARREGLADO (27 Enero 2026)
 
-| Estación | Stop ID | Falta conectar con |
-|----------|---------|-------------------|
-| Espanya FGC | `FGC_PE4` | TMB L1, L3 |
-| Passeig de Gràcia | ? | L2, L3, L4, Rodalies |
-| Arc de Triomf | ? | L1, Rodalies |
-| Diagonal | ? | L3, L5, TRAM |
+- Espanya: ✅ conecta con L1, L3
+- Diagonal: ✅ conecta con L3, L5, FGC
+
+---
+
+### 3.3 Metro Sevilla sin horarios
+**Estado:** ❌ PENDIENTE
+
+**Problema:** Las 21 paradas existen pero departures devuelve vacío.
+Falta cargar stop_times (como Metro Granada que tiene 143,098).
+
+**Paradas afectadas:** `METRO_SEV_L1_E1` a `METRO_SEV_L1_E21`
+
+---
+
+### 3.4 Route Planner Metro Madrid
+**Estado:** ❌ PENDIENTE
+
+**Problema:** No encuentra rutas entre paradas de Metro Madrid.
+Ejemplo: `METRO_12` (Sol) → `METRO_14` (Gran Vía) devuelve "No route found"
 
 ---
 
