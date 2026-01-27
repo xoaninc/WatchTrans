@@ -60,11 +60,36 @@ Para sugerir nuevas funcionalidades:
 
 ```
 WatchTrans/
-├── Shared/           # Codigo compartido entre targets
-├── WatchTrans iOS/   # Codigo especifico de iOS
-├── WatchTrans Watch App/  # Codigo especifico de watchOS
-└── WatchTransWidget/ # Widget
+├── WatchTrans iOS/              # App iOS
+│   ├── Models/                  # Modelos de datos
+│   ├── Views/                   # Vistas SwiftUI
+│   │   ├── Home/
+│   │   ├── Lines/
+│   │   ├── Stop/
+│   │   ├── Journey/
+│   │   └── Search/
+│   ├── Services/                # Logica de negocio
+│   │   ├── GTFSRT/
+│   │   └── Network/
+│   ├── Components/              # UI reutilizables
+│   ├── Extensions/
+│   ├── Utilities/
+│   └── Intents/                 # Siri Shortcuts
+│
+├── WatchTrans Watch App/        # App watchOS
+│   ├── Models/
+│   ├── Views/
+│   │   ├── Lines/
+│   │   ├── Stop/
+│   │   └── Components/
+│   ├── Services/
+│   ├── Extensions/
+│   └── Utilities/
+│
+└── WatchTransWidget/            # Widget iOS
 ```
+
+> **Nota:** iOS y Watch tienen estructuras paralelas. El codigo base (Models, Services, etc.) se mantiene sincronizado pero cada target tiene su propia copia para compatibilidad con Xcode synchronized groups.
 
 ### Commits
 
@@ -100,7 +125,7 @@ Usa prefijos descriptivos:
 
 ### Modelos
 
-Los modelos estan en `Shared/Models/` y son compartidos entre iOS y watchOS.
+Los modelos estan en `[Target]/Models/` (cada target tiene su copia sincronizada).
 
 ### API
 
