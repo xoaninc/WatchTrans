@@ -2,7 +2,7 @@
 
 **Base URL:** `https://redcercanias.com/api/v1/gtfs`
 
-**Última verificación:** 26 Enero 2026
+**Última verificación:** 27 Enero 2026
 
 > **Nota:** Bugs y mejoras pendientes están en `ROADMAP.md`
 
@@ -17,7 +17,22 @@
 | `/stops/{stop_id}/departures` | GET | ✅ | Próximas salidas de una parada |
 | `/routes/{route_id}/stops` | GET | ✅ | Paradas de una línea |
 | `/routes/{route_id}/shape` | GET | ✅ | Recorrido de una línea (polyline) |
+| `/routes/{route_id}/shape?max_gap=50` | GET | ✅ | Shape normalizado (servidor interpola) |
 | `/stops?search={query}` | GET | ✅ | Búsqueda de paradas |
+
+### Route Planner (RAPTOR)
+| Endpoint | Método | Estado | Descripción |
+|----------|--------|--------|-------------|
+| `/route-planner?from=X&to=Y` | GET | ✅ | Planificador de rutas RAPTOR |
+
+**Parámetros:**
+- `from` (string, requerido): ID parada origen
+- `to` (string, requerido): ID parada destino
+- `departure_time` (string, default: hora actual): Formato HH:MM
+- `max_transfers` (int, default: 3): Máximo transbordos (0-5)
+- `max_alternatives` (int, default: 3): Alternativas Pareto (1-5)
+
+**Response incluye:** `journeys[]`, `departure`, `arrival`, `suggested_heading`, `alerts[]`
 
 ### Plataformas y Correspondencias
 | Endpoint | Método | Estado | Descripción |
@@ -46,9 +61,12 @@
 | Metro Bilbao | L1, L2 | ✅ | OK |
 | Metro Ligero | 4 | ✅ | OK |
 | SFM Mallorca | 4 | ✅ | OK |
-| Metro Sevilla | L1 | 272 | ✅ OK |
+| Metro Sevilla | L1 | 272 | ⚠️ Sin departures |
+| Metro Granada | L1 | ✅ | OK (143,098 stop_times) |
 
 **Total:** ~293,638 puntos de shapes
+
+**Nota:** Shapes normalizados disponibles con `?max_gap=50` (servidor interpola)
 
 ---
 
@@ -61,14 +79,9 @@
 | Sants | `RENFE_71801` | 2 (Metro L3, L5) |
 | La Sagrera | `TMB_METRO_1.526` | 3 (L1, L5, Rodalies) |
 | Clot | `RENFE_79009` | 2 |
-
-### Pendientes ❌
-| Estación | Stop ID | Correspondencias | Debería tener |
-|----------|---------|------------------|---------------|
-| Espanya FGC | `FGC_PE4` | 0 | TMB L1, L3 |
-| Passeig de Gràcia | ? | ? | L2, L3, L4, Rodalies |
-| Arc de Triomf | ? | ? | L1, Rodalies |
-| Diagonal | ? | ? | L3, L5, TRAM |
+| Espanya | `FGC_PE4` | ✅ L1, L3, FGC (arreglado 27/01) |
+| Diagonal L3 | `TMB_METRO_1.328` | ✅ L5, FGC Provença |
+| Diagonal L5 | `TMB_METRO_1.521` | ✅ L3, FGC Provença |
 
 ---
 
@@ -160,6 +173,16 @@ MapCamera update - Actualiza marcador y cámara
 ---
 
 ## Changelog
+
+### 27 Enero 2026
+- **Route Planner RAPTOR** desplegado y funcionando
+- **Shapes normalizados** con parámetro `?max_gap=50`
+- **Metro Granada** añadido (143,098 stop_times, departures funcionando)
+- **Bug C10 arreglado** (ya no incluye Zaragoza)
+- **Correspondencias BCN arregladas**: Espanya, Diagonal
+- **`suggested_heading`** incluido en route planner response
+- **Metro Sevilla**: shapes OK pero departures vacío (pendiente API)
+- **Metro Madrid**: route planner no encuentra rutas (pendiente API)
 
 ### 26 Enero 2026
 - Migración de `renfeapp.fly.dev` a `redcercanias.com`
