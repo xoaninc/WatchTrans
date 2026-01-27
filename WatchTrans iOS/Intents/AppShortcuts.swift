@@ -19,13 +19,13 @@ struct AppShortcuts: AppShortcutsProvider {
             phrases: [
                 // Spanish phrases
                 "Próximo tren en \(\.$stop) con \(.applicationName)",
-                "¿Cuándo pasa el tren en \(\.$stop)?",
+                "¿Cuándo pasa el tren en \(\.$stop) con \(.applicationName)?",
                 "Salidas de \(\.$stop) con \(.applicationName)",
-                "Horarios de \(\.$stop)",
+                "Horarios de \(\.$stop) en \(.applicationName)",
 
                 // English phrases
                 "Next train at \(\.$stop) with \(.applicationName)",
-                "When is the next train at \(\.$stop)?",
+                "When is the next train at \(\.$stop) with \(.applicationName)?",
                 "Departures from \(\.$stop) with \(.applicationName)",
                 "\(.applicationName) departures at \(\.$stop)"
             ],

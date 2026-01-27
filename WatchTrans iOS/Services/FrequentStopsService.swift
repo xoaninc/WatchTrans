@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Service for tracking and detecting frequently visited stops
 class FrequentStopsService: ObservableObject {
