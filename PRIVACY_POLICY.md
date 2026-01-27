@@ -62,7 +62,7 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 ### Contact Us
 
 If you have questions about this Privacy Policy, please contact us at:
-- **Email:** watchtrans@xoan.dev
+- **Email:** xoanin05@gmail.com
 - **GitHub:** https://github.com/xoaninc/WatchTrans/issues
 
 ---
@@ -125,7 +125,7 @@ Podemos actualizar esta Política de Privacidad ocasionalmente. Te notificaremos
 ### Contacto
 
 Si tienes preguntas sobre esta Política de Privacidad, contáctanos en:
-- **Email:** watchtrans@xoan.dev
+- **Email:** xoanin05@gmail.com
 - **GitHub:** https://github.com/xoaninc/WatchTrans/issues
 
 ---

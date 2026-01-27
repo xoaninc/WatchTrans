@@ -62,11 +62,37 @@ struct SettingsView: View {
 
                 // Links section
                 Section {
-                    if let websiteURL = URL(string: "https://redcercanias.com") {
+                    if let websiteURL = URL(string: "https://xoaninc.github.io/WatchTrans-App-website-/") {
                         Link(destination: websiteURL) {
                             HStack {
                                 Image(systemName: "globe")
                                 Text("Sitio web")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    if let supportURL = URL(string: "https://xoaninc.github.io/WatchTrans-App-website-/support.html") {
+                        Link(destination: supportURL) {
+                            HStack {
+                                Image(systemName: "questionmark.circle")
+                                Text("Soporte y FAQ")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    if let privacyURL = URL(string: "https://xoaninc.github.io/WatchTrans-App-website-/privacy.html") {
+                        Link(destination: privacyURL) {
+                            HStack {
+                                Image(systemName: "hand.raised")
+                                Text("Politica de privacidad")
                                 Spacer()
                                 Image(systemName: "arrow.up.right")
                                     .font(.caption)
@@ -80,19 +106,6 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.bubble")
                                 Text("Reportar problema")
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    if let privacyURL = URL(string: "https://github.com/xoaninc/WatchTrans/blob/main/PRIVACY_POLICY.md") {
-                        Link(destination: privacyURL) {
-                            HStack {
-                                Image(systemName: "hand.raised")
-                                Text("Politica de privacidad")
                                 Spacer()
                                 Image(systemName: "arrow.up.right")
                                     .font(.caption)
