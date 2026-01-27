@@ -4,6 +4,7 @@
 //
 //  Created by Claude on 26/1/26.
 //  View for planning journeys between two stops
+//  Updated 27/1/26 to use API route planner instead of local RoutingService
 //
 
 import SwiftUI
@@ -12,7 +13,6 @@ struct JourneyPlannerView: View {
     let dataService: DataService
     let locationService: LocationService
 
-    @State private var routingService: RoutingService?
     @State private var originText = ""
     @State private var destinationText = ""
     @State private var selectedOrigin: Stop?
@@ -74,11 +74,6 @@ struct JourneyPlannerView: View {
                 if let journey = journey {
                     Journey3DAnimationView(journey: journey, dataService: dataService)
                 }
-            }
-        }
-        .onAppear {
-            if routingService == nil {
-                routingService = RoutingService(dataService: dataService)
             }
         }
     }
@@ -338,23 +333,21 @@ struct JourneyPlannerView: View {
 
     private func calculateRoute() async {
         guard let origin = selectedOrigin,
-              let destination = selectedDestination,
-              let routing = routingService else { return }
+              let destination = selectedDestination else { return }
 
         isCalculating = true
         errorMessage = nil
 
-        do {
-            if let result = await routing.findRoute(from: origin.id, to: destination.id) {
-                await MainActor.run {
-                    journey = result
-                    isCalculating = false
-                }
-            } else {
-                await MainActor.run {
-                    errorMessage = "No se encontro ruta entre estas estaciones"
-                    isCalculating = false
-                }
+        // Use API route planner via DataService
+        if let result = await dataService.planJourney(fromStopId: origin.id, toStopId: destination.id) {
+            await MainActor.run {
+                journey = result
+                isCalculating = false
+            }
+        } else {
+            await MainActor.run {
+                errorMessage = "No se encontro ruta entre estas estaciones"
+                isCalculating = false
             }
         }
     }

@@ -1,15 +1,34 @@
 # Migración de Lógica de App a API
 
-## Resumen de Cambios Pendientes
+## Estado: COMPLETADO (2026-01-27)
 
-Este documento describe la funcionalidad que actualmente está en la app iOS y que podría/debería moverse al servidor para simplificar el cliente.
+Este documento describe la funcionalidad que se ha migrado del cliente iOS al servidor API.
 
 ---
 
-## 0. ALGORITMO COMPLETO DE BÚSQUEDA DE RUTAS (RoutingService.swift)
+## CAMBIOS COMPLETADOS
+
+### 1. Route Planner API - IMPLEMENTADO
+- Endpoint: `GET /api/v1/gtfs/route-planner?from=STOP_ID&to=STOP_ID`
+- **Cliente actualizado**: `DataService.planJourney(fromStopId:toStopId:)` llama al nuevo endpoint
+- **Código eliminado**: `RoutingService.swift` (~530 líneas) - algoritmo Dijkstra local
+- **Modelos eliminados**: `TransitNode`, `TransitEdge`, `EdgeType` de Journey.swift
+
+### 2. Shape Normalization API - IMPLEMENTADO
+- Endpoint: `GET /api/v1/gtfs/routes/{route_id}/shape?max_gap=50`
+- **Cliente actualizado**: `DataService.fetchRouteShape(routeId:maxGap:)` acepta parámetro `maxGap`
+- **Código eliminado**: `normalizeRoute()` y `sphericalInterpolate()` de AnimationController
+
+---
+
+## DOCUMENTACIÓN HISTÓRICA
+
+La siguiente sección documenta el algoritmo original que estaba en la app iOS (ahora migrado al servidor).
+
+## 0. ALGORITMO COMPLETO DE BÚSQUEDA DE RUTAS (RoutingService.swift) - MIGRADO
 
 ### Resumen
-La app implementa un planificador de rutas completo usando Dijkstra sobre un grafo de transporte público. El código está en `WatchTrans iOS/Services/RoutingService.swift` (~530 líneas).
+La app implementaba un planificador de rutas usando Dijkstra sobre un grafo de transporte público. El código estaba en `WatchTrans iOS/Services/RoutingService.swift` (~530 líneas) - **YA ELIMINADO**.
 
 ### Paso 1: Construcción del Grafo (`buildGraph()`)
 

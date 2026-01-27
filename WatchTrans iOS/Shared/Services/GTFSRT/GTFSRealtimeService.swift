@@ -293,13 +293,41 @@ class GTFSRealtimeService {
 
     /// Fetch shape (polyline) for a route
     /// Returns the coordinates to draw the route on a map
-    func fetchRouteShape(routeId: String) async throws -> RouteShapeResponse {
-        guard let url = URL(string: "\(baseURL)/routes/\(routeId)/shape") else {
+    func fetchRouteShape(routeId: String, maxGap: Int? = nil) async throws -> RouteShapeResponse {
+        var urlString = "\(baseURL)/routes/\(routeId)/shape"
+        if let maxGap = maxGap {
+            urlString += "?max_gap=\(maxGap)"
+        }
+
+        guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
         }
 
         let response: RouteShapeResponse = try await networkService.fetch(url)
-        DebugLog.log("🗺️ [RT] Fetched \(response.shape.count) shape points for \(routeId)")
+        DebugLog.log("🗺️ [RT] Fetched \(response.shape.count) shape points for \(routeId)\(maxGap != nil ? " (max_gap=\(maxGap!))" : "")")
+        return response
+    }
+
+    // MARK: - Route Planner
+
+    /// Fetch a planned journey between two stops
+    /// Returns complete journey with segments, times, and normalized coordinates
+    func fetchRoutePlan(fromStopId: String, toStopId: String) async throws -> RoutePlanResponse {
+        let urlString = "\(baseURL)/route-planner?from=\(fromStopId)&to=\(toStopId)"
+        DebugLog.log("🗺️ [RT] Fetching route plan: \(fromStopId) → \(toStopId)")
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.badResponse
+        }
+
+        let response: RoutePlanResponse = try await networkService.fetch(url)
+
+        if response.success, let journey = response.journey {
+            DebugLog.log("🗺️ [RT] ✅ Route plan: \(journey.segments.count) segments, \(journey.totalDurationMinutes) min")
+        } else {
+            DebugLog.log("🗺️ [RT] ⚠️ Route plan failed: \(response.message ?? "unknown error")")
+        }
+
         return response
     }
 }

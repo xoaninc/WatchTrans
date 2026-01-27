@@ -5,9 +5,11 @@
 //  Created by Juan Macias Gomez on 14/1/26.
 //
 //  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (redcercanias.com)
+//  UPDATED: 2026-01-27 - Added API route planner integration
 //
 
 import Foundation
+import CoreLocation
 
 /// Current location context - holds network/province info for the user's location
 struct LocationContext {
@@ -914,15 +916,116 @@ class DataService {
 
     /// Fetch shape (polyline) for a route
     /// Returns array of shape points to draw the route on a map
-    func fetchRouteShape(routeId: String) async -> [ShapePoint] {
+    /// - Parameter maxGap: If provided, normalizes coordinates to have no gaps > maxGap meters
+    func fetchRouteShape(routeId: String, maxGap: Int? = nil) async -> [ShapePoint] {
         do {
-            let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId)
-            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)")
+            let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId, maxGap: maxGap)
+            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
             return response.shape.sorted { $0.sequence < $1.sequence }
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch shape for \(routeId): \(error)")
             return []
         }
+    }
+
+    // MARK: - Route Planner
+
+    /// Plan a journey between two stops using the API route planner
+    /// Returns a Journey object with all segments and coordinates
+    func planJourney(fromStopId: String, toStopId: String) async -> Journey? {
+        DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId)")
+
+        do {
+            let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId)
+
+            guard response.success, let apiJourney = response.journey else {
+                DebugLog.log("⚠️ [DataService] Route plan failed: \(response.message ?? "unknown error")")
+                return nil
+            }
+
+            // Convert API response to Journey model
+            let journey = convertToJourney(from: apiJourney)
+            DebugLog.log("🗺️ [DataService] ✅ Journey planned: \(journey.segments.count) segments, \(journey.totalDurationMinutes) min")
+            return journey
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to plan journey: \(error)")
+            return nil
+        }
+    }
+
+    /// Convert API route plan response to Journey model
+    private func convertToJourney(from apiJourney: RoutePlanJourney) -> Journey {
+        // Convert origin stop
+        let origin = Stop(
+            id: apiJourney.origin.id,
+            name: apiJourney.origin.name,
+            latitude: apiJourney.origin.lat,
+            longitude: apiJourney.origin.lon
+        )
+
+        // Convert destination stop
+        let destination = Stop(
+            id: apiJourney.destination.id,
+            name: apiJourney.destination.name,
+            latitude: apiJourney.destination.lat,
+            longitude: apiJourney.destination.lon
+        )
+
+        // Convert segments
+        let segments = apiJourney.segments.map { apiSegment -> JourneySegment in
+            let segmentOrigin = Stop(
+                id: apiSegment.origin.id,
+                name: apiSegment.origin.name,
+                latitude: apiSegment.origin.lat,
+                longitude: apiSegment.origin.lon
+            )
+
+            let segmentDestination = Stop(
+                id: apiSegment.destination.id,
+                name: apiSegment.destination.name,
+                latitude: apiSegment.destination.lat,
+                longitude: apiSegment.destination.lon
+            )
+
+            let intermediateStops = (apiSegment.intermediateStops ?? []).map { apiStop in
+                Stop(
+                    id: apiStop.id,
+                    name: apiStop.name,
+                    latitude: apiStop.lat,
+                    longitude: apiStop.lon
+                )
+            }
+
+            // Convert coordinates
+            let coordinates = apiSegment.coordinates.map { coord in
+                CLLocationCoordinate2D(latitude: coord.lat, longitude: coord.lon)
+            }
+
+            // Determine segment type and transport mode
+            let segmentType: SegmentType = apiSegment.type == "walking" ? .walking : .transit
+            let transportMode = TransportMode(rawValue: apiSegment.transportMode) ?? .metro
+
+            return JourneySegment(
+                type: segmentType,
+                transportMode: transportMode,
+                lineName: apiSegment.lineName,
+                lineColor: apiSegment.lineColor,
+                origin: segmentOrigin,
+                destination: segmentDestination,
+                intermediateStops: intermediateStops,
+                durationMinutes: apiSegment.durationMinutes,
+                coordinates: coordinates
+            )
+        }
+
+        return Journey(
+            origin: origin,
+            destination: destination,
+            segments: segments,
+            totalDurationMinutes: apiJourney.totalDurationMinutes,
+            totalWalkingMinutes: apiJourney.totalWalkingMinutes,
+            transferCount: apiJourney.transferCount
+        )
     }
 
 }

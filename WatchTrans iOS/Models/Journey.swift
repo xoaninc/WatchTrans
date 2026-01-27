@@ -146,38 +146,3 @@ enum TransportMode: String, CaseIterable {
         }
     }
 }
-
-// MARK: - Graph Node for Routing
-
-/// Node in the transit graph for pathfinding
-struct TransitNode: Hashable {
-    let stopId: String
-    let lineId: String?  // nil for transfer nodes
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(stopId)
-        hasher.combine(lineId)
-    }
-
-    static func == (lhs: TransitNode, rhs: TransitNode) -> Bool {
-        lhs.stopId == rhs.stopId && lhs.lineId == rhs.lineId
-    }
-}
-
-/// Edge in the transit graph
-struct TransitEdge {
-    let from: TransitNode
-    let to: TransitNode
-    let weight: Double        // Time in minutes
-    let type: EdgeType
-    let lineId: String?
-    let lineName: String?
-    let lineColor: String?
-}
-
-enum EdgeType {
-    case ride       // Riding on a line
-    case transfer   // Walking transfer between lines
-    case boarding   // Boarding a line at a stop
-    case alighting  // Getting off a line at a stop
-}

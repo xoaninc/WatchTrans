@@ -587,15 +587,13 @@ class AnimationController {
         onUpdate: @escaping (CLLocationCoordinate2D, Double, Double, CLLocationCoordinate2D?) -> Void,
         onComplete: @escaping () -> Void
     ) {
-        // Normalize route: subdivide segments >50m for smooth animation
-        let normalizedCoords = Self.normalizeRoute(coordinates, maxSegmentMeters: 50.0)
-
-        self.coordinates = normalizedCoords
+        // Coordinates are already normalized by the API (max_gap=50m)
+        self.coordinates = coordinates
         self.speedKmPerSec = speedKmPerSec
         self.onUpdate = onUpdate
         self.onComplete = onComplete
         self.currentDistance = 0
-        self.totalDistance = Self.lineDistance(normalizedCoords)
+        self.totalDistance = Self.lineDistance(coordinates)
 
         // Reset state
         frameCount = 0
@@ -714,85 +712,6 @@ class AnimationController {
                 sin(from.latitude * .pi / 180) * cos(deltaLon * .pi / 180)
         let heading = atan2(y, x) * 180 / .pi
         return (heading + 360).truncatingRemainder(dividingBy: 360)
-    }
-
-    // MARK: - Route Normalization (subdivide sparse points)
-
-    /// Normalizes a route by subdividing segments that are too long.
-    /// This ensures smooth animation even when polyline points are far apart.
-    /// - Parameter maxSegmentMeters: Maximum distance between consecutive points (default 50m)
-    /// - Returns: Normalized array with denser points where needed
-    static func normalizeRoute(_ coordinates: [CLLocationCoordinate2D], maxSegmentMeters: Double = 50.0) -> [CLLocationCoordinate2D] {
-        guard coordinates.count > 1 else { return coordinates }
-
-        var normalized: [CLLocationCoordinate2D] = []
-        normalized.append(coordinates[0])
-
-        for i in 0..<coordinates.count - 1 {
-            let from = coordinates[i]
-            let to = coordinates[i + 1]
-
-            let fromLoc = CLLocation(latitude: from.latitude, longitude: from.longitude)
-            let toLoc = CLLocation(latitude: to.latitude, longitude: to.longitude)
-            let segmentDistance = fromLoc.distance(from: toLoc)  // meters
-
-            if segmentDistance > maxSegmentMeters {
-                // Subdivide this segment
-                let subdivisions = Int(ceil(segmentDistance / maxSegmentMeters))
-
-                for j in 1..<subdivisions {
-                    let ratio = Double(j) / Double(subdivisions)
-                    // Spherical interpolation for accuracy on longer distances
-                    let interpolated = sphericalInterpolate(from: from, to: to, fraction: ratio)
-                    normalized.append(interpolated)
-                }
-            }
-
-            normalized.append(to)
-        }
-
-        return normalized
-    }
-
-    /// Spherical linear interpolation (Slerp) between two coordinates
-    /// More accurate than linear interpolation for geographic coordinates
-    static func sphericalInterpolate(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D, fraction: Double) -> CLLocationCoordinate2D {
-        let lat1 = from.latitude * .pi / 180
-        let lon1 = from.longitude * .pi / 180
-        let lat2 = to.latitude * .pi / 180
-        let lon2 = to.longitude * .pi / 180
-
-        // Calculate angular distance
-        let deltaLat = lat2 - lat1
-        let deltaLon = lon2 - lon1
-
-        let a = sin(deltaLat / 2) * sin(deltaLat / 2) +
-                cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
-        let angularDistance = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        // If points are very close, use linear interpolation
-        if angularDistance < 1e-10 {
-            return CLLocationCoordinate2D(
-                latitude: from.latitude + (to.latitude - from.latitude) * fraction,
-                longitude: from.longitude + (to.longitude - from.longitude) * fraction
-            )
-        }
-
-        // Spherical interpolation
-        let A = sin((1 - fraction) * angularDistance) / sin(angularDistance)
-        let B = sin(fraction * angularDistance) / sin(angularDistance)
-
-        let x = A * cos(lat1) * cos(lon1) + B * cos(lat2) * cos(lon2)
-        let y = A * cos(lat1) * sin(lon1) + B * cos(lat2) * sin(lon2)
-        let z = A * sin(lat1) + B * sin(lat2)
-
-        let interpolatedLat = atan2(z, sqrt(x * x + y * y))
-        let interpolatedLon = atan2(y, x)
-
-        return CLLocationCoordinate2D(
-            latitude: interpolatedLat * 180 / .pi,
-            longitude: interpolatedLon * 180 / .pi
-        )
     }
 }
 

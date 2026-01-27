@@ -563,3 +563,73 @@ struct ShapePoint: Codable {
         case lat, lon, sequence
     }
 }
+
+// MARK: - Route Planner Response
+
+/// Response from GET /api/v1/gtfs/route-planner
+/// Contains complete journey with segments, times, and normalized coordinates
+struct RoutePlanResponse: Codable {
+    let success: Bool
+    let message: String?
+    let journey: RoutePlanJourney?
+}
+
+/// Complete journey from origin to destination
+struct RoutePlanJourney: Codable {
+    let origin: RoutePlanStop
+    let destination: RoutePlanStop
+    let totalDurationMinutes: Int
+    let totalWalkingMinutes: Int
+    let totalTransitMinutes: Int
+    let transferCount: Int
+    let segments: [RoutePlanSegment]
+
+    enum CodingKeys: String, CodingKey {
+        case origin, destination, segments
+        case totalDurationMinutes = "total_duration_minutes"
+        case totalWalkingMinutes = "total_walking_minutes"
+        case totalTransitMinutes = "total_transit_minutes"
+        case transferCount = "transfer_count"
+    }
+}
+
+/// A stop in the route plan
+struct RoutePlanStop: Codable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+}
+
+/// A segment of the journey (transit or walking)
+struct RoutePlanSegment: Codable {
+    let type: String                    // "transit" or "walking"
+    let transportMode: String           // "metro", "cercanias", "walking", etc.
+    let lineId: String?
+    let lineName: String?
+    let lineColor: String?
+    let headsign: String?
+    let origin: RoutePlanStop
+    let destination: RoutePlanStop
+    let intermediateStops: [RoutePlanStop]?
+    let durationMinutes: Int
+    let distanceMeters: Int?
+    let coordinates: [RoutePlanCoordinate]
+
+    enum CodingKeys: String, CodingKey {
+        case type, origin, destination, coordinates, headsign
+        case transportMode = "transport_mode"
+        case lineId = "line_id"
+        case lineName = "line_name"
+        case lineColor = "line_color"
+        case intermediateStops = "intermediate_stops"
+        case durationMinutes = "duration_minutes"
+        case distanceMeters = "distance_meters"
+    }
+}
+
+/// A coordinate in the route plan segment
+struct RoutePlanCoordinate: Codable {
+    let lat: Double
+    let lon: Double
+}
