@@ -64,30 +64,32 @@ GET /api/v1/gtfs/stops/{stop_id}/departures?compact=true&limit=3
 ---
 
 ### 1.4 Paradas Frecuentes (Auto-detectar)
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ Implementado
 
-**Lógica propuesta:**
-1. Guardar historial de paradas consultadas (local)
-2. Detectar patrones (misma parada, misma hora, días laborables)
-3. Sugerir como favorito o mostrar en home
+**Archivos creados:**
+- `WatchTrans iOS/Services/FrequentStopsService.swift`
 
-**Sin dependencia de API** - implementación local
+**Funcionalidad:**
+- Registra visitas a paradas automáticamente
+- Detecta patrones (hora, día de semana, L-V vs fines de semana)
+- Muestra sección "Frecuentes" en Home con badge de patrón (ej: "~08:00 L-V")
+- Ordena por relevancia según hora actual
 
 ---
 
 ### 1.5 Abrir en Apple Maps/Google Maps
-**Estado:** ⏳ Pendiente (baja prioridad)
+**Estado:** ✅ Implementado
 
-**Inspiración:** CMMapLauncher de Citymapper
+**Archivos creados:**
+- `WatchTrans iOS/Services/MapLauncher.swift`
 
-**Implementación:**
-```swift
-// Apple Maps
-let url = URL(string: "maps://?daddr=\(lat),\(lon)")
+**Apps soportadas:**
+- Apple Maps (siempre disponible)
+- Google Maps
+- Citymapper
+- Waze
 
-// Google Maps
-let url = URL(string: "comgooglemaps://?daddr=\(lat),\(lon)")
-```
+**Uso:** Botón en toolbar de StopDetailView → muestra selector de app
 
 ---
 

@@ -26,6 +26,7 @@ struct StopDetailView: View {
     @State private var isAlertsExpanded = false
     @State private var showFavoriteAlert = false
     @State private var favoriteAlertMessage = ""
+    @State private var showMapOptions = false
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -116,32 +117,43 @@ struct StopDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                if let manager = favoritesManager {
+                HStack(spacing: 16) {
+                    // Open in Maps button
                     Button {
-                        // Haptic feedback
-                        let impact = UIImpactFeedbackGenerator(style: .medium)
-                        impact.impactOccurred()
-
-                        if manager.isFavorite(stopId: stop.id) {
-                            manager.removeFavorite(stopId: stop.id)
-                        } else {
-                            let result = manager.addFavorite(stop: stop)
-                            switch result {
-                            case .success:
-                                break // Already handled by state update
-                            case .limitReached:
-                                favoriteAlertMessage = "Has alcanzado el limite de \(manager.maxFavorites) favoritos"
-                                showFavoriteAlert = true
-                            case .alreadyExists:
-                                break // Should not happen due to isFavorite check
-                            case .saveFailed(let error):
-                                favoriteAlertMessage = "Error al guardar: \(error.localizedDescription)"
-                                showFavoriteAlert = true
-                            }
-                        }
+                        showMapOptions = true
                     } label: {
-                        Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
-                            .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
+                        Image(systemName: "arrow.triangle.turn.up.right.diamond")
+                            .foregroundStyle(.blue)
+                    }
+
+                    // Favorite button
+                    if let manager = favoritesManager {
+                        Button {
+                            // Haptic feedback
+                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                            impact.impactOccurred()
+
+                            if manager.isFavorite(stopId: stop.id) {
+                                manager.removeFavorite(stopId: stop.id)
+                            } else {
+                                let result = manager.addFavorite(stop: stop)
+                                switch result {
+                                case .success:
+                                    break // Already handled by state update
+                                case .limitReached:
+                                    favoriteAlertMessage = "Has alcanzado el limite de \(manager.maxFavorites) favoritos"
+                                    showFavoriteAlert = true
+                                case .alreadyExists:
+                                    break // Should not happen due to isFavorite check
+                                case .saveFailed(let error):
+                                    favoriteAlertMessage = "Error al guardar: \(error.localizedDescription)"
+                                    showFavoriteAlert = true
+                                }
+                            }
+                        } label: {
+                            Image(systemName: manager.isFavorite(stopId: stop.id) ? "star.fill" : "star")
+                                .foregroundStyle(manager.isFavorite(stopId: stop.id) ? .yellow : .gray)
+                        }
                     }
                 }
             }
@@ -150,6 +162,18 @@ struct StopDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(favoriteAlertMessage)
+        }
+        .confirmationDialog("Abrir en", isPresented: $showMapOptions, titleVisibility: .visible) {
+            ForEach(MapLauncher.availableApps(), id: \.name) { app in
+                Button(app.name) {
+                    MapLauncher.open(
+                        coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
+                        name: stop.name,
+                        in: app
+                    )
+                }
+            }
+            Button("Cancelar", role: .cancel) { }
         }
         .refreshable {
             dataService.clearArrivalCache()
@@ -160,6 +184,8 @@ struct StopDetailView: View {
         }
         .onAppear {
             startAutoRefresh()
+            // Record visit for frequent stops detection
+            FrequentStopsService.shared.recordVisit(stopId: stop.id, stopName: stop.name)
         }
         .onDisappear {
             stopAutoRefresh()

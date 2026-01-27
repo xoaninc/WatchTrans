@@ -61,6 +61,14 @@ struct HomeView: View {
                         )
                     }
 
+                    // Frequent Stops Section (auto-detected)
+                    FrequentStopsSectionView(
+                        dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager,
+                        refreshTrigger: effectiveTrigger
+                    )
+
                     // Nearby Stops Section
                     NearbyStopsSectionView(
                         dataService: dataService,
@@ -174,6 +182,162 @@ struct FavoritesSectionView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Frequent Stops Section
+
+struct FrequentStopsSectionView: View {
+    let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
+    let refreshTrigger: UUID
+
+    @ObservedObject private var frequentStopsService = FrequentStopsService.shared
+
+    /// Get Stop objects for frequent stop IDs
+    private var frequentStops: [(stop: Stop, pattern: String?)] {
+        let favoriteIds = Set(favoritesManager?.favorites.map { $0.stopId } ?? [])
+        let suggested = frequentStopsService.getSuggestedStops()
+
+        return suggested.compactMap { frequent in
+            // Skip if already a favorite
+            guard !favoriteIds.contains(frequent.id) else { return nil }
+            // Find the stop in dataService
+            guard let stop = dataService.stops.first(where: { $0.id == frequent.id }) else { return nil }
+            return (stop, frequent.patternDescription)
+        }
+    }
+
+    var body: some View {
+        if !frequentStops.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                // Section header
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .foregroundStyle(.purple)
+                    Text("Frecuentes")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Spacer()
+                    Text("Auto")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.purple.opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                ForEach(frequentStops, id: \.stop.id) { item in
+                    NavigationLink(destination: StopDetailView(
+                        stop: item.stop,
+                        dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager
+                    )) {
+                        FrequentStopCardView(
+                            stop: item.stop,
+                            pattern: item.pattern,
+                            dataService: dataService,
+                            locationService: locationService,
+                            favoritesManager: favoritesManager,
+                            refreshTrigger: refreshTrigger
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Frequent Stop Card View
+
+struct FrequentStopCardView: View {
+    let stop: Stop
+    let pattern: String?
+    let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
+    let refreshTrigger: UUID
+
+    @State private var arrivals: [Arrival] = []
+    @State private var isLoading = false
+    @State private var hasLoadedOnce = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Stop header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(stop.name)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    HStack(spacing: 8) {
+                        if let location = locationService.currentLocation {
+                            Text(stop.formattedDistance(from: location))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        // Pattern badge (e.g., "~08:00 L-V")
+                        if let pattern = pattern {
+                            Text(pattern)
+                                .font(.caption2)
+                                .foregroundStyle(.purple)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.tertiary)
+            }
+
+            // Arrivals preview
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            } else if arrivals.isEmpty {
+                Text("Sin salidas proximas")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(arrivals.prefix(2)) { arrival in
+                        ArrivalRowView(arrival: arrival, dataService: dataService)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+        )
+        .task(id: refreshTrigger) {
+            await loadArrivals()
+        }
+    }
+
+    private func loadArrivals() async {
+        if !hasLoadedOnce {
+            isLoading = true
+        }
+        arrivals = await dataService.fetchArrivals(for: stop.id)
+        hasLoadedOnce = true
+        isLoading = false
     }
 }
 
