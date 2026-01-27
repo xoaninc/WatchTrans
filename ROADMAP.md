@@ -58,14 +58,23 @@ GET /api/v1/gtfs/stops/{stop_id}/departures?compact=true&limit=3
 ---
 
 ### 1.3 Complicaciones Apple Watch
-**Estado:** ⏳ Pendiente
+**Estado:** ✅ IMPLEMENTADO (28 Enero 2026) - Pendiente testing en dispositivo real
 
-**Tipos a implementar:**
-- Circular: próxima salida (línea + minutos)
-- Rectangular: 2-3 próximas salidas
-- Corner: icono + minutos
+**Archivo:** `WatchTransWidget/WatchTransWidget.swift`
 
-**Dependencia:** Mismo endpoint compact que widgets
+**Tipos implementados:**
+- `accessoryCircular`: Anillo de progreso + línea + minutos
+- `accessoryRectangular`: Línea + destino + minutos + barra de progreso
+- `accessoryCorner`: Nombre de línea con tiempo en label
+- `accessoryInline`: Texto simple "L1: 5 min"
+
+**Características:**
+- Colores de línea reales (hex desde API)
+- Indicador de retraso (verde=puntual, naranja=retrasado)
+- Metro/ML usa color de línea (sin info de retraso)
+- Selección de parada configurable
+- Recomendaciones basadas en favoritos y hubs
+- Actualización cada 2.5 minutos
 
 ---
 
