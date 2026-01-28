@@ -33,19 +33,13 @@ struct PlanRouteIntent: AppIntent {
     /// Don't open app when running
     static var openAppWhenRun: Bool = false
 
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
-        DebugLog.log("🗺️ [PlanRouteIntent] ▶️ Starting route plan via Siri")
-        DebugLog.log("🗺️ [PlanRouteIntent]   From: \(fromStop.name) (ID: \(fromStop.id))")
-        DebugLog.log("🗺️ [PlanRouteIntent]   To: \(toStop.name) (ID: \(toStop.id))")
+    // Base URL for API (local constant to avoid MainActor issues)
+    private static let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
 
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         do {
             // Fetch route with compact=true for fast response (<5KB)
             let journey = try await fetchRoute(fromId: fromStop.id, toId: toStop.id)
-
-            DebugLog.log("🗺️ [PlanRouteIntent] ✅ Route found:")
-            DebugLog.log("🗺️ [PlanRouteIntent]   Duration: \(journey.durationMinutes) min")
-            DebugLog.log("🗺️ [PlanRouteIntent]   Transfers: \(journey.transfers)")
-            DebugLog.log("🗺️ [PlanRouteIntent]   Segments: \(journey.segments.count)")
 
             // Build response text
             let responseText = buildResponseText(journey: journey)
@@ -60,14 +54,12 @@ struct PlanRouteIntent: AppIntent {
                 )
             }
         } catch PlanRouteError.noRouteFound {
-            DebugLog.log("🗺️ [PlanRouteIntent] ❌ No route found")
             return .result(
                 dialog: "No route found from \(fromStop.name) to \(toStop.name)"
             ) {
                 PlanRouteErrorView(message: "No se encontro ruta entre \(fromStop.name) y \(toStop.name)")
             }
         } catch {
-            DebugLog.log("🗺️ [PlanRouteIntent] ❌ Error: \(error)")
             return .result(
                 dialog: "Could not plan route: \(error.localizedDescription)"
             ) {
@@ -79,30 +71,17 @@ struct PlanRouteIntent: AppIntent {
     // MARK: - API Call
 
     private func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
-        let baseURL = APIConfiguration.baseURL
         // Use compact=true for minimal response (<5KB, faster for Siri)
-        let urlString = "\(baseURL)/route-planner?from=\(fromId)&to=\(toId)&compact=true"
-
-        DebugLog.log("🗺️ [PlanRouteIntent] Fetching: \(urlString)")
+        let urlString = "\(Self.apiBaseURL)/route-planner?from=\(fromId)&to=\(toId)&compact=true"
 
         guard let url = URL(string: urlString) else {
             throw PlanRouteError.invalidURL
         }
 
-        let startTime = Date()
         let (data, response) = try await URLSession.shared.data(from: url)
-        let elapsed = Date().timeIntervalSince(startTime)
 
-        DebugLog.log("🗺️ [PlanRouteIntent] ⏱️ Response in \(String(format: "%.3f", elapsed))s")
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw PlanRouteError.apiError
-        }
-
-        DebugLog.log("🗺️ [PlanRouteIntent]   HTTP Status: \(httpResponse.statusCode)")
-        DebugLog.log("🗺️ [PlanRouteIntent]   Response size: \(data.count) bytes")
-
-        guard httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
             throw PlanRouteError.apiError
         }
 
@@ -112,8 +91,6 @@ struct PlanRouteIntent: AppIntent {
         guard apiResponse.success, let journey = apiResponse.journeys?.first else {
             throw PlanRouteError.noRouteFound
         }
-
-        DebugLog.log("🗺️ [PlanRouteIntent] ✅ Decoded journey: \(journey.durationMinutes) min, \(journey.segments.count) segments")
 
         return journey
     }
@@ -161,13 +138,13 @@ enum PlanRouteError: Error, CustomLocalizedStringResourceConvertible {
 
 /// Compact response from route-planner?compact=true
 /// Optimized for Widget/Siri (<5KB response)
-struct CompactRoutePlanResponse: Codable {
+struct CompactRoutePlanResponse: Codable, Sendable {
     let success: Bool
     let message: String?
     let journeys: [SiriJourney]?
 }
 
-struct SiriJourney: Codable {
+struct SiriJourney: Codable, Sendable {
     let durationMinutes: Int
     let transfers: Int
     let walkingMinutes: Int
@@ -181,7 +158,7 @@ struct SiriJourney: Codable {
     }
 }
 
-struct SiriSegment: Codable {
+struct SiriSegment: Codable, Sendable {
     let type: String  // "transit" or "walk"
     let routeId: String?
     let routeName: String?
