@@ -86,7 +86,10 @@ class GTFSRealtimeMapper {
                 routeColor: departure.routeColor,
                 routeId: departure.routeId,
                 frequencyBased: departure.frequencyBased ?? false,
-                headwayMinutes: departure.headwayMinutes
+                headwayMinutes: departure.headwayMinutes,
+                isOfflineData: false,
+                occupancyStatus: departure.occupancyStatus,
+                occupancyPercentage: departure.occupancyPercentage
             )
 
             arrivals.append(arrival)

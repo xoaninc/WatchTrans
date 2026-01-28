@@ -34,6 +34,13 @@ struct Arrival: Identifiable, Codable {
     let frequencyBased: Bool
     let headwayMinutes: Int?
 
+    // Offline mode flag
+    let isOfflineData: Bool
+
+    // Occupancy data (GTFS-RT standard, currently only TMB Metro Barcelona)
+    let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
+    let occupancyPercentage: Int?   // 0-100 percentage
+
     // Delay calculation
     var isDelayed: Bool {
         if let delay = delaySeconds, delay > 60 {
@@ -166,6 +173,24 @@ struct Arrival: Identifiable, Codable {
         return lineName.hasPrefix("ML") || lineName.hasPrefix("T")
     }
 
+    // MARK: - Occupancy
+
+    /// Occupancy level for display (green/yellow/red/gray)
+    var occupancyLevel: OccupancyLevel {
+        guard let status = occupancyStatus else { return .unknown }
+        switch status {
+        case 0, 1: return .low        // EMPTY, MANY_SEATS_AVAILABLE
+        case 2, 3: return .medium     // FEW_SEATS_AVAILABLE, STANDING_ROOM_ONLY
+        case 4, 5, 6: return .high    // CRUSHED_STANDING_ROOM_ONLY, FULL, NOT_ACCEPTING_PASSENGERS
+        default: return .unknown      // NO_DATA_AVAILABLE (7), NOT_BOARDABLE (8)
+        }
+    }
+
+    /// Returns true if we have occupancy data to display
+    var hasOccupancyData: Bool {
+        occupancyStatus != nil && occupancyStatus != 7 && occupancyStatus != 8
+    }
+
     /// Check if this is a Cercanías/Rodalies line (C1, C2, R1, R2, etc.)
     /// These are the only lines that show exact times even for > 30 min
     /// Excludes FGC R-lines (R5, R6, R50, R60) which are regional but not Rodalies/Cercanías
@@ -190,5 +215,42 @@ struct Arrival: Identifiable, Codable {
         if lineName.hasPrefix("R") && !lowerLineId.contains("fgc") { return true }
 
         return false
+    }
+}
+
+// MARK: - Occupancy Level
+
+/// Occupancy level for visual display
+enum OccupancyLevel {
+    case low       // 🟢 Empty or many seats (0-1)
+    case medium    // 🟡 Few seats or standing (2-3)
+    case high      // 🔴 Full or crushed (4-6)
+    case unknown   // ⚫ No data (7-8 or nil)
+
+    var color: String {
+        switch self {
+        case .low: return "green"
+        case .medium: return "yellow"
+        case .high: return "red"
+        case .unknown: return "gray"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .low: return "person"
+        case .medium: return "person.2"
+        case .high: return "person.3"
+        case .unknown: return "questionmark"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .low: return "Poco lleno"
+        case .medium: return "Moderado"
+        case .high: return "Muy lleno"
+        case .unknown: return "Sin datos"
+        }
     }
 }

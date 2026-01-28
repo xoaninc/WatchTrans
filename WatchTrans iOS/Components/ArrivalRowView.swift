@@ -93,6 +93,11 @@ struct ArrivalRowView: View {
                     }
                 }
 
+                // Occupancy indicator (currently only TMB Metro Barcelona)
+                if arrival.hasOccupancyData {
+                    OccupancyIndicator(level: arrival.occupancyLevel, percentage: arrival.occupancyPercentage)
+                }
+
                 // Platform badge (if available)
                 if let platform = arrival.platform, !platform.isEmpty {
                     HStack(spacing: 2) {
@@ -119,12 +124,65 @@ struct ArrivalRowView: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
                 }
+
+                // Offline indicator
+                if arrival.isOfflineData {
+                    HStack(spacing: 2) {
+                        Image(systemName: "icloud.slash")
+                            .font(.caption2)
+                        Text("offline")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+                }
             }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(Color(.systemGray6))
         .cornerRadius(10)
+    }
+}
+
+// MARK: - Occupancy Indicator
+
+/// Visual indicator for train occupancy level
+struct OccupancyIndicator: View {
+    let level: OccupancyLevel
+    let percentage: Int?
+
+    var body: some View {
+        HStack(spacing: 3) {
+            // Colored circle indicator
+            Circle()
+                .fill(indicatorColor)
+                .frame(width: 8, height: 8)
+
+            // Person icons based on level
+            Image(systemName: level.iconName)
+                .font(.caption2)
+                .foregroundStyle(indicatorColor)
+
+            // Percentage if available
+            if let pct = percentage {
+                Text("\(pct)%")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(indicatorColor.opacity(0.15))
+        .cornerRadius(4)
+    }
+
+    private var indicatorColor: Color {
+        switch level {
+        case .low: return .green
+        case .medium: return .yellow
+        case .high: return .red
+        case .unknown: return .gray
+        }
     }
 }
 
@@ -150,17 +208,21 @@ struct ArrivalRowView: View {
                 routeColor: "#813380",
                 routeId: "RENFE_C3_36",
                 frequencyBased: false,
-                headwayMinutes: nil
+                headwayMinutes: nil,
+                isOfflineData: false,
+                occupancyStatus: nil,
+                occupancyPercentage: nil
             ),
             dataService: DataService()
         )
 
+        // Metro Barcelona con ocupación
         ArrivalRowView(
             arrival: Arrival(
                 id: "2",
-                lineId: "l1",
+                lineId: "TMB_METRO_L1",
                 lineName: "L1",
-                destination: "Valdecarros",
+                destination: "Hospital de Bellvitge",
                 scheduledTime: Date().addingTimeInterval(2 * 60),
                 expectedTime: Date().addingTimeInterval(2 * 60),
                 platform: nil,
@@ -172,10 +234,13 @@ struct ArrivalRowView: View {
                 trainStatus: nil,
                 trainEstimated: nil,
                 delaySeconds: nil,
-                routeColor: "#2ca5dd",
-                routeId: "METRO_L1_123",
+                routeColor: "#E23131",
+                routeId: "TMB_METRO_L1",
                 frequencyBased: true,
-                headwayMinutes: 5
+                headwayMinutes: 5,
+                isOfflineData: false,
+                occupancyStatus: 2,  // FEW_SEATS_AVAILABLE
+                occupancyPercentage: 45
             ),
             dataService: DataService()
         )

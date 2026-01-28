@@ -561,7 +561,10 @@ struct JourneyStopsListView: View {
                 routeColor: "#813380",
                 routeId: "RENFE_C3_36",
                 frequencyBased: false,
-                headwayMinutes: nil
+                headwayMinutes: nil,
+                isOfflineData: false,
+                occupancyStatus: nil,
+                occupancyPercentage: nil
             ),
             lineColor: Color(red: 129/255, green: 51/255, blue: 128/255)
         )

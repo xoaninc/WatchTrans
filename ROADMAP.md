@@ -249,12 +249,9 @@ Tipo: `float` (0-360 grados, 0=norte)
 ---
 
 ### 3.3 Metro Sevilla sin horarios
-**Estado:** ❌ PENDIENTE
+**Estado:** ✅ ARREGLADO
 
-**Problema:** Las 21 paradas existen pero departures devuelve vacío.
-Falta cargar stop_times (como Metro Granada que tiene 143,098).
-
-**Paradas afectadas:** `METRO_SEV_L1_E1` a `METRO_SEV_L1_E21`
+Metro Sevilla funciona correctamente con horarios.
 
 ---
 
@@ -332,6 +329,91 @@ struct CompactDeparturesResponse: Codable {
 ---
 
 ## 6. FEATURES FUTURAS (v2+)
+
+### 6.0 Próximas Prioridades (Enero 2026)
+
+#### 6.0.1 Modo Offline Básico
+**Estado:** ✅ IMPLEMENTADO (28 Enero 2026)
+
+**Descripción:** Cachear horarios GTFS para funcionar sin conexión.
+
+**Archivos creados:**
+- `WatchTrans iOS/Services/NetworkMonitor.swift` - Detecta conectividad
+- `WatchTrans iOS/Services/OfflineScheduleService.swift` - Gestiona cache de horarios
+
+**Funcionalidad implementada:**
+- ✅ Cachea horarios de paradas favoritas automáticamente al iniciar app
+- ✅ Detecta cuando no hay conexión (NWPathMonitor)
+- ✅ Muestra horarios programados como fallback cuando offline
+- ✅ Indicador visual "offline" en ArrivalRowView
+- ✅ Cache persiste en disco (JSON en cachesDirectory)
+- ✅ Cache válido por 1 día (validForDate)
+
+**Flujo:**
+1. App inicia → Si online, cachea horarios de favoritos
+2. Usuario sin conexión → Detecta via NetworkMonitor
+3. Fetch arrivals falla → Usa OfflineScheduleService.getCachedDepartures()
+4. UI muestra icono "icloud.slash" + "offline"
+
+**Prioridad:** ~~Alta~~ Completado
+
+---
+
+#### 6.0.2 Push Notifications para Alertas
+**Estado:** ⏳ Pendiente
+
+**Descripción:** Notificar cuando una línea favorita tiene incidencias.
+
+**Funcionalidad:**
+- Suscribirse a alertas de líneas favoritas
+- Push notification cuando hay incidencia/avería
+- Integración con sistema de alertas existente
+
+**Requisitos:**
+- APNs (Apple Push Notification service)
+- Servidor de notificaciones o Firebase Cloud Messaging
+
+**Prioridad:** Media
+
+---
+
+#### 6.0.3 Watch Independiente
+**Estado:** ⏳ Pendiente
+
+**Descripción:** Apple Watch funciona sin iPhone cerca.
+
+**Funcionalidad:**
+- App Watch con conectividad propia (WiFi/Cellular)
+- No requiere iPhone para consultar salidas
+- Sincronización de favoritos vía iCloud
+
+**Requisitos:**
+- watchOS independiente con URLSession
+- WatchConnectivity solo para sync opcional
+
+**Prioridad:** Media
+
+---
+
+#### 6.0.4 Indicador de Ocupación
+**Estado:** ✅ IMPLEMENTADO (28 Enero 2026)
+
+**Descripción:** Mostrar verde/amarillo/rojo según ocupación del tren.
+
+**Archivos modificados:**
+- `RenfeServerModels.swift` - campos `occupancy_status`, `occupancy_percentage`, `occupancy_per_car`
+- `Arrival.swift` - nuevos campos + enum `OccupancyLevel`
+- `ArrivalRowView.swift` - nuevo componente `OccupancyIndicator`
+
+**UI implementada:**
+- 🟢 Verde: vacío/muchos asientos (0-1)
+- 🟡 Amarillo: pocos asientos/de pie (2-3)
+- 🔴 Rojo: lleno (4-6)
+- ⚫ Gris: sin datos (7-8)
+
+**Operadores con datos:** Solo TMB Metro Barcelona por ahora
+
+---
 
 ### 6.1 Ticketing / Payment
 **Inspiración:** Masabi JustRide SDK

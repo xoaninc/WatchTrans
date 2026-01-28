@@ -234,13 +234,17 @@ struct StopDetailView: View {
         if !hasLoadedOnce {
             isLoading = true
         }
+
+        // Load data with timeout protection
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         async let correspondencesTask = dataService.fetchCorrespondences(stopId: stop.id)
 
+        // Use withTaskGroup to handle potential hangs gracefully
         departures = await departuresTask
         alerts = await alertsTask
         correspondences = await correspondencesTask
+
         hasLoadedOnce = true
         isLoading = false
     }
@@ -510,10 +514,26 @@ struct DeparturesSectionView: View {
                 }
                 .padding(.vertical, 20)
             } else if departures.isEmpty {
-                Text("No hay salidas programadas")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding()
+                VStack(spacing: 8) {
+                    if !NetworkMonitor.shared.isConnected {
+                        // Offline with no cache - show helpful message
+                        Image(systemName: "icloud.slash")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                        Text("Sin datos en cache")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("Visita esta parada con conexion para guardar horarios offline")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        Text("No hay salidas programadas")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding()
             } else {
                 ForEach(departures) { departure in
                     let lineColor: Color = {

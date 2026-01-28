@@ -14,11 +14,15 @@ struct SearchView: View {
 
     @State private var searchText = ""
     @State private var searchResults: [Stop] = []
-    @State private var recentSearches: [String] = []
+    @State private var recentStopIds: [String] = []
     @State private var isSearching = false
 
     // Debounce timer
     @State private var searchTask: Task<Void, Never>?
+
+    // Recent stops persistence
+    private let recentStopsKey = "recentViewedStops"
+    private let maxRecentStops = 5
 
     var body: some View {
         NavigationStack {
@@ -39,11 +43,12 @@ struct SearchView: View {
                     } else {
                         Section("Resultados") {
                             ForEach(searchResults) { stop in
-                                NavigationLink(destination: StopDetailView(
+                                NavigationLink(destination: StopDetailViewWithTracking(
                                     stop: stop,
                                     dataService: dataService,
                                     locationService: locationService,
-                                    favoritesManager: favoritesManager
+                                    favoritesManager: favoritesManager,
+                                    onViewedLongEnough: { addRecentStop(stop.id) }
                                 )) {
                                     SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
                                 }
@@ -51,27 +56,24 @@ struct SearchView: View {
                         }
                     }
                 } else {
-                    // Recent searches
-                    if !recentSearches.isEmpty {
-                        Section("Busquedas recientes") {
-                            ForEach(recentSearches, id: \.self) { query in
-                                Button {
-                                    searchText = query
-                                    Task {
-                                        await performSearch(query: query)
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "clock")
-                                            .foregroundStyle(.secondary)
-                                        Text(query)
-                                            .foregroundStyle(.primary)
-                                    }
+                    // Recent stops (viewed > 5 seconds)
+                    if !recentStops.isEmpty {
+                        Section("Paradas recientes") {
+                            ForEach(recentStops) { stop in
+                                NavigationLink(destination: StopDetailViewWithTracking(
+                                    stop: stop,
+                                    dataService: dataService,
+                                    locationService: locationService,
+                                    favoritesManager: favoritesManager,
+                                    onViewedLongEnough: { addRecentStop(stop.id) }
+                                )) {
+                                    SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
                                 }
                             }
                             .onDelete { indexSet in
-                                recentSearches.remove(atOffsets: indexSet)
-                                saveRecentSearches()
+                                let idsToRemove = indexSet.map { recentStops[$0].id }
+                                recentStopIds.removeAll { idsToRemove.contains($0) }
+                                saveRecentStops()
                             }
                         }
                     }
@@ -79,11 +81,12 @@ struct SearchView: View {
                     // Popular stops (when no search)
                     Section("Estaciones principales") {
                         ForEach(popularStops) { stop in
-                            NavigationLink(destination: StopDetailView(
+                            NavigationLink(destination: StopDetailViewWithTracking(
                                 stop: stop,
                                 dataService: dataService,
                                 locationService: locationService,
-                                favoritesManager: favoritesManager
+                                favoritesManager: favoritesManager,
+                                onViewedLongEnough: { addRecentStop(stop.id) }
                             )) {
                                 SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
                             }
@@ -105,7 +108,7 @@ struct SearchView: View {
             .navigationTitle("Buscar")
         }
         .onAppear {
-            loadRecentSearches()
+            loadRecentStops()
         }
     }
 
@@ -128,39 +131,75 @@ struct SearchView: View {
         isSearching = true
         searchResults = await dataService.searchStops(query: query)
         isSearching = false
-
-        // Save to recent searches
-        if !query.isEmpty && !searchResults.isEmpty {
-            addRecentSearch(query)
-        }
     }
 
-    // MARK: - Recent Searches Persistence
+    // MARK: - Recent Stops
 
-    private let recentSearchesKey = "recentStopSearches"
-    private let maxRecentSearches = 10
-
-    private func loadRecentSearches() {
-        recentSearches = UserDefaults.standard.stringArray(forKey: recentSearchesKey) ?? []
+    /// Convert stop IDs to Stop objects
+    private var recentStops: [Stop] {
+        recentStopIds.compactMap { dataService.getStop(by: $0) }
     }
 
-    private func saveRecentSearches() {
-        UserDefaults.standard.set(recentSearches, forKey: recentSearchesKey)
+    private func loadRecentStops() {
+        recentStopIds = UserDefaults.standard.stringArray(forKey: recentStopsKey) ?? []
     }
 
-    private func addRecentSearch(_ query: String) {
+    private func saveRecentStops() {
+        UserDefaults.standard.set(recentStopIds, forKey: recentStopsKey)
+    }
+
+    private func addRecentStop(_ stopId: String) {
         // Remove if already exists
-        recentSearches.removeAll { $0.lowercased() == query.lowercased() }
+        recentStopIds.removeAll { $0 == stopId }
 
         // Add at beginning
-        recentSearches.insert(query, at: 0)
+        recentStopIds.insert(stopId, at: 0)
 
         // Keep only max items
-        if recentSearches.count > maxRecentSearches {
-            recentSearches = Array(recentSearches.prefix(maxRecentSearches))
+        if recentStopIds.count > maxRecentStops {
+            recentStopIds = Array(recentStopIds.prefix(maxRecentStops))
         }
 
-        saveRecentSearches()
+        saveRecentStops()
+    }
+}
+
+// MARK: - StopDetailView with Time Tracking
+
+/// Wrapper that tracks viewing time and calls callback after 5 seconds
+struct StopDetailViewWithTracking: View {
+    let stop: Stop
+    let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
+    let onViewedLongEnough: () -> Void
+
+    @State private var viewStartTime: Date?
+    @State private var hasTriggered = false
+
+    private let minimumViewTime: TimeInterval = 5.0
+
+    var body: some View {
+        StopDetailView(
+            stop: stop,
+            dataService: dataService,
+            locationService: locationService,
+            favoritesManager: favoritesManager
+        )
+        .onAppear {
+            viewStartTime = Date()
+            hasTriggered = false
+        }
+        .onDisappear {
+            guard !hasTriggered,
+                  let startTime = viewStartTime else { return }
+
+            let viewDuration = Date().timeIntervalSince(startTime)
+            if viewDuration >= minimumViewTime {
+                hasTriggered = true
+                onViewedLongEnough()
+            }
+        }
     }
 }
 

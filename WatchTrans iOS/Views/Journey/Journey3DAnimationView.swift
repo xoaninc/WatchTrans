@@ -8,7 +8,6 @@
 
 import SwiftUI
 import MapKit
-import QuartzCore
 
 struct Journey3DAnimationView: View {
     let journey: Journey
@@ -21,13 +20,8 @@ struct Journey3DAnimationView: View {
     @State private var currentSegmentIndex = 0
     @State private var currentProgress: Double = 0  // 0.0 to 1.0 for entire journey
     @State private var showControls = true
-
-    // CADisplayLink animation controller
-    @State private var animationController: AnimationController?
-
-    // Animation configuration
-    private let baseSpeedKmPerSec: Double = 0.15
     @State private var speedMultiplier: Double = 1.0
+    @State private var isMapReady = false  // True when map tiles are preloaded
 
     var currentSegment: JourneySegment? {
         guard currentSegmentIndex < journey.segments.count else { return nil }
@@ -41,7 +35,9 @@ struct Journey3DAnimationView: View {
                 segments: journey.segments,
                 currentProgress: $currentProgress,
                 currentSegmentIndex: $currentSegmentIndex,
-                isPlaying: isPlaying
+                isMapReady: $isMapReady,
+                isPlaying: isPlaying,
+                speedMultiplier: speedMultiplier
             )
             .ignoresSafeArea()
 
@@ -78,7 +74,7 @@ struct Journey3DAnimationView: View {
             }
         }
         .onDisappear {
-            animationController?.stop()
+            isPlaying = false
         }
     }
 
@@ -87,7 +83,7 @@ struct Journey3DAnimationView: View {
     private var topBar: some View {
         HStack {
             Button {
-                animationController?.stop()
+                isPlaying = false
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -115,86 +111,6 @@ struct Journey3DAnimationView: View {
             .cornerRadius(10)
         }
         .padding()
-    }
-
-    private var currentPositionMarker: some View {
-        // Simplified marker for better performance during fast animations
-        // Using a larger, more visible marker that renders consistently
-        ZStack {
-            // Outer glow (static, no animation)
-            Circle()
-                .fill(currentMarkerColor.opacity(0.4))
-                .frame(width: 32, height: 32)
-
-            // Main marker - larger for visibility
-            Circle()
-                .fill(currentMarkerColor)
-                .frame(width: 18, height: 18)
-                .overlay(
-                    Circle()
-                        .stroke(.white, lineWidth: 2.5)
-                )
-
-            // Transport mode icon
-            Image(systemName: currentSegment?.transportMode.icon ?? "location.fill")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white)
-        }
-        .drawingGroup()  // Flatten to single layer for better rendering performance
-    }
-
-    private var currentMarkerColor: Color {
-        if let segment = currentSegment, let hex = segment.lineColor {
-            return Color(hex: hex) ?? .blue
-        }
-        return currentSegment?.type == .walking ? .orange : .blue
-    }
-
-    private func stopMarker(for stop: Stop, isOrigin: Bool) -> some View {
-        VStack(spacing: 2) {
-            ZStack {
-                Circle()
-                    .fill(isOrigin ? .green : .white)
-                    .frame(width: 16, height: 16)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.primary.opacity(0.3), lineWidth: 1)
-                    )
-
-                if isOrigin {
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 6, height: 6)
-                }
-            }
-
-            if isOrigin {
-                Text(stop.name)
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(4)
-            }
-        }
-    }
-
-    private var destinationMarker: some View {
-        VStack(spacing: 2) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.red)
-                .background(Circle().fill(.white).padding(4))
-
-            Text(journey.destination.name)
-                .font(.caption2)
-                .fontWeight(.bold)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(.ultraThinMaterial)
-                .cornerRadius(4)
-        }
     }
 
     private func segmentInfoCard(_ segment: JourneySegment) -> some View {
@@ -278,23 +194,25 @@ struct Journey3DAnimationView: View {
 
     private var controlsBar: some View {
         HStack(spacing: 20) {
-            // Speed toggle: 1× → 2× → 4× → 1×
+            // Speed toggle: 0.5× → 1× → 2× → 0.5×
             Button {
-                if speedMultiplier == 1.0 {
-                    speedMultiplier = 2.0
-                } else if speedMultiplier == 2.0 {
-                    speedMultiplier = 4.0
-                } else {
+                if speedMultiplier == 0.5 {
                     speedMultiplier = 1.0
+                } else if speedMultiplier == 1.0 {
+                    speedMultiplier = 2.0
+                } else {
+                    speedMultiplier = 0.5
                 }
             } label: {
-                Text(speedMultiplier == 1.0 ? "1×" : (speedMultiplier == 2.0 ? "2×" : "4×"))
+                Text(speedMultiplier == 0.5 ? "0.5×" : (speedMultiplier == 1.0 ? "1×" : "2×"))
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(speedMultiplier == 1.0 ? .gray.opacity(0.5) : (speedMultiplier == 2.0 ? .orange : .red)))
+                    .background(Circle().fill(speedMultiplier == 0.5 ? .blue : (speedMultiplier == 1.0 ? .gray.opacity(0.5) : .orange)))
             }
+            .disabled(!isMapReady)
+            .opacity(isMapReady ? 1.0 : 0.5)
 
             // Restart
             Button {
@@ -304,6 +222,8 @@ struct Journey3DAnimationView: View {
                     .font(.title2)
                     .foregroundStyle(.white)
             }
+            .disabled(!isMapReady)
+            .opacity(isMapReady ? 1.0 : 0.5)
 
             // Play/Pause
             Button {
@@ -313,12 +233,22 @@ struct Journey3DAnimationView: View {
                     play()
                 }
             } label: {
-                Image(systemName: isPlaying && !isPaused ? "pause.fill" : "play.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(.white)
-                    .frame(width: 60, height: 60)
-                    .background(Circle().fill(.blue))
+                ZStack {
+                    if !isMapReady {
+                        // Loading indicator while map preloads
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.2)
+                    } else {
+                        Image(systemName: isPlaying && !isPaused ? "pause.fill" : "play.fill")
+                            .font(.largeTitle)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(width: 60, height: 60)
+                .background(Circle().fill(isMapReady ? .blue : .gray))
             }
+            .disabled(!isMapReady)
 
             // Skip to end
             Button {
@@ -328,6 +258,8 @@ struct Journey3DAnimationView: View {
                     .font(.title2)
                     .foregroundStyle(.white)
             }
+            .disabled(!isMapReady)
+            .opacity(isMapReady ? 1.0 : 0.5)
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -359,259 +291,32 @@ struct Journey3DAnimationView: View {
 
     // MARK: - Playback Control
 
-    /// Total distance of the journey in kilometers
-    private var totalJourneyDistance: Double {
-        journey.segments.flatMap { $0.coordinates }.reduce(into: (0.0, nil as CLLocationCoordinate2D?)) { result, coord in
-            if let prev = result.1 {
-                let from = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
-                let to = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-                result.0 += from.distance(from: to) / 1000.0
-            }
-            result.1 = coord
-        }.0
-    }
-
     private func play() {
         guard !isPlaying || isPaused else { return }
 
+        print("🎬 [SwiftUI] Play pressed")
         isPlaying = true
         isPaused = false
-
-        // Stop any existing animation
-        animationController?.stop()
-
-        // All coordinates flattened
-        let allCoords = journey.segments.flatMap { $0.coordinates }
-
-        // Create new animation controller
-        let controller = AnimationController()
-        animationController = controller
-
-        // Calculate effective speed based on multiplier
-        let effectiveSpeed = baseSpeedKmPerSec * speedMultiplier
-
-        controller.start(
-            coordinates: allCoords,
-            speedKmPerSec: effectiveSpeed,
-            onUpdate: { [self] _, _, progress, _ in
-                // Update progress (0.0 to 1.0) - NativeAnimatedMapView handles the rest
-                currentProgress = progress
-
-                // Update current segment index based on progress
-                updateCurrentSegmentIndex(progress: progress)
-            },
-            onComplete: { [self] in
-                isPlaying = false
-                currentProgress = 1.0
-            }
-        )
-    }
-
-    /// Update currentSegmentIndex based on overall progress
-    private func updateCurrentSegmentIndex(progress: Double) {
-        let allCoords = journey.segments.flatMap { $0.coordinates }
-        let currentIndex = Int(progress * Double(allCoords.count - 1))
-
-        var accumulated = 0
-        for (index, segment) in journey.segments.enumerated() {
-            accumulated += segment.coordinates.count
-            if currentIndex < accumulated {
-                if currentSegmentIndex != index {
-                    currentSegmentIndex = index
-                }
-                break
-            }
-        }
+        // Animation is now handled by NativeAnimatedMapView's Coordinator
     }
 
     private func pause() {
         isPaused = true
-        animationController?.stop()
+        isPlaying = false  // This will trigger stopAnimation in Coordinator
     }
 
     private func restart() {
-        animationController?.stop()
+        isPlaying = false  // Stop animation
         currentSegmentIndex = 0
         currentProgress = 0
-        isPlaying = false
         isPaused = false
     }
 
     private func skipToEnd() {
-        animationController?.stop()
+        isPlaying = false  // Stop animation
         currentSegmentIndex = journey.segments.count - 1
         currentProgress = 1.0
-        isPlaying = false
         isPaused = false
-    }
-}
-
-// MARK: - CADisplayLink Animation Controller
-
-/// Controller for smooth map marker animation along a route.
-///
-/// Uses techniques from Mapbox GL JS and Google Maps:
-/// - CADisplayLink for 60fps synchronized with display refresh (like requestAnimationFrame)
-/// - Distance-based interpolation along polyline (like turf.along)
-/// - Route normalization to subdivide sparse points (max 50m gaps)
-/// - Spherical interpolation (Slerp) for geographic accuracy
-///
-/// Usage:
-/// ```swift
-/// let controller = AnimationController()
-/// controller.start(
-///     coordinates: segment.coordinates,
-///     speedKmPerSec: 0.5,
-///     onUpdate: { coord, heading, progress in
-///         // Update marker and camera
-///     },
-///     onComplete: {
-///         // Animation finished
-///     }
-/// )
-/// ```
-class AnimationController {
-    private var displayLink: CADisplayLink?
-    private var startTime: CFTimeInterval = 0
-    private var currentDistance: Double = 0
-    private var totalDistance: Double = 0
-    private var speedKmPerSec: Double = 0.5
-    private var coordinates: [CLLocationCoordinate2D] = []
-    // onUpdate: (coord, heading, progress, unused)
-    private var onUpdate: ((CLLocationCoordinate2D, Double, Double, CLLocationCoordinate2D?) -> Void)?
-    private var onComplete: (() -> Void)?
-
-    func start(
-        coordinates: [CLLocationCoordinate2D],
-        speedKmPerSec: Double,
-        onUpdate: @escaping (CLLocationCoordinate2D, Double, Double, CLLocationCoordinate2D?) -> Void,
-        onComplete: @escaping () -> Void
-    ) {
-        // Coordinates are already normalized by the API (max_gap=50m)
-        self.coordinates = coordinates
-        self.speedKmPerSec = speedKmPerSec
-        self.onUpdate = onUpdate
-        self.onComplete = onComplete
-        self.currentDistance = 0
-        self.totalDistance = Self.lineDistance(coordinates)
-
-        // Reset state
-        frameCount = 0
-        smoothedHeading = 0
-        headingInitialized = false
-
-        startTime = CACurrentMediaTime()
-        displayLink = CADisplayLink(target: self, selector: #selector(update))
-        // Limit to 60fps to reduce jitter on ProMotion (120Hz) displays
-        displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-        displayLink?.add(to: .main, forMode: .common)
-    }
-
-    func stop() {
-        displayLink?.invalidate()
-        displayLink = nil
-    }
-
-    private var frameCount = 0
-    private var smoothedHeading: Double = 0
-    private var headingInitialized = false
-
-    @objc private func update(displayLink: CADisplayLink) {
-        let elapsed = CACurrentMediaTime() - startTime
-        currentDistance = elapsed * speedKmPerSec
-        frameCount += 1
-
-        if currentDistance >= totalDistance {
-            // Animation complete
-            if let last = coordinates.last {
-                let heading = coordinates.count > 1
-                    ? Self.calculateHeading(from: coordinates[coordinates.count - 2], to: last)
-                    : 0
-                onUpdate?(last, heading, 1.0, nil)
-            }
-            stop()
-            onComplete?()
-            return
-        }
-
-        // Get position at current distance (like turf.along)
-        let (coord, targetHeading) = Self.coordinateAlong(coordinates, distance: currentDistance)
-        let progress = currentDistance / totalDistance
-
-        // Smooth heading to prevent vibration when turning
-        // Use very aggressive smoothing (0.03 = extremely smooth, more lag but no jitter)
-        if !headingInitialized {
-            smoothedHeading = targetHeading
-            headingInitialized = true
-        } else {
-            // Handle wrap-around at 0/360 degrees
-            var delta = targetHeading - smoothedHeading
-            if delta > 180 { delta -= 360 }
-            if delta < -180 { delta += 360 }
-            smoothedHeading += delta * 0.03  // Very smooth (0.03)
-            // Normalize to 0-360
-            if smoothedHeading < 0 { smoothedHeading += 360 }
-            if smoothedHeading >= 360 { smoothedHeading -= 360 }
-        }
-
-        // Update every frame for smooth motion on 120Hz ProMotion displays
-        // (Previously skipped frames caused vibration due to MapKit interpolation)
-        onUpdate?(coord, smoothedHeading, progress, nil)
-    }
-
-    // MARK: - Static Geometry Helpers
-
-    static func lineDistance(_ coordinates: [CLLocationCoordinate2D]) -> Double {
-        guard coordinates.count > 1 else { return 0 }
-        var total: Double = 0
-        for i in 0..<coordinates.count - 1 {
-            let from = CLLocation(latitude: coordinates[i].latitude, longitude: coordinates[i].longitude)
-            let to = CLLocation(latitude: coordinates[i + 1].latitude, longitude: coordinates[i + 1].longitude)
-            total += from.distance(from: to) / 1000.0
-        }
-        return total
-    }
-
-    static func coordinateAlong(_ coordinates: [CLLocationCoordinate2D], distance: Double) -> (CLLocationCoordinate2D, Double) {
-        guard coordinates.count > 1 else {
-            return (coordinates.first ?? CLLocationCoordinate2D(), 0)
-        }
-
-        var traveled: Double = 0
-
-        for i in 0..<coordinates.count - 1 {
-            let from = coordinates[i]
-            let to = coordinates[i + 1]
-            let fromLoc = CLLocation(latitude: from.latitude, longitude: from.longitude)
-            let toLoc = CLLocation(latitude: to.latitude, longitude: to.longitude)
-            let segmentDist = fromLoc.distance(from: toLoc) / 1000.0
-
-            if traveled + segmentDist >= distance {
-                let remaining = distance - traveled
-                let ratio = segmentDist > 0 ? remaining / segmentDist : 0
-                let lat = from.latitude + (to.latitude - from.latitude) * ratio
-                let lon = from.longitude + (to.longitude - from.longitude) * ratio
-                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                let heading = calculateHeading(from: from, to: to)
-                return (coord, heading)
-            }
-
-            traveled += segmentDist
-        }
-
-        let last = coordinates[coordinates.count - 1]
-        let secondLast = coordinates[coordinates.count - 2]
-        let heading = calculateHeading(from: secondLast, to: last)
-        return (last, heading)
-    }
-
-    static func calculateHeading(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
-        let deltaLon = to.longitude - from.longitude
-        let y = sin(deltaLon * .pi / 180)
-        let x = cos(from.latitude * .pi / 180) * tan(to.latitude * .pi / 180) -
-                sin(from.latitude * .pi / 180) * cos(deltaLon * .pi / 180)
-        let heading = atan2(y, x) * 180 / .pi
-        return (heading + 360).truncatingRemainder(dividingBy: 360)
     }
 }
 
