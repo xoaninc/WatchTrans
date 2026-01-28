@@ -8,20 +8,37 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- Siri Shortcuts para "Proximo tren en [parada]" (pendiente de configurar en Xcode)
+- **Alertas de servicio en planificador de viajes**: RouteAlertsView muestra avisos de la API RAPTOR
+- **Siri Shortcut "Plan Route"**: "¿Como llego de X a Y?" usando RAPTOR con ?compact=true
+- Siri Shortcuts para "Proximo tren en [parada]"
 - Deteccion automatica de paradas frecuentes basada en patrones de uso
 - Seccion "Frecuentes" en Home con badge de patron (ej: "~08:00 L-V")
 - Abrir ubicaciones en Apple Maps, Google Maps, Citymapper o Waze
 - Info.plist con LSApplicationQueriesSchemes para detectar apps instaladas
 - ROADMAP.md unificado con todas las tareas pendientes
+- **Debug logs exhaustivos** en JourneyPlannerView, DataService y GTFSRealtimeService
 
 ### Changed
 - Migracion de calculo de rutas del cliente a la API (eliminado RoutingService.swift)
+- GTFSRealtimeService.fetchRoutePlan ahora soporta parametro `compact: Bool`
 - Documentacion reorganizada y consolidada
 
 ### Removed
 - RoutingService.swift (~530 lineas) - routing ahora se hace en servidor
 - API_CHANGES_v2.md (contenido movido a ROADMAP.md)
+
+## [1.1.1] - 2026-01-28
+
+### Added
+- **RouteAlertsView**: Componente expandible para mostrar alertas de servicio en JourneyPlannerView
+- **PlanRouteIntent.swift**: Siri Shortcut para planificar rutas con comandos de voz
+- Soporte para `?compact=true` en endpoint route-planner (respuestas <5KB para Widget/Siri)
+- Debug logs detallados con timestamps y estructura clara para analisis
+
+### Changed
+- JourneyPlannerView ahora muestra alertas de la API automaticamente
+- AppShortcuts incluye frases en espanol e ingles para "Plan Route"
+- GTFSRealtimeService registra tiempo de respuesta de API y detalles de journeys
 
 ## [1.1.0] - 2026-01-26
 

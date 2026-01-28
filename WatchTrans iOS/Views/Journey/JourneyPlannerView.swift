@@ -5,6 +5,7 @@
 //  Created by Claude on 26/1/26.
 //  View for planning journeys between two stops
 //  Updated 27/1/26 to use API route planner instead of local RoutingService
+//  Updated 28/1/26 to show service alerts from RAPTOR API
 //
 
 import SwiftUI
@@ -26,6 +27,7 @@ struct JourneyPlannerView: View {
     @State private var isCalculating = false
     @State private var showAnimation = false
     @State private var showAlternatives = false
+    @State private var showAlerts = true  // Service alerts expanded by default
     @State private var errorMessage: String?
 
     @FocusState private var focusedField: Field?
@@ -53,6 +55,14 @@ struct JourneyPlannerView: View {
                         .padding()
                         .background(Color.orange.opacity(0.1))
                         .cornerRadius(10)
+                    }
+
+                    // Service alerts (if any)
+                    if let result = routePlanResult, !result.alerts.isEmpty {
+                        RouteAlertsView(
+                            alerts: result.alerts,
+                            isExpanded: $showAlerts
+                        )
                     }
 
                     // Journey result
@@ -344,7 +354,14 @@ struct JourneyPlannerView: View {
 
     private func calculateRoute() async {
         guard let origin = selectedOrigin,
-              let destination = selectedDestination else { return }
+              let destination = selectedDestination else {
+            DebugLog.log("🗺️ [JourneyPlanner] Cannot calculate: origin or destination is nil")
+            return
+        }
+
+        DebugLog.log("🗺️ [JourneyPlanner] ▶️ Starting route calculation")
+        DebugLog.log("🗺️ [JourneyPlanner]   Origin: \(origin.name) (ID: \(origin.id))")
+        DebugLog.log("🗺️ [JourneyPlanner]   Destination: \(destination.name) (ID: \(destination.id))")
 
         isCalculating = true
         errorMessage = nil
@@ -352,12 +369,28 @@ struct JourneyPlannerView: View {
 
         // Use API route planner via DataService
         if let result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id) {
+            DebugLog.log("🗺️ [JourneyPlanner] ✅ Route plan received:")
+            DebugLog.log("🗺️ [JourneyPlanner]   Journeys: \(result.journeys.count)")
+            DebugLog.log("🗺️ [JourneyPlanner]   Alerts: \(result.alerts.count)")
+
+            if let best = result.bestJourney {
+                DebugLog.log("🗺️ [JourneyPlanner]   Best journey: \(best.totalDurationMinutes) min, \(best.transferCount) transfers, \(best.segments.count) segments")
+                for (i, seg) in best.segments.enumerated() {
+                    DebugLog.log("🗺️ [JourneyPlanner]     Segment \(i+1): \(seg.type) - \(seg.lineName ?? "walk") - \(seg.origin.name) → \(seg.destination.name) (\(seg.durationMinutes) min)")
+                }
+            }
+
+            for alert in result.alerts {
+                DebugLog.log("🗺️ [JourneyPlanner]   ⚠️ Alert [\(alert.severity)]: \(alert.message)")
+            }
+
             await MainActor.run {
                 routePlanResult = result
                 selectedJourney = result.bestJourney
                 isCalculating = false
             }
         } else {
+            DebugLog.log("🗺️ [JourneyPlanner] ❌ No route found between \(origin.id) and \(destination.id)")
             await MainActor.run {
                 routePlanResult = nil
                 selectedJourney = nil
@@ -483,6 +516,7 @@ struct AlternativeRowView: View {
         }
         .buttonStyle(.plain)
     }
+}
 
 // MARK: - Journey Result View
 
@@ -711,6 +745,136 @@ struct DestinationRowView: View {
             Spacer()
         }
         .padding(.horizontal)
+    }
+}
+
+// MARK: - Route Alerts View
+
+/// Expandable view showing service alerts affecting the planned route
+struct RouteAlertsView: View {
+    let alerts: [RouteAlert]
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header - tap to expand/collapse
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(alertHeaderColor)
+                    Text("\(alerts.count) aviso\(alerts.count == 1 ? "" : "s") de servicio")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Alert list
+            if isExpanded {
+                ForEach(Array(alerts.enumerated()), id: \.offset) { _, alert in
+                    RouteAlertRow(alert: alert)
+                }
+            } else {
+                // Show preview of first alert when collapsed
+                if let first = alerts.first {
+                    Text(first.message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .padding()
+        .background(alertBackgroundColor)
+        .cornerRadius(12)
+        .onAppear {
+            DebugLog.log("🗺️ [RouteAlertsView] Displaying \(alerts.count) alerts")
+            for alert in alerts {
+                DebugLog.log("🗺️ [RouteAlertsView]   [\(alert.severity)] \(alert.lineId ?? "general"): \(alert.message)")
+            }
+        }
+    }
+
+    /// Header color based on most severe alert
+    private var alertHeaderColor: Color {
+        if alerts.contains(where: { $0.severity == "error" }) {
+            return .red
+        } else if alerts.contains(where: { $0.severity == "warning" }) {
+            return .orange
+        }
+        return .blue
+    }
+
+    /// Background color based on severity
+    private var alertBackgroundColor: Color {
+        if alerts.contains(where: { $0.severity == "error" }) {
+            return Color.red.opacity(0.1)
+        } else if alerts.contains(where: { $0.severity == "warning" }) {
+            return Color.orange.opacity(0.1)
+        }
+        return Color.blue.opacity(0.1)
+    }
+}
+
+// MARK: - Route Alert Row
+
+struct RouteAlertRow: View {
+    let alert: RouteAlert
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            // Severity icon
+            Image(systemName: severityIcon)
+                .foregroundStyle(severityColor)
+                .font(.subheadline)
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Line badge (if applicable)
+                if let lineId = alert.lineId {
+                    Text(lineId)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(severityColor)
+                        .cornerRadius(4)
+                }
+
+                // Message
+                Text(alert.message)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var severityIcon: String {
+        switch alert.severity {
+        case "error": return "xmark.octagon.fill"
+        case "warning": return "exclamationmark.triangle.fill"
+        default: return "info.circle.fill"
+        }
+    }
+
+    private var severityColor: Color {
+        switch alert.severity {
+        case "error": return .red
+        case "warning": return .orange
+        default: return .blue
+        }
     }
 }
 

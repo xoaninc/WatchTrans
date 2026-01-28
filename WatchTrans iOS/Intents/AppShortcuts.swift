@@ -3,6 +3,7 @@
 //  WatchTrans iOS
 //
 //  Created by Claude on 27/1/26.
+//  Updated 28/1/26: Added PlanRouteIntent shortcut
 //  Defines Siri Shortcuts available to users
 //
 
@@ -14,6 +15,7 @@ import AppIntents
 struct AppShortcuts: AppShortcutsProvider {
     /// The shortcuts that appear in Siri and Shortcuts app
     static var appShortcuts: [AppShortcut] {
+        // Next Train shortcut
         AppShortcut(
             intent: NextTrainIntent(),
             phrases: [
@@ -31,6 +33,28 @@ struct AppShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Next Train",
             systemImageName: "tram.fill"
+        )
+
+        // Plan Route shortcut (uses RAPTOR algorithm via API)
+        AppShortcut(
+            intent: PlanRouteIntent(),
+            phrases: [
+                // Spanish phrases
+                "¿Cómo llego de \(\.$fromStop) a \(\.$toStop) con \(.applicationName)?",
+                "Ruta de \(\.$fromStop) a \(\.$toStop) con \(.applicationName)",
+                "Planifica viaje de \(\.$fromStop) a \(\.$toStop) con \(.applicationName)",
+                "Ir de \(\.$fromStop) a \(\.$toStop) en \(.applicationName)",
+                "¿Cómo voy de \(\.$fromStop) a \(\.$toStop) con \(.applicationName)?",
+
+                // English phrases
+                "How do I get from \(\.$fromStop) to \(\.$toStop) with \(.applicationName)?",
+                "Route from \(\.$fromStop) to \(\.$toStop) with \(.applicationName)",
+                "Plan trip from \(\.$fromStop) to \(\.$toStop) with \(.applicationName)",
+                "Directions from \(\.$fromStop) to \(\.$toStop) using \(.applicationName)",
+                "\(.applicationName) route \(\.$fromStop) to \(\.$toStop)"
+            ],
+            shortTitle: "Plan Route",
+            systemImageName: "arrow.triangle.swap"
         )
     }
 }

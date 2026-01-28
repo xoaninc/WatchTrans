@@ -1,6 +1,6 @@
 # Migración de Lógica de App a API
 
-## Estado: ✅ COMPLETADO (2026-01-27)
+## Estado: ✅ COMPLETADO (2026-01-28)
 
 > **Documento histórico** - Esta migración ya está completada.
 > Ver `ROADMAP.md` para tareas pendientes actuales.
@@ -21,6 +21,22 @@ Este documento describe la funcionalidad que se migró del cliente iOS al servid
 - Endpoint: `GET /api/v1/gtfs/routes/{route_id}/shape?max_gap=50`
 - **Cliente actualizado**: `DataService.fetchRouteShape(routeId:maxGap:)` acepta parámetro `maxGap`
 - **Código eliminado**: `normalizeRoute()` y `sphericalInterpolate()` de AnimationController
+
+### 3. Service Alerts UI - IMPLEMENTADO (2026-01-28)
+- **RouteAlertsView**: Muestra alertas de la API RAPTOR en JourneyPlannerView
+- **Componente expandible**: Por defecto expandido, muestra severity (info/warning/error)
+- Las alertas vienen en `RoutePlanResponse.alerts[]`
+
+### 4. Compact Route Planner for Siri/Widget - IMPLEMENTADO (2026-01-28)
+- Endpoint: `GET /api/v1/gtfs/route-planner?from=X&to=Y&compact=true`
+- **PlanRouteIntent.swift**: Siri Shortcut "¿Cómo llego de X a Y?"
+- **Respuesta <5KB**: Optimizada para Widget y Siri (sin coordenadas completas)
+- **GTFSRealtimeService**: `fetchRoutePlan(fromStopId:toStopId:compact:)`
+
+### 5. Debug Logging - IMPLEMENTADO (2026-01-28)
+- JourneyPlannerView: Logs de inicio, resultado, segmentos y alertas
+- GTFSRealtimeService: Logs de URL, tiempo de respuesta, journeys y segments
+- Formato consistente: `🗺️ [Component] ▶️/✅/❌ Message`
 
 ---
 

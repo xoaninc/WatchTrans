@@ -312,20 +312,68 @@ class GTFSRealtimeService {
 
     /// Fetch a planned journey between two stops
     /// Returns complete journey with segments, times, and normalized coordinates
-    func fetchRoutePlan(fromStopId: String, toStopId: String) async throws -> RoutePlanResponse {
-        let urlString = "\(baseURL)/route-planner?from=\(fromStopId)&to=\(toStopId)"
-        DebugLog.log("🗺️ [RT] Fetching route plan: \(fromStopId) → \(toStopId)")
+    /// - Parameters:
+    ///   - fromStopId: Origin stop ID
+    ///   - toStopId: Destination stop ID
+    ///   - compact: If true, returns minimal response for Widget/Siri (<5KB)
+    func fetchRoutePlan(fromStopId: String, toStopId: String, compact: Bool = false) async throws -> RoutePlanResponse {
+        var urlString = "\(baseURL)/route-planner?from=\(fromStopId)&to=\(toStopId)"
+        if compact {
+            urlString += "&compact=true"
+        }
+
+        DebugLog.log("🗺️ [RT] ▶️ ROUTE PLAN REQUEST")
+        DebugLog.log("🗺️ [RT]   From: \(fromStopId)")
+        DebugLog.log("🗺️ [RT]   To: \(toStopId)")
+        DebugLog.log("🗺️ [RT]   Compact: \(compact)")
+        DebugLog.log("🗺️ [RT]   URL: \(urlString)")
 
         guard let url = URL(string: urlString) else {
+            DebugLog.log("🗺️ [RT] ❌ Invalid URL: \(urlString)")
             throw NetworkError.badResponse
         }
 
+        let startTime = Date()
         let response: RoutePlanResponse = try await networkService.fetch(url)
+        let elapsed = Date().timeIntervalSince(startTime)
 
-        if response.success, let journey = response.journey {
-            DebugLog.log("🗺️ [RT] ✅ Route plan: \(journey.segments.count) segments, \(journey.totalDurationMinutes) min")
+        DebugLog.log("🗺️ [RT] ⏱️ API RESPONSE in \(String(format: "%.3f", elapsed))s")
+        DebugLog.log("🗺️ [RT]   Success: \(response.success)")
+        DebugLog.log("🗺️ [RT]   Message: \(response.message ?? "none")")
+
+        if response.success {
+            let journeys = response.allJourneys
+            DebugLog.log("🗺️ [RT] ✅ ROUTE PLAN SUCCESS")
+            DebugLog.log("🗺️ [RT]   Total journeys: \(journeys.count)")
+
+            for (i, journey) in journeys.enumerated() {
+                DebugLog.log("🗺️ [RT]   ━━━ Journey \(i+1)/\(journeys.count) ━━━")
+                DebugLog.log("🗺️ [RT]     Duration: \(journey.totalDurationMinutes) min")
+                DebugLog.log("🗺️ [RT]     Transfers: \(journey.transfers)")
+                DebugLog.log("🗺️ [RT]     Walking: \(journey.walkingMinutes) min")
+                DebugLog.log("🗺️ [RT]     Segments: \(journey.segments.count)")
+
+                for (j, seg) in journey.segments.enumerated() {
+                    let lineInfo = seg.routeName ?? "🚶 walk"
+                    let coordCount = seg.coordinates.count
+                    let intermediateCount = seg.intermediateStops?.count ?? 0
+                    DebugLog.log("🗺️ [RT]       [\(j+1)] \(seg.type.uppercased()): \(lineInfo)")
+                    DebugLog.log("🗺️ [RT]            \(seg.origin.name) → \(seg.destination.name)")
+                    DebugLog.log("🗺️ [RT]            \(seg.durationMinutes) min | \(coordCount) coords | \(intermediateCount) stops")
+                }
+            }
+
+            if let alerts = response.alerts, !alerts.isEmpty {
+                DebugLog.log("🗺️ [RT]   ⚠️ SERVICE ALERTS: \(alerts.count)")
+                for (i, alert) in alerts.enumerated() {
+                    DebugLog.log("🗺️ [RT]     [\(i+1)] [\(alert.severity.uppercased())] \(alert.lineId ?? "GENERAL")")
+                    DebugLog.log("🗺️ [RT]         \(alert.message)")
+                }
+            } else {
+                DebugLog.log("🗺️ [RT]   ℹ️ No service alerts")
+            }
         } else {
-            DebugLog.log("🗺️ [RT] ⚠️ Route plan failed: \(response.message ?? "unknown error")")
+            DebugLog.log("🗺️ [RT] ❌ ROUTE PLAN FAILED: \(response.message ?? "unknown error")")
         }
 
         return response
