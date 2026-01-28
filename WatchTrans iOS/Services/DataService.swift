@@ -920,8 +920,20 @@ class DataService {
     func fetchRouteShape(routeId: String, maxGap: Int? = nil) async -> [ShapePoint] {
         do {
             let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId, maxGap: maxGap)
-            DebugLog.log("🗺️ [DataService] Fetched \(response.shape.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
-            return response.shape.sorted { $0.sequence < $1.sequence }
+            let sorted = response.shape.sorted { $0.sequence < $1.sequence }
+            DebugLog.log("🗺️ [DataService] Fetched \(sorted.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
+            // Debug: Show first 5 and last 2 coordinates to verify shape data
+            if sorted.count >= 5 {
+                DebugLog.log("🗺️ [DataService]   First 5 coords:")
+                for (i, pt) in sorted.prefix(5).enumerated() {
+                    DebugLog.log("🗺️ [DataService]     [\(i)] (\(pt.lat), \(pt.lon))")
+                }
+                DebugLog.log("🗺️ [DataService]   Last 2 coords:")
+                for (i, pt) in sorted.suffix(2).enumerated() {
+                    DebugLog.log("🗺️ [DataService]     [\(sorted.count - 2 + i)] (\(pt.lat), \(pt.lon))")
+                }
+            }
+            return sorted
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch shape for \(routeId): \(error)")
             return []
@@ -959,12 +971,17 @@ class DataService {
             }
 
             // Convert all API journeys to Journey models
-            let journeys = apiJourneys.compactMap { convertToJourney(from: $0) }
+            var journeys = apiJourneys.compactMap { convertToJourney(from: $0) }
 
             guard !journeys.isEmpty else {
                 DebugLog.log("⚠️ [DataService] Failed to convert any journeys")
                 return nil
             }
+
+            // Enrich transit segments with full shape coordinates
+            // The route planner only returns 2 coords per segment (start/end)
+            // We fetch the actual route shapes for smoother map display
+            journeys = await enrichJourneysWithShapes(journeys, apiJourneys: apiJourneys)
 
             DebugLog.log("🗺️ [DataService] ✅ Found \(journeys.count) route(s). Best: \(journeys[0].segments.count) segments, \(journeys[0].totalDurationMinutes) min")
 
@@ -1044,9 +1061,12 @@ class DataService {
             let transportMode = TransportMode(rawValue: apiSegment.transportMode) ?? .metro
 
             // Parse departure and arrival times
-            let isoFormatter = ISO8601DateFormatter()
-            let departureTime = apiSegment.departure.flatMap { isoFormatter.date(from: $0) }
-            let arrivalTime = apiSegment.arrival.flatMap { isoFormatter.date(from: $0) }
+            // API returns format: "2026-01-28T06:30:00" (no timezone)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            let departureTime = apiSegment.departure.flatMap { dateFormatter.date(from: $0) }
+            let arrivalTime = apiSegment.arrival.flatMap { dateFormatter.date(from: $0) }
 
             return JourneySegment(
                 type: segmentType,
@@ -1071,6 +1091,180 @@ class DataService {
             totalWalkingMinutes: apiJourney.totalWalkingMinutes,
             transferCount: apiJourney.transferCount
         )
+    }
+
+    /// Enrich journeys with full shape coordinates for transit segments
+    /// The route planner only returns 2 coords per segment, this fetches the full shapes
+    private func enrichJourneysWithShapes(_ journeys: [Journey], apiJourneys: [RoutePlanJourney]) async -> [Journey] {
+        var enrichedJourneys: [Journey] = []
+
+        for (journeyIndex, journey) in journeys.enumerated() {
+            let apiJourney = apiJourneys[journeyIndex]
+            var enrichedSegments: [JourneySegment] = []
+
+            for (segmentIndex, segment) in journey.segments.enumerated() {
+                let apiSegment = apiJourney.segments[segmentIndex]
+
+                // Only fetch shapes for transit segments with a lineId
+                if segment.type == .transit, let routeId = apiSegment.lineId {
+                    // Fetch full shape for this route (use maxGap=100 for better compatibility)
+                    var shapePoints = await fetchRouteShape(routeId: routeId, maxGap: 100)
+
+                    // Debug: log what we have before fallback check
+                    DebugLog.log("🗺️ [DataService] SHAPE CHECK: routeId=\(routeId), shapePoints.count=\(shapePoints.count), isEmpty=\(shapePoints.isEmpty), lineName=\(segment.lineName ?? "NIL")")
+
+                    // Fallback: if no shapes returned, try finding the line in loaded data
+                    // The route planner might return a different routeId variant than what has shapes
+                    if shapePoints.isEmpty, let lineName = segment.lineName, !lineName.isEmpty {
+                        DebugLog.log("🗺️ [DataService] Looking for fallback shape for '\(lineName)' (loaded lines: \(lines.count))")
+                        let lineNames = lines.map { "\($0.name) [\($0.type.rawValue)]" }
+                        DebugLog.log("🗺️ [DataService]   Available lines: \(lineNames.joined(separator: ", "))")
+
+                        // Try multiple matching strategies:
+                        // 1. Exact match (case-insensitive)
+                        // 2. Without L prefix for Metro (e.g., "L1" -> "1")
+                        // 3. With L prefix for Metro (e.g., "1" -> "L1")
+                        let lineNameLower = lineName.lowercased()
+                        let lineNameNoL = lineNameLower.hasPrefix("l") ? String(lineNameLower.dropFirst()) : lineNameLower
+                        let lineNameWithL = lineNameLower.hasPrefix("l") ? lineNameLower : "l\(lineNameLower)"
+
+                        let matchingLine = lines.first(where: { line in
+                            let name = line.name.lowercased()
+                            return name == lineNameLower ||
+                                   name == lineNameNoL ||
+                                   name == lineNameWithL
+                        })
+
+                        if let matchingLine = matchingLine,
+                           let fallbackRouteId = matchingLine.routeIds.first {
+                            DebugLog.log("🗺️ [DataService] Found matching line: \(matchingLine.name) with routeIds: \(matchingLine.routeIds)")
+                            if fallbackRouteId != routeId {
+                                DebugLog.log("🗺️ [DataService] Fallback: trying \(fallbackRouteId) instead of \(routeId)")
+                                shapePoints = await fetchRouteShape(routeId: fallbackRouteId, maxGap: 100)
+                            } else {
+                                // Try other routeIds if available
+                                if matchingLine.routeIds.count > 1 {
+                                    for altRouteId in matchingLine.routeIds.dropFirst() {
+                                        DebugLog.log("🗺️ [DataService] Fallback: trying alternate routeId \(altRouteId)")
+                                        shapePoints = await fetchRouteShape(routeId: altRouteId, maxGap: 100)
+                                        if !shapePoints.isEmpty {
+                                            break
+                                        }
+                                    }
+                                } else {
+                                    DebugLog.log("🗺️ [DataService] Fallback routeId is same as original and no alternatives: \(routeId)")
+                                }
+                            }
+                        } else {
+                            DebugLog.log("🗺️ [DataService] No matching line found for '\(lineName)' (tried: \(lineNameLower), \(lineNameNoL), \(lineNameWithL))")
+                        }
+                    } else if shapePoints.isEmpty {
+                        DebugLog.log("🗺️ [DataService] Cannot fallback: lineName is nil or empty")
+                    }
+
+                    if shapePoints.count > 2 {
+                        // Convert to CLLocationCoordinate2D
+                        let fullCoordinates = shapePoints.map {
+                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)
+                        }
+
+                        // Extract only the portion between origin and destination stops
+                        let segmentCoords = extractSegmentCoordinates(
+                            from: fullCoordinates,
+                            origin: segment.origin,
+                            destination: segment.destination
+                        )
+
+                        DebugLog.log("🗺️ [DataService] Enriched segment \(segment.lineName ?? "?"): \(segment.coordinates.count) → \(segmentCoords.count) coords")
+
+                        // Create new segment with enriched coordinates
+                        let enrichedSegment = JourneySegment(
+                            type: segment.type,
+                            transportMode: segment.transportMode,
+                            lineName: segment.lineName,
+                            lineColor: segment.lineColor,
+                            origin: segment.origin,
+                            destination: segment.destination,
+                            intermediateStops: segment.intermediateStops,
+                            durationMinutes: segment.durationMinutes,
+                            coordinates: segmentCoords,
+                            departureTime: segment.departureTime,
+                            arrivalTime: segment.arrivalTime
+                        )
+                        enrichedSegments.append(enrichedSegment)
+                        continue
+                    }
+                }
+
+                // Keep original segment (walking or no shape available)
+                enrichedSegments.append(segment)
+            }
+
+            let enrichedJourney = Journey(
+                origin: journey.origin,
+                destination: journey.destination,
+                segments: enrichedSegments,
+                totalDurationMinutes: journey.totalDurationMinutes,
+                totalWalkingMinutes: journey.totalWalkingMinutes,
+                transferCount: journey.transferCount
+            )
+            enrichedJourneys.append(enrichedJourney)
+        }
+
+        return enrichedJourneys
+    }
+
+    /// Extract the portion of route coordinates between two stops
+    /// Finds the closest points to origin and destination, then returns the segment between them
+    private func extractSegmentCoordinates(
+        from coordinates: [CLLocationCoordinate2D],
+        origin: Stop,
+        destination: Stop
+    ) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 2 else { return coordinates }
+
+        let originCoord = CLLocationCoordinate2D(latitude: origin.latitude, longitude: origin.longitude)
+        let destCoord = CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude)
+
+        // Find index of closest point to origin
+        var originIndex = 0
+        var minOriginDist = Double.greatestFiniteMagnitude
+        for (i, coord) in coordinates.enumerated() {
+            let dist = distanceSquared(from: coord, to: originCoord)
+            if dist < minOriginDist {
+                minOriginDist = dist
+                originIndex = i
+            }
+        }
+
+        // Find index of closest point to destination
+        var destIndex = coordinates.count - 1
+        var minDestDist = Double.greatestFiniteMagnitude
+        for (i, coord) in coordinates.enumerated() {
+            let dist = distanceSquared(from: coord, to: destCoord)
+            if dist < minDestDist {
+                minDestDist = dist
+                destIndex = i
+            }
+        }
+
+        // Ensure correct order (origin before destination)
+        let startIndex = min(originIndex, destIndex)
+        let endIndex = max(originIndex, destIndex)
+
+        // Return the segment between origin and destination
+        if startIndex < endIndex {
+            return Array(coordinates[startIndex...endIndex])
+        }
+
+        return coordinates
+    }
+
+    /// Calculate squared distance between two coordinates (faster than actual distance)
+    private func distanceSquared(from c1: CLLocationCoordinate2D, to c2: CLLocationCoordinate2D) -> Double {
+        let dLat = c1.latitude - c2.latitude
+        let dLon = c1.longitude - c2.longitude
+        return dLat * dLat + dLon * dLon
     }
 
 }

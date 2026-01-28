@@ -131,6 +131,12 @@ struct LineDetailView: View {
     private func loadData() async {
         isLoading = true
 
+        // Debug: Log line info and routeIds
+        let routeIdForShape = line.routeIds.first
+        DebugLog.log("📋 [LineDetail] Loading line: \(line.name) (\(line.id))")
+        DebugLog.log("📋 [LineDetail]   routeIds: \(line.routeIds)")
+        DebugLog.log("📋 [LineDetail]   Using routeId for shape: \(routeIdForShape ?? "NONE")")
+
         async let stopsTask: [Stop] = {
             if let routeId = line.routeIds.first {
                 return await dataService.fetchStopsForRoute(routeId: routeId)
@@ -148,9 +154,11 @@ struct LineDetailView: View {
         }()
 
         // Fetch shape points for the route
+        // Use maxGap=100 to normalize/interpolate sparse points for smoother curves
+        // (especially important for Cercanías which have sparser shape data)
         async let shapeTask: [CLLocationCoordinate2D] = {
             if let routeId = line.routeIds.first {
-                let points = await dataService.fetchRouteShape(routeId: routeId)
+                let points = await dataService.fetchRouteShape(routeId: routeId, maxGap: 100)
                 return points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
             }
             return []
@@ -160,6 +168,8 @@ struct LineDetailView: View {
         alerts = await alertsTask
         operatingHoursResult = await hoursTask
         shapePoints = await shapeTask
+
+        DebugLog.log("📋 [LineDetail] ✅ Loaded: \(stops.count) stops, \(shapePoints.count) shape coords, \(alerts.count) alerts")
         isLoading = false
     }
 }

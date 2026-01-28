@@ -303,8 +303,9 @@ class GTFSRealtimeService {
             throw NetworkError.badResponse
         }
 
+        DebugLog.log("🗺️ [RT] 📡 Shape request: \(urlString)")
         let response: RouteShapeResponse = try await networkService.fetch(url)
-        DebugLog.log("🗺️ [RT] Fetched \(response.shape.count) shape points for \(routeId)\(maxGap != nil ? " (max_gap=\(maxGap!))" : "")")
+        DebugLog.log("🗺️ [RT] ✅ Shape response: \(response.shape.count) points for \(response.routeId)")
         return response
     }
 
@@ -358,6 +359,7 @@ class GTFSRealtimeService {
                     let coordCount = seg.coordinates.count
                     let intermediateCount = seg.intermediateStops?.count ?? 0
                     DebugLog.log("🗺️ [RT]       [\(j+1)] \(seg.type.uppercased()): \(lineInfo)")
+                    DebugLog.log("🗺️ [RT]            lineId: \(seg.lineId ?? "nil")")
                     DebugLog.log("🗺️ [RT]            \(seg.origin.name) → \(seg.destination.name)")
                     DebugLog.log("🗺️ [RT]            \(seg.durationMinutes) min | \(coordCount) coords | \(intermediateCount) stops")
                 }

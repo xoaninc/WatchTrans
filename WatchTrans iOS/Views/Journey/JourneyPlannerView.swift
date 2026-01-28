@@ -460,23 +460,41 @@ struct AlternativeRowView: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Ruta \(index)")
+            HStack(spacing: 12) {
+                // Times column
+                VStack(spacing: 4) {
+                    Text(journey.departureTimeString ?? "--:--")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    Text(journey.arrivalTimeString ?? "--:--")
                         .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 50)
 
-                    HStack(spacing: 12) {
-                        Label("\(journey.totalDurationMinutes) min", systemImage: "clock")
+                // Divider line
+                Rectangle()
+                    .fill(Color(.systemGray4))
+                    .frame(width: 1, height: 50)
+
+                // Journey info
+                VStack(alignment: .leading, spacing: 6) {
+                    // Duration and transfers
+                    HStack(spacing: 8) {
+                        Text("\(journey.totalDurationMinutes) min")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+
                         if journey.transferCount > 0 {
-                            Label("\(journey.transferCount)", systemImage: "arrow.triangle.branch")
-                        }
-                        if journey.totalWalkingMinutes > 0 {
-                            Label("\(journey.totalWalkingMinutes) min", systemImage: "figure.walk")
+                            Text("· \(journey.transferCount) transb.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("· Directo")
+                                .font(.caption)
+                                .foregroundStyle(.green)
                         }
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
 
                     // Line badges
                     HStack(spacing: 4) {
@@ -493,6 +511,15 @@ struct AlternativeRowView: View {
                                             .fill(Color(hex: segment.lineColor ?? "#007AFF") ?? .blue)
                                     )
                             }
+                        }
+
+                        if journey.totalWalkingMinutes > 0 {
+                            HStack(spacing: 2) {
+                                Image(systemName: "figure.walk")
+                                Text("\(journey.totalWalkingMinutes)'")
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -527,17 +554,58 @@ struct JourneyResultView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Summary header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(journey.totalDurationMinutes) min")
-                        .font(.title)
-                        .fontWeight(.bold)
+            // Summary header with times
+            VStack(spacing: 12) {
+                // Departure and arrival times
+                HStack(alignment: .center) {
+                    // Departure
+                    VStack(spacing: 2) {
+                        Text(journey.departureTimeString ?? "--:--")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Salida")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
+                    // Timeline arrow with duration
+                    VStack(spacing: 4) {
+                        HStack(spacing: 4) {
+                            Rectangle()
+                                .fill(Color.blue.opacity(0.3))
+                                .frame(height: 2)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.blue)
+                        }
+                        Text("\(journey.totalDurationMinutes) min")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.blue)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // Arrival
+                    VStack(spacing: 2) {
+                        Text(journey.arrivalTimeString ?? "--:--")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Llegada")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Divider()
+
+                // Details row
+                HStack {
                     HStack(spacing: 12) {
                         if journey.transferCount > 0 {
                             Label("\(journey.transferCount) transbordo\(journey.transferCount > 1 ? "s" : "")",
                                   systemImage: "arrow.triangle.branch")
+                        } else {
+                            Label("Directo", systemImage: "arrow.right")
                         }
                         if journey.totalWalkingMinutes > 0 {
                             Label("\(journey.totalWalkingMinutes) min andando",
@@ -546,21 +614,20 @@ struct JourneyResultView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                }
 
-                Spacer()
+                    Spacer()
 
-                // Preview button
-                Button {
-                    onPreview()
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "play.circle.fill")
-                            .font(.title)
-                        Text("Ver en 3D")
-                            .font(.caption2)
+                    // Preview button
+                    Button {
+                        onPreview()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "play.circle.fill")
+                            Text("Ver en 3D")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
                     }
-                    .foregroundStyle(.blue)
                 }
             }
             .padding()

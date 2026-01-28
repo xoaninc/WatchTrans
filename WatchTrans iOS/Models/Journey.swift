@@ -26,6 +26,32 @@ struct Journey: Identifiable {
         segments.flatMap { $0.coordinates }
     }
 
+    /// Journey departure time (from first segment)
+    var departureTime: Date? {
+        segments.first?.departureTime
+    }
+
+    /// Journey arrival time (from last segment)
+    var arrivalTime: Date? {
+        segments.last?.arrivalTime
+    }
+
+    /// Formatted departure time (HH:mm)
+    var departureTimeString: String? {
+        guard let time = departureTime else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: time)
+    }
+
+    /// Formatted arrival time (HH:mm)
+    var arrivalTimeString: String? {
+        guard let time = arrivalTime else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: time)
+    }
+
     /// Calculate total duration
     static func calculateDuration(segments: [JourneySegment]) -> Int {
         segments.reduce(0) { $0 + $1.durationMinutes }

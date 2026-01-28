@@ -13,8 +13,8 @@ struct RouteMapView: View {
     let line: Line
     let stops: [Stop]
     let dataService: DataService
-    var shapePoints: [CLLocationCoordinate2D]?
-    var isSuspended: Bool
+    let shapePoints: [CLLocationCoordinate2D]?
+    let isSuspended: Bool
 
     @State private var mapPosition: MapCameraPosition
     @State private var selectedStop: Stop?
@@ -31,7 +31,13 @@ struct RouteMapView: View {
         self.shapePoints = shapePoints
         self.isSuspended = isSuspended
 
-        let coordinates = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        // Calculate region from shape points if available, otherwise from stops
+        let coordinates: [CLLocationCoordinate2D]
+        if let shapePoints = shapePoints, !shapePoints.isEmpty {
+            coordinates = shapePoints
+        } else {
+            coordinates = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        }
         let region = Self.regionToFit(coordinates: coordinates)
         _mapPosition = State(initialValue: .region(region))
     }
@@ -41,9 +47,10 @@ struct RouteMapView: View {
             // Map header
             mapHeader
 
-            // Map content
+            // Map content - use id to force refresh when shape data changes
             mapContent
                 .frame(height: 280)
+                .id(shapePoints?.count ?? 0)
 
             // Selected stop info
             if let stop = selectedStop {
@@ -64,6 +71,14 @@ struct RouteMapView: View {
                 initialPosition: mapPosition,
                 isSuspended: isSuspended
             )
+        }
+        .onChange(of: shapePoints?.count) { oldCount, newCount in
+            // Update map region when shape points are loaded
+            if let count = newCount, count > 2, let shape = shapePoints {
+                DebugLog.log("🗺️ [RouteMapView] Shape loaded (\(count) points), updating region")
+                let region = Self.regionToFit(coordinates: shape)
+                mapPosition = .region(region)
+            }
         }
     }
 
@@ -89,24 +104,27 @@ struct RouteMapView: View {
     }
 
     private var mapContent: some View {
-        Map(position: $mapPosition) {
-            // Route polyline - dashed only if suspended
-            if let shapePoints = shapePoints, !shapePoints.isEmpty {
+        let _ = DebugLog.log("🗺️ [RouteMapView] Rendering \(line.name): shapePoints=\(shapePoints?.count ?? 0), stops=\(stops.count)")
+
+        return Map(position: $mapPosition) {
+            // Route polyline - use shape points if available, otherwise connect stops
+            if let shape = shapePoints, shape.count > 2 {
                 if isSuspended {
-                    MapPolyline(coordinates: shapePoints)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, dash: [8, 4]))
+                    MapPolyline(coordinates: shape)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 4]))
                 } else {
-                    MapPolyline(coordinates: shapePoints)
-                        .stroke(lineColor, lineWidth: 4)
+                    MapPolyline(coordinates: shape)
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                 }
             } else {
+                // Fallback: connect stops with straight lines
                 let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
                 if isSuspended {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 3, dash: [8, 4]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [8, 4]))
                 } else {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor, lineWidth: 3)
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                 }
             }
 
@@ -269,23 +287,24 @@ struct FullScreenMapView: View {
 
     private var mapContent: some View {
         Map(position: $mapPosition) {
-            // Route polyline - dashed only if suspended
-            if let shapePoints = shapePoints, !shapePoints.isEmpty {
+            // Route polyline - use shape points if available, otherwise connect stops
+            if let shape = shapePoints, shape.count > 2 {
                 if isSuspended {
-                    MapPolyline(coordinates: shapePoints)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, dash: [10, 5]))
+                    MapPolyline(coordinates: shape)
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [10, 5]))
                 } else {
-                    MapPolyline(coordinates: shapePoints)
-                        .stroke(lineColor, lineWidth: 5)
+                    MapPolyline(coordinates: shape)
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }
             } else {
+                // Fallback: connect stops with straight lines
                 let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
                 if isSuspended {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, dash: [10, 5]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [10, 5]))
                 } else {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor, lineWidth: 4)
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                 }
             }
 

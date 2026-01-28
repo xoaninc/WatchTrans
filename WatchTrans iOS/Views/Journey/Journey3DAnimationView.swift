@@ -47,11 +47,12 @@ struct Journey3DAnimationView: View {
             // 3D Map
             Map(position: $mapPosition) {
                 // Route polyline for current and completed segments
+                // Use rounded line caps and joins for smoother appearance
                 ForEach(Array(journey.segments.enumerated()), id: \.element.id) { index, segment in
                     if index <= currentSegmentIndex {
                         let color = segmentColor(segment)
                         MapPolyline(coordinates: segment.coordinates)
-                            .stroke(color, lineWidth: index == currentSegmentIndex ? 6 : 4)
+                            .stroke(color, style: StrokeStyle(lineWidth: index == currentSegmentIndex ? 6 : 4, lineCap: .round, lineJoin: .round))
                     }
                 }
 
