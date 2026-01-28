@@ -70,7 +70,7 @@ struct PlanRouteIntent: AppIntent {
 
     // MARK: - API Call
 
-    private func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
+    private nonisolated func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
         // Use compact=true for minimal response (<5KB, faster for Siri)
         let urlString = "\(Self.apiBaseURL)/route-planner?from=\(fromId)&to=\(toId)&compact=true"
 
@@ -138,6 +138,7 @@ enum PlanRouteError: Error, CustomLocalizedStringResourceConvertible {
 
 /// Compact response from route-planner?compact=true
 /// Optimized for Widget/Siri (<5KB response)
+/// Marked Sendable for Swift 6 concurrency (pure value types)
 struct CompactRoutePlanResponse: Codable, Sendable {
     let success: Bool
     let message: String?
