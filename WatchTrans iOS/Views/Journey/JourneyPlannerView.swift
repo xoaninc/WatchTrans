@@ -30,6 +30,10 @@ struct JourneyPlannerView: View {
     @State private var showAlerts = true  // Service alerts expanded by default
     @State private var errorMessage: String?
 
+    // Debounce timers for search
+    @State private var originSearchTask: Task<Void, Never>?
+    @State private var destinationSearchTask: Task<Void, Never>?
+
     @FocusState private var focusedField: Field?
 
     enum Field {
@@ -130,7 +134,14 @@ struct JourneyPlannerView: View {
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .origin)
                         .onChange(of: originText) { _, newValue in
-                            searchStops(query: newValue, isOrigin: true)
+                            // Debounced search (300ms)
+                            originSearchTask?.cancel()
+                            originSearchTask = Task {
+                                try? await Task.sleep(nanoseconds: 300_000_000)
+                                if !Task.isCancelled {
+                                    searchStops(query: newValue, isOrigin: true)
+                                }
+                            }
                         }
 
                     if selectedOrigin != nil {
@@ -186,7 +197,14 @@ struct JourneyPlannerView: View {
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .destination)
                         .onChange(of: destinationText) { _, newValue in
-                            searchStops(query: newValue, isOrigin: false)
+                            // Debounced search (300ms)
+                            destinationSearchTask?.cancel()
+                            destinationSearchTask = Task {
+                                try? await Task.sleep(nanoseconds: 300_000_000)
+                                if !Task.isCancelled {
+                                    searchStops(query: newValue, isOrigin: false)
+                                }
+                            }
                         }
 
                     if selectedDestination != nil {
