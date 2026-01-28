@@ -959,7 +959,12 @@ class DataService {
             }
 
             // Convert all API journeys to Journey models
-            let journeys = apiJourneys.map { convertToJourney(from: $0) }
+            let journeys = apiJourneys.compactMap { convertToJourney(from: $0) }
+
+            guard !journeys.isEmpty else {
+                DebugLog.log("⚠️ [DataService] Failed to convert any journeys")
+                return nil
+            }
 
             DebugLog.log("🗺️ [DataService] ✅ Found \(journeys.count) route(s). Best: \(journeys[0].segments.count) segments, \(journeys[0].totalDurationMinutes) min")
 
@@ -980,21 +985,28 @@ class DataService {
     }
 
     /// Convert API route plan response to Journey model
-    private func convertToJourney(from apiJourney: RoutePlanJourney) -> Journey {
+    private func convertToJourney(from apiJourney: RoutePlanJourney) -> Journey? {
+        // API v2: origin/destination are computed from segments
+        guard let apiOrigin = apiJourney.origin,
+              let apiDestination = apiJourney.destination else {
+            DebugLog.log("⚠️ [DataService] Journey has no origin/destination")
+            return nil
+        }
+
         // Convert origin stop
         let origin = Stop(
-            id: apiJourney.origin.id,
-            name: apiJourney.origin.name,
-            latitude: apiJourney.origin.lat,
-            longitude: apiJourney.origin.lon
+            id: apiOrigin.id,
+            name: apiOrigin.name,
+            latitude: apiOrigin.lat,
+            longitude: apiOrigin.lon
         )
 
         // Convert destination stop
         let destination = Stop(
-            id: apiJourney.destination.id,
-            name: apiJourney.destination.name,
-            latitude: apiJourney.destination.lat,
-            longitude: apiJourney.destination.lon
+            id: apiDestination.id,
+            name: apiDestination.name,
+            latitude: apiDestination.lat,
+            longitude: apiDestination.lon
         )
 
         // Convert segments

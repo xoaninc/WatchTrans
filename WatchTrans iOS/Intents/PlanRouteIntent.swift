@@ -33,13 +33,10 @@ struct PlanRouteIntent: AppIntent {
     /// Don't open app when running
     static var openAppWhenRun: Bool = false
 
-    // Base URL for API (local constant to avoid MainActor issues)
-    private static let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
-
     func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         do {
-            // Fetch route with compact=true for fast response (<5KB)
-            let journey = try await fetchRoute(fromId: fromStop.id, toId: toStop.id)
+            // Fetch route using helper (outside MainActor context to avoid Swift 6 warnings)
+            let journey = try await SiriAPIHelper.fetchRoute(fromId: fromStop.id, toId: toStop.id)
 
             // Build response text
             let responseText = buildResponseText(journey: journey)
@@ -68,32 +65,7 @@ struct PlanRouteIntent: AppIntent {
         }
     }
 
-    // MARK: - API Call
-
-    private nonisolated func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
-        // Use compact=true for minimal response (<5KB, faster for Siri)
-        let urlString = "\(Self.apiBaseURL)/route-planner?from=\(fromId)&to=\(toId)&compact=true"
-
-        guard let url = URL(string: urlString) else {
-            throw PlanRouteError.invalidURL
-        }
-
-        let (data, response) = try await URLSession.shared.data(from: url)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw PlanRouteError.apiError
-        }
-
-        let decoder = JSONDecoder()
-        let apiResponse = try decoder.decode(CompactRoutePlanResponse.self, from: data)
-
-        guard apiResponse.success, let journey = apiResponse.journeys?.first else {
-            throw PlanRouteError.noRouteFound
-        }
-
-        return journey
-    }
+    // MARK: - Response Text
 
     private func buildResponseText(journey: SiriJourney) -> String {
         let durationText = "\(journey.durationMinutes) minutes"
@@ -115,67 +87,6 @@ struct PlanRouteIntent: AppIntent {
         let lineText = lines.isEmpty ? "" : " via \(lines.joined(separator: " then "))"
 
         return "The journey takes \(durationText) \(transferText)\(lineText)."
-    }
-}
-
-// MARK: - Intent Errors
-
-enum PlanRouteError: Error, CustomLocalizedStringResourceConvertible {
-    case invalidURL
-    case apiError
-    case noRouteFound
-
-    var localizedStringResource: LocalizedStringResource {
-        switch self {
-        case .invalidURL: return "Invalid URL"
-        case .apiError: return "Could not connect to service"
-        case .noRouteFound: return "No route found"
-        }
-    }
-}
-
-// MARK: - Compact API Response Models
-
-/// Compact response from route-planner?compact=true
-/// Optimized for Widget/Siri (<5KB response)
-/// Marked Sendable for Swift 6 concurrency (pure value types)
-struct CompactRoutePlanResponse: Codable, Sendable {
-    let success: Bool
-    let message: String?
-    let journeys: [SiriJourney]?
-}
-
-struct SiriJourney: Codable, Sendable {
-    let durationMinutes: Int
-    let transfers: Int
-    let walkingMinutes: Int
-    let segments: [SiriSegment]
-
-    enum CodingKeys: String, CodingKey {
-        case durationMinutes = "duration_minutes"
-        case transfers
-        case walkingMinutes = "walking_minutes"
-        case segments
-    }
-}
-
-struct SiriSegment: Codable, Sendable {
-    let type: String  // "transit" or "walk"
-    let routeId: String?
-    let routeName: String?
-    let routeColor: String?
-    let fromStopName: String
-    let toStopName: String
-    let durationMinutes: Int
-
-    enum CodingKeys: String, CodingKey {
-        case type
-        case routeId = "route_id"
-        case routeName = "route_name"
-        case routeColor = "route_color"
-        case fromStopName = "from_stop_name"
-        case toStopName = "to_stop_name"
-        case durationMinutes = "duration_minutes"
     }
 }
 

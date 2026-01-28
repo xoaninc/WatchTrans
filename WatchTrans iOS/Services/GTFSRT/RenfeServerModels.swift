@@ -607,27 +607,32 @@ struct RouteAlert: Codable {
     }
 }
 
-/// Complete journey from origin to destination
+/// Complete journey from origin to destination (API v2 format)
 struct RoutePlanJourney: Codable {
-    let origin: RoutePlanStop
-    let destination: RoutePlanStop
-    let totalDurationMinutes: Int
-    let totalWalkingMinutes: Int
-    let totalTransitMinutes: Int
-    let transferCount: Int
+    let durationMinutes: Int
+    let walkingMinutes: Int
+    let transfers: Int
     let segments: [RoutePlanSegment]
-
-    // API v2 new fields
     let departure: String?  // ISO8601 timestamp "2026-01-28T08:32:00"
     let arrival: String?    // ISO8601 timestamp "2026-01-28T09:07:00"
 
     enum CodingKeys: String, CodingKey {
-        case origin, destination, segments, departure, arrival
-        case totalDurationMinutes = "total_duration_minutes"
-        case totalWalkingMinutes = "total_walking_minutes"
-        case totalTransitMinutes = "total_transit_minutes"
-        case transferCount = "transfer_count"
+        case segments, departure, arrival, transfers
+        case durationMinutes = "duration_minutes"
+        case walkingMinutes = "walking_minutes"
     }
+
+    // Computed properties for compatibility
+    var totalDurationMinutes: Int { durationMinutes }
+    var totalWalkingMinutes: Int { walkingMinutes }
+    var totalTransitMinutes: Int { durationMinutes - walkingMinutes }
+    var transferCount: Int { transfers }
+
+    /// Origin is first segment's origin
+    var origin: RoutePlanStop? { segments.first?.origin }
+
+    /// Destination is last segment's destination
+    var destination: RoutePlanStop? { segments.last?.destination }
 
     /// Parsed departure time
     var departureDate: Date? {
@@ -650,10 +655,10 @@ struct RoutePlanStop: Codable {
     let lon: Double
 }
 
-/// A segment of the journey (transit or walking)
+/// A segment of the journey (transit or walking) - API v2 format
 struct RoutePlanSegment: Codable {
     let type: String                    // "transit" or "walking"
-    let transportMode: String           // "metro", "cercanias", "walking", etc.
+    let mode: String?                   // "metro", "cercanias", "walking", etc.
     let lineId: String?
     let lineName: String?
     let lineColor: String?
@@ -665,10 +670,11 @@ struct RoutePlanSegment: Codable {
     let distanceMeters: Int?
     let coordinates: [RoutePlanCoordinate]
     let suggestedHeading: Double?       // API v2: camera heading 0-360 degrees (0=north)
+    let departure: String?              // API v2: segment departure time
+    let arrival: String?                // API v2: segment arrival time
 
     enum CodingKeys: String, CodingKey {
-        case type, origin, destination, coordinates, headsign
-        case transportMode = "transport_mode"
+        case type, mode, origin, destination, coordinates, headsign, departure, arrival
         case lineId = "line_id"
         case lineName = "line_name"
         case lineColor = "line_color"
@@ -677,6 +683,9 @@ struct RoutePlanSegment: Codable {
         case distanceMeters = "distance_meters"
         case suggestedHeading = "suggested_heading"
     }
+
+    // Compatibility alias
+    var transportMode: String { mode ?? type }
 }
 
 /// A coordinate in the route plan segment
