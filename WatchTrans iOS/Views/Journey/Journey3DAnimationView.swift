@@ -165,27 +165,29 @@ struct Journey3DAnimationView: View {
     }
 
     private var currentPositionMarker: some View {
+        // Simplified marker for better performance during fast animations
+        // Using a larger, more visible marker that renders consistently
         ZStack {
-            // Pulse animation
+            // Outer glow (static, no animation)
             Circle()
-                .fill(currentMarkerColor.opacity(0.3))
-                .frame(width: 40, height: 40)
+                .fill(currentMarkerColor.opacity(0.4))
+                .frame(width: 32, height: 32)
 
-            // Main marker
+            // Main marker - larger for visibility
             Circle()
                 .fill(currentMarkerColor)
-                .frame(width: 20, height: 20)
+                .frame(width: 18, height: 18)
                 .overlay(
                     Circle()
-                        .stroke(.white, lineWidth: 3)
+                        .stroke(.white, lineWidth: 2.5)
                 )
-                .shadow(color: currentMarkerColor.opacity(0.5), radius: 5)
 
             // Transport mode icon
             Image(systemName: currentSegment?.transportMode.icon ?? "location.fill")
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white)
         }
+        .drawingGroup()  // Flatten to single layer for better rendering performance
     }
 
     private var currentMarkerColor: Color {
@@ -413,20 +415,68 @@ struct Journey3DAnimationView: View {
     // MARK: - Camera Control
 
     private func setupInitialCamera() {
-        // Center on the start of the journey
+        // First show the entire route (zoomed out) to pre-load all map tiles
+        // Then zoom in to the start position
         guard let firstSegment = journey.segments.first,
               let startCoord = firstSegment.coordinates.first else { return }
 
         // Initialize marker position
         animatedMarkerPosition = startCoord
 
-        // Fixed north heading (rotation disabled)
+        // Calculate center and distance to show entire route
+        let allCoords = journey.segments.flatMap { $0.coordinates }
+        let center = calculateCenter(of: allCoords)
+        let distance = calculateDistanceToFit(coordinates: allCoords)
+
+        // Step 1: Show entire route (zoomed out, flat view to load tiles)
         mapPosition = .camera(MapCamera(
-            centerCoordinate: startCoord,
-            distance: 2500,
+            centerCoordinate: center,
+            distance: distance,
             heading: 0,
-            pitch: 55
+            pitch: 0  // Flat view for faster tile loading
         ))
+
+        // Step 2: After tiles load, zoom in to start position
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                mapPosition = .camera(MapCamera(
+                    centerCoordinate: startCoord,
+                    distance: 2500,
+                    heading: 0,
+                    pitch: 55
+                ))
+            }
+        }
+    }
+
+    /// Calculate the center point of a set of coordinates
+    private func calculateCenter(of coordinates: [CLLocationCoordinate2D]) -> CLLocationCoordinate2D {
+        guard !coordinates.isEmpty else {
+            return CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        }
+        let lats = coordinates.map { $0.latitude }
+        let lons = coordinates.map { $0.longitude }
+        return CLLocationCoordinate2D(
+            latitude: (lats.min()! + lats.max()!) / 2,
+            longitude: (lons.min()! + lons.max()!) / 2
+        )
+    }
+
+    /// Calculate camera distance needed to fit all coordinates in view
+    private func calculateDistanceToFit(coordinates: [CLLocationCoordinate2D]) -> Double {
+        guard coordinates.count > 1 else { return 5000 }
+
+        let lats = coordinates.map { $0.latitude }
+        let lons = coordinates.map { $0.longitude }
+
+        let latSpan = (lats.max()! - lats.min()!) * 111000  // ~111km per degree lat
+        let lonSpan = (lons.max()! - lons.min()!) * 85000   // ~85km per degree lon at mid-latitudes
+
+        let maxSpan = max(latSpan, lonSpan)
+
+        // Add padding and convert to camera distance
+        // Camera distance is roughly 2x the span for good framing
+        return max(maxSpan * 2.5, 5000)
     }
 
     private func animateCamera(to coordinate: CLLocationCoordinate2D, mode: TransportMode, heading: Double = 0) {

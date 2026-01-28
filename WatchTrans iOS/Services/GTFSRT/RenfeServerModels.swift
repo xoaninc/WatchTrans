@@ -501,6 +501,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let distanceM: Int          // Distance in meters
     let walkTimeS: Int          // Walk time in seconds
     let source: String          // "manual", "proximity", etc.
+    let walkingShape: [ShapePoint]?  // Walking route coordinates (only with include_shape=true)
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -511,6 +512,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
         case distanceM = "distance_m"
         case walkTimeS = "walk_time_s"
         case source
+        case walkingShape = "walking_shape"
     }
 
     /// Walk time formatted as "X min"

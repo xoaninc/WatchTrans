@@ -279,13 +279,21 @@ class GTFSRealtimeService {
 
     /// Fetch walking correspondences from a station
     /// Returns nearby stations connected by walking passages
-    func fetchCorrespondences(stopId: String) async throws -> CorrespondencesResponse {
-        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/correspondences") else {
+    /// - Parameters:
+    ///   - stopId: The station ID
+    ///   - includeShape: If true, includes walking route coordinates in response
+    func fetchCorrespondences(stopId: String, includeShape: Bool = false) async throws -> CorrespondencesResponse {
+        var urlString = "\(baseURL)/stops/\(stopId)/correspondences"
+        if includeShape {
+            urlString += "?include_shape=true"
+        }
+
+        guard let url = URL(string: urlString) else {
             throw NetworkError.badResponse
         }
 
         let response: CorrespondencesResponse = try await networkService.fetch(url)
-        DebugLog.log("🚶 [RT] Fetched \(response.correspondences.count) correspondences for \(stopId)")
+        DebugLog.log("🚶 [RT] Fetched \(response.correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
         return response
     }
 
