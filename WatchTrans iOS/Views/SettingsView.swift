@@ -12,6 +12,15 @@ struct SettingsView: View {
     @AppStorage("autoRefreshEnabled") private var autoRefreshEnabled = true
     @AppStorage("preferredTransport") private var preferredTransport = "all"
 
+    // Developer mode state
+    @State private var versionTapCount = 0
+    @State private var developerModeEnabled = false
+    @State private var showTokenInput = false
+    @State private var tokenInput = ""
+    @State private var isReloading = false
+    @State private var reloadMessage: String?
+    @State private var showReloadAlert = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -30,6 +39,10 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        handleVersionTap()
+                    }
                 } header: {
                     Text("Acerca de")
                 }
@@ -158,10 +171,100 @@ struct SettingsView: View {
                 } header: {
                     Text("Creditos")
                 }
+
+                // Developer section (hidden until activated)
+                if developerModeEnabled {
+                    Section {
+                        if AdminService.hasToken() {
+                            // Token configured - show reload button
+                            Button {
+                                Task { await reloadGTFS() }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Recargar GTFS")
+                                    Spacer()
+                                    if isReloading {
+                                        ProgressView()
+                                    }
+                                }
+                            }
+                            .disabled(isReloading)
+
+                            Button("Eliminar token", role: .destructive) {
+                                AdminService.removeToken()
+                            }
+                        } else {
+                            // No token - show input
+                            SecureField("Admin Token", text: $tokenInput)
+                                .textContentType(.password)
+                                .autocorrectionDisabled()
+
+                            Button("Guardar token") {
+                                if AdminService.saveToken(tokenInput) {
+                                    tokenInput = ""
+                                }
+                            }
+                            .disabled(tokenInput.isEmpty)
+                        }
+                    } header: {
+                        HStack {
+                            Image(systemName: "hammer.fill")
+                            Text("Desarrollador")
+                        }
+                    } footer: {
+                        Text("Funciones de administracion del servidor.")
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Ajustes")
+            .alert("GTFS Reload", isPresented: $showReloadAlert) {
+                Button("OK") { }
+            } message: {
+                Text(reloadMessage ?? "")
+            }
         }
+    }
+
+    // MARK: - Developer Mode
+
+    private func handleVersionTap() {
+        versionTapCount += 1
+
+        if versionTapCount >= 7 && !developerModeEnabled {
+            developerModeEnabled = true
+            // Haptic feedback
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        }
+
+        // Reset counter after 3 seconds of inactivity
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if versionTapCount < 7 {
+                versionTapCount = 0
+            }
+        }
+    }
+
+    private func reloadGTFS() async {
+        isReloading = true
+        defer { isReloading = false }
+
+        let result = await AdminService.reloadGTFS()
+
+        switch result {
+        case .success(let message):
+            reloadMessage = "✅ \(message)"
+        case .unauthorized:
+            reloadMessage = "❌ Token inválido"
+        case .error(let error):
+            reloadMessage = "❌ Error: \(error)"
+        case .noToken:
+            reloadMessage = "❌ No hay token configurado"
+        }
+
+        showReloadAlert = true
     }
 
     private func clearCache() {
