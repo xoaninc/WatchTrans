@@ -15,6 +15,7 @@ struct RouteMapView: View {
     let dataService: DataService
     let shapePoints: [CLLocationCoordinate2D]?
     let isSuspended: Bool
+    let isShapeLoading: Bool
 
     @State private var mapPosition: MapCameraPosition
     @State private var selectedStop: Stop?
@@ -24,12 +25,13 @@ struct RouteMapView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
-    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, isSuspended: Bool = false) {
+    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
         self.line = line
         self.stops = stops
         self.dataService = dataService
         self.shapePoints = shapePoints
         self.isSuspended = isSuspended
+        self.isShapeLoading = isShapeLoading
 
         // Calculate region from shape points if available, otherwise from stops
         let coordinates: [CLLocationCoordinate2D]
@@ -47,10 +49,34 @@ struct RouteMapView: View {
             // Map header
             mapHeader
 
-            // Map content - use id to force refresh when shape data changes
-            mapContent
-                .frame(height: 280)
-                .id(shapePoints?.count ?? 0)
+            // Map content - show loading placeholder until shape loads
+            ZStack {
+                if isShapeLoading {
+                    // Loading placeholder with line color gradient
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [lineColor.opacity(0.1), lineColor.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                    .tint(lineColor)
+                                Text("Cargando recorrido...")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        )
+                } else {
+                    // Map content - use id to force refresh when shape data changes
+                    mapContent
+                        .id(shapePoints?.count ?? 0)
+                }
+            }
+            .frame(height: 280)
 
             // Selected stop info
             if let stop = selectedStop {

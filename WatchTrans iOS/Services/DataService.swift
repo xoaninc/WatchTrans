@@ -98,6 +98,12 @@ class DataService {
     /// Used to determine primary network without hardcoded ID lists
     private var networkTransportTypes: [String: String] = [:]
 
+    // MARK: - Route Shape Cache
+
+    /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
+    private var shapeCache: [String: [ShapePoint]] = [:]
+    private let shapeCacheLock = NSLock()
+
     // MARK: - Public Methods
 
     /// Initialize data - call this on app launch
@@ -916,12 +922,32 @@ class DataService {
 
     /// Fetch shape (polyline) for a route
     /// Returns array of shape points to draw the route on a map
+    /// Uses cache to avoid redundant API calls - shapes don't change during a session
     /// - Parameter maxGap: If provided, normalizes coordinates to have no gaps > maxGap meters
     func fetchRouteShape(routeId: String, maxGap: Int? = nil) async -> [ShapePoint] {
+        // Create cache key including maxGap to differentiate normalized vs raw shapes
+        let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
+
+        // Check cache first
+        shapeCacheLock.lock()
+        if let cached = shapeCache[cacheKey] {
+            shapeCacheLock.unlock()
+            DebugLog.log("🗺️ [DataService] ✅ Shape CACHE HIT for \(routeId) (\(cached.count) points)")
+            return cached
+        }
+        shapeCacheLock.unlock()
+
+        // Fetch from API
         do {
             let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId, maxGap: maxGap)
             let sorted = response.shape.sorted { $0.sequence < $1.sequence }
             DebugLog.log("🗺️ [DataService] Fetched \(sorted.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
+
+            // Store in cache
+            shapeCacheLock.lock()
+            shapeCache[cacheKey] = sorted
+            shapeCacheLock.unlock()
+
             // Debug: Show first 5 and last 2 coordinates to verify shape data
             if sorted.count >= 5 {
                 DebugLog.log("🗺️ [DataService]   First 5 coords:")

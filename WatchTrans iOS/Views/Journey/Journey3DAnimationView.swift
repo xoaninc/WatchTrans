@@ -56,13 +56,17 @@ struct Journey3DAnimationView: View {
                         .stroke(color.opacity(opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                 }
 
-                // Current position marker (uses animated position for smooth movement)
-                // Using anchorPoint to ensure consistent positioning
+                // Current position marker - using MapCircle instead of Annotation
+                // MapCircle is rendered as map overlay (less susceptible to frustum culling)
                 if let markerCoord = animatedMarkerPosition {
-                    Annotation("", coordinate: markerCoord, anchor: .center) {
-                        currentPositionMarker
-                    }
-                    .annotationTitles(.hidden)
+                    // Outer glow circle
+                    MapCircle(center: markerCoord, radius: 25)
+                        .foregroundStyle(currentMarkerColor.opacity(0.3))
+
+                    // Main marker circle
+                    MapCircle(center: markerCoord, radius: 12)
+                        .foregroundStyle(currentMarkerColor)
+                        .stroke(Color.white, lineWidth: 3)
                 }
 
                 // Stop markers

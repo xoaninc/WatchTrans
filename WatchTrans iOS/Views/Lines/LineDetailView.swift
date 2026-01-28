@@ -18,6 +18,7 @@ struct LineDetailView: View {
     @State private var operatingHoursResult: OperatingHoursResult?
     @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var isLoading = true
+    @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
 
     var lineColor: Color {
@@ -81,7 +82,8 @@ struct LineDetailView: View {
                         stops: stops,
                         dataService: dataService,
                         shapePoints: shapePoints.isEmpty ? nil : shapePoints,
-                        isSuspended: operatingHoursResult?.isSuspended ?? false
+                        isSuspended: operatingHoursResult?.isSuspended ?? false,
+                        isShapeLoading: isShapeLoading
                     )
                 }
 
@@ -130,6 +132,7 @@ struct LineDetailView: View {
 
     private func loadData() async {
         isLoading = true
+        isShapeLoading = true
 
         // Debug: Log line info and routeIds
         let routeIdForShape = line.routeIds.first
@@ -168,6 +171,7 @@ struct LineDetailView: View {
         alerts = await alertsTask
         operatingHoursResult = await hoursTask
         shapePoints = await shapeTask
+        isShapeLoading = false
 
         DebugLog.log("📋 [LineDetail] ✅ Loaded: \(stops.count) stops, \(shapePoints.count) shape coords, \(alerts.count) alerts")
         isLoading = false
