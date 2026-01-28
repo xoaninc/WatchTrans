@@ -51,6 +51,8 @@ struct JourneySegment: Identifiable {
     let intermediateStops: [Stop]   // Stops between origin and destination
     let durationMinutes: Int
     let coordinates: [CLLocationCoordinate2D]  // Shape points or stop coordinates
+    let departureTime: Date?        // When this segment departs
+    let arrivalTime: Date?          // When this segment arrives
 
     /// All stops including origin and destination
     var allStops: [Stop] {
@@ -60,6 +62,22 @@ struct JourneySegment: Identifiable {
     /// Number of stops (not counting origin)
     var stopCount: Int {
         intermediateStops.count + 1
+    }
+
+    /// Formatted departure time (HH:mm)
+    var departureTimeString: String? {
+        guard let time = departureTime else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: time)
+    }
+
+    /// Formatted arrival time (HH:mm)
+    var arrivalTimeString: String? {
+        guard let time = arrivalTime else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: time)
     }
 }
 

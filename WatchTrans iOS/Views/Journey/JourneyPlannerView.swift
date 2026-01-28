@@ -576,6 +576,18 @@ struct JourneyResultView: View {
                         isLast: false,  // Never show inline destination
                         dataService: dataService
                     )
+
+                    // Show wait time between segments
+                    if index < journey.segments.count - 1 {
+                        let nextSegment = journey.segments[index + 1]
+                        if let currentArrival = segment.arrivalTime,
+                           let nextDeparture = nextSegment.departureTime {
+                            let waitMinutes = Int(nextDeparture.timeIntervalSince(currentArrival) / 60)
+                            if waitMinutes > 1 {
+                                WaitTimeRowView(waitMinutes: waitMinutes)
+                            }
+                        }
+                    }
                 }
 
                 // Final destination row
@@ -629,11 +641,20 @@ struct SegmentRowView: View {
 
             // Content
             VStack(alignment: .leading, spacing: 6) {
-                // Origin
+                // Origin with departure time
                 HStack {
-                    Text(segment.origin.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(segment.origin.name)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+
+                        // Departure time
+                        if let time = segment.departureTimeString {
+                            Text("Sale \(time)")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        }
+                    }
 
                     Spacer()
 
@@ -651,7 +672,7 @@ struct SegmentRowView: View {
                     }
                 }
 
-                // Duration and stops info
+                // Duration, stops info, and arrival
                 HStack {
                     if segment.type == .transit {
                         Text("\(segment.stopCount) parada\(segment.stopCount > 1 ? "s" : "") · \(segment.durationMinutes) min")
@@ -660,6 +681,16 @@ struct SegmentRowView: View {
                     } else {
                         Text("Andando · \(segment.durationMinutes) min")
                             .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    // Arrival time
+                    if let time = segment.arrivalTimeString {
+                        Text("→ \(time)")
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -690,6 +721,46 @@ struct SegmentRowView: View {
 
     private var iconColor: Color {
         segment.type == .walking ? .primary : .white
+    }
+}
+
+// MARK: - Wait Time Row View
+
+struct WaitTimeRowView: View {
+    let waitMinutes: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            // Timeline continuation
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.orange.opacity(0.3))
+                    .frame(width: 3, height: 8)
+
+                // Wait icon
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.15))
+                        .frame(width: 28, height: 28)
+
+                    Image(systemName: "clock")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.orange)
+                }
+
+                Rectangle()
+                    .fill(Color.orange.opacity(0.3))
+                    .frame(width: 3, height: 8)
+            }
+
+            // Wait info
+            Text("Espera \(waitMinutes) min")
+                .font(.caption)
+                .foregroundStyle(.orange)
+
+            Spacer()
+        }
+        .padding(.horizontal)
     }
 }
 

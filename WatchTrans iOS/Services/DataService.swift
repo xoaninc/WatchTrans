@@ -1043,6 +1043,11 @@ class DataService {
             let segmentType: SegmentType = apiSegment.type == "walking" ? .walking : .transit
             let transportMode = TransportMode(rawValue: apiSegment.transportMode) ?? .metro
 
+            // Parse departure and arrival times
+            let isoFormatter = ISO8601DateFormatter()
+            let departureTime = apiSegment.departure.flatMap { isoFormatter.date(from: $0) }
+            let arrivalTime = apiSegment.arrival.flatMap { isoFormatter.date(from: $0) }
+
             return JourneySegment(
                 type: segmentType,
                 transportMode: transportMode,
@@ -1052,7 +1057,9 @@ class DataService {
                 destination: segmentDestination,
                 intermediateStops: intermediateStops,
                 durationMinutes: apiSegment.durationMinutes,
-                coordinates: coordinates
+                coordinates: coordinates,
+                departureTime: departureTime,
+                arrivalTime: arrivalTime
             )
         }
 
