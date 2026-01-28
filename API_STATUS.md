@@ -46,6 +46,23 @@
 | `/realtime/alerts` | GET | ✅ | Alertas activas |
 | `/realtime/stops/{stop_id}/alerts` | GET | ✅ | Alertas de una parada |
 
+### Admin (Requiere Autenticación)
+| Endpoint | Método | Estado | Descripción |
+|----------|--------|--------|-------------|
+| `/admin/reload-gtfs` | POST | 🔒 | Recargar datos GTFS en el servidor |
+
+**Base URL Admin:** `https://juanmacias.com`
+
+**Header requerido:** `X-Admin-Token: <token_secreto>`
+
+**Respuestas:**
+| Código | Descripción |
+|--------|-------------|
+| 200 | `{"status": "reload_initiated", "message": "..."}` |
+| 401 | `{"detail": "Unauthorized: Invalid or missing X-Admin-Token"}` |
+
+> ⚠️ El token NO se incluye en el repositorio. Contactar al administrador.
+
 ---
 
 ## Estado de Shapes por Red
@@ -173,6 +190,13 @@ MapCamera update - Actualiza marcador y cámara
 ---
 
 ## Changelog
+
+### 28 Enero 2026
+- **Modo Desarrollador** añadido en Settings (tap versión 7x)
+- **Admin Token** almacenado en Keychain (seguro)
+- **GTFS Reload** función para recargar datos del servidor
+- **Siri Shortcut** para planificar rutas con RAPTOR
+- **RouteAlertsView** muestra alertas de servicio en JourneyPlannerView
 
 ### 27 Enero 2026
 - **Route Planner RAPTOR** desplegado y funcionando

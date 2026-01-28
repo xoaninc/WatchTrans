@@ -8,6 +8,9 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Modo Desarrollador oculto**: Tap 7x en version para activar
+- **KeychainService**: Almacenamiento seguro de tokens
+- **AdminService**: Funcion para recargar GTFS en servidor (POST /admin/reload-gtfs)
 - **Alertas de servicio en planificador de viajes**: RouteAlertsView muestra avisos de la API RAPTOR
 - **Siri Shortcut "Plan Route"**: "¿Como llego de X a Y?" usando RAPTOR con ?compact=true
 - Siri Shortcuts para "Proximo tren en [parada]"
