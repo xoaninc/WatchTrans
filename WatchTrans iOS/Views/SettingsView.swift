@@ -8,9 +8,18 @@
 import SwiftUI
 
 struct SettingsView: View {
+    let dataService: DataService
+
     @AppStorage("showDelayNotifications") private var showDelayNotifications = true
     @AppStorage("autoRefreshEnabled") private var autoRefreshEnabled = true
-    @AppStorage("preferredTransport") private var preferredTransport = "all"
+    @AppStorage("enabledTransportTypes") private var enabledTransportTypesData: Data = Data()
+
+    // Transport type filter
+    @State private var enabledTypes: Set<TransportType> = []
+
+    // Cache clearing state
+    @State private var isClearingCache = false
+    @State private var showCacheCleared = false
 
     // Developer mode state
     @State private var versionTapCount = 0
@@ -20,6 +29,17 @@ struct SettingsView: View {
     @State private var isReloading = false
     @State private var reloadMessage: String?
     @State private var showReloadAlert = false
+
+    // Developer password protection
+    @State private var showDevPasswordPrompt = false
+    @State private var devPasswordInput = ""
+    @State private var showWrongPasswordAlert = false
+
+    /// Available transport types based on current location's lines
+    private var availableTransportTypes: [TransportType] {
+        let types = Set(dataService.lines.map { $0.type })
+        return Array(types).sorted { $0.rawValue < $1.rawValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -50,27 +70,65 @@ struct SettingsView: View {
                 // Preferences section
                 Section {
                     Toggle("Auto-refrescar datos", isOn: $autoRefreshEnabled)
-
-                    Picker("Transporte preferido", selection: $preferredTransport) {
-                        Text("Todos").tag("all")
-                        Text("Cercanias").tag("cercanias")
-                        Text("Metro").tag("metro")
-                        Text("Tranvia").tag("tram")
-                    }
                 } header: {
                     Text("Preferencias")
                 }
 
+                // Transport type filter
+                if !availableTransportTypes.isEmpty {
+                    Section {
+                        ForEach(availableTransportTypes, id: \.self) { type in
+                            Toggle(isOn: Binding(
+                                get: { enabledTypes.contains(type) },
+                                set: { isEnabled in
+                                    if isEnabled {
+                                        enabledTypes.insert(type)
+                                    } else {
+                                        enabledTypes.remove(type)
+                                    }
+                                    saveEnabledTypes()
+                                }
+                            )) {
+                                HStack {
+                                    Image(systemName: iconForTransportType(type))
+                                        .foregroundStyle(colorForTransportType(type))
+                                    Text(type.rawValue)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Tipos de Transporte")
+                    } footer: {
+                        Text("Filtra las lineas que se muestran. Sin seleccion = todas.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 // Data section
                 Section {
-                    Button("Limpiar cache") {
+                    Button {
                         clearCache()
+                    } label: {
+                        HStack {
+                            Text(showCacheCleared ? "Cache limpiada" : "Limpiar cache")
+                            Spacer()
+                            if isClearingCache {
+                                ProgressView()
+                            } else if showCacheCleared {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                            }
+                        }
                     }
-                    .foregroundStyle(.red)
+                    .foregroundStyle(showCacheCleared ? .green : .red)
+                    .disabled(isClearingCache)
                 } header: {
                     Text("Datos")
                 } footer: {
-                    Text("Limpia los datos almacenados localmente. Los favoritos no se eliminaran.")
+                    Text("Borra llegadas, horarios offline e itinerarios. Los favoritos no se eliminan.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Links section
@@ -224,6 +282,72 @@ struct SettingsView: View {
             } message: {
                 Text(reloadMessage ?? "")
             }
+            .alert("Modo Desarrollador", isPresented: $showDevPasswordPrompt) {
+                SecureField("Contraseña", text: $devPasswordInput)
+                Button("Cancelar", role: .cancel) {
+                    devPasswordInput = ""
+                }
+                Button("Acceder") {
+                    verifyDeveloperPassword()
+                }
+            } message: {
+                Text("Introduce la contraseña de desarrollador")
+            }
+            .alert("Error", isPresented: $showWrongPasswordAlert) {
+                Button("OK") { }
+            } message: {
+                Text("Contraseña incorrecta")
+            }
+            .onAppear {
+                loadEnabledTypes()
+            }
+        }
+    }
+
+    // MARK: - Transport Type Helpers
+
+    private func iconForTransportType(_ type: TransportType) -> String {
+        switch type {
+        case .metro:
+            return "tram.tunnel.fill"
+        case .metroLigero:
+            return "tram.fill"
+        case .cercanias:
+            return "tram.fill"
+        case .tram:
+            return "tram"
+        case .fgc:
+            return "tram.fill"
+        }
+    }
+
+    private func colorForTransportType(_ type: TransportType) -> Color {
+        switch type {
+        case .metro:
+            return .red
+        case .metroLigero:
+            return .blue
+        case .cercanias:
+            return .purple
+        case .tram:
+            return .green
+        case .fgc:
+            return .orange
+        }
+    }
+
+    private func saveEnabledTypes() {
+        if let data = try? JSONEncoder().encode(Array(enabledTypes)) {
+            enabledTransportTypesData = data
+        }
+    }
+
+    private func loadEnabledTypes() {
+        if let types = try? JSONDecoder().decode([TransportType].self, from: enabledTransportTypesData) {
+            enabledTypes = Set(types)
+        } else {
+            // Default: all types enabled (empty set means show all)
+            enabledTypes = []
         }
     }
 
@@ -233,10 +357,9 @@ struct SettingsView: View {
         versionTapCount += 1
 
         if versionTapCount >= 7 && !developerModeEnabled {
-            developerModeEnabled = true
-            // Haptic feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
+            // Show password prompt instead of directly enabling
+            showDevPasswordPrompt = true
+            versionTapCount = 0
         }
 
         // Reset counter after 3 seconds of inactivity
@@ -244,6 +367,22 @@ struct SettingsView: View {
             if versionTapCount < 7 {
                 versionTapCount = 0
             }
+        }
+    }
+
+    private func verifyDeveloperPassword() {
+        if devPasswordInput == Secrets.developerPassword {
+            developerModeEnabled = true
+            devPasswordInput = ""
+            // Haptic feedback
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        } else {
+            showWrongPasswordAlert = true
+            devPasswordInput = ""
+            // Error haptic
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
         }
     }
 
@@ -268,17 +407,45 @@ struct SettingsView: View {
     }
 
     private func clearCache() {
-        // Clear arrival cache
-        URLCache.shared.removeAllCachedResponses()
+        isClearingCache = true
+        showCacheCleared = false
 
-        // Clear UserDefaults cache keys (but not favorites)
-        let keysToRemove = ["lastLocationTimestamp", "lastLatitude", "lastLongitude"]
-        for key in keysToRemove {
-            UserDefaults.standard.removeObject(forKey: key)
+        Task {
+            // 1. Clear HTTP cache
+            URLCache.shared.removeAllCachedResponses()
+
+            // 2. Clear arrival cache in DataService
+            dataService.clearArrivalCache()
+
+            // 3. Clear offline schedules
+            await OfflineScheduleService.shared.clearCache()
+
+            // 4. Clear offline line itineraries
+            await OfflineLineService.shared.clearAllCache()
+
+            // 5. Clear UserDefaults cache keys (but not favorites or settings)
+            let keysToRemove = ["lastLocationTimestamp", "lastLatitude", "lastLongitude"]
+            for key in keysToRemove {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+
+            // Update UI and haptic feedback
+            await MainActor.run {
+                isClearingCache = false
+                showCacheCleared = true
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+            }
+
+            // Reset "Cache limpiada" text after 2 seconds
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                showCacheCleared = false
+            }
         }
     }
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(dataService: DataService())
 }

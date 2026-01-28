@@ -20,6 +20,7 @@ struct LineDetailView: View {
     @State private var isLoading = true
     @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
+    @State private var isOfflineData = false
 
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
@@ -28,6 +29,20 @@ struct LineDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // Offline banner
+                if isOfflineData {
+                    HStack {
+                        Image(systemName: "icloud.slash")
+                        Text("Datos en cache - Sin conexion")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.gray)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(8)
+                }
+
                 // Line header
                 LineHeaderView(line: line, stopsCount: stops.count, isLoading: isLoading)
 
@@ -113,6 +128,7 @@ struct LineDetailView: View {
                                     lineColor: lineColor,
                                     isFirst: index == 0,
                                     isLast: index == stops.count - 1,
+                                    isCircular: line.isCircular,
                                     dataService: dataService
                                 )
                             }
@@ -133,13 +149,25 @@ struct LineDetailView: View {
     private func loadData() async {
         isLoading = true
         isShapeLoading = true
+        isOfflineData = false
 
-        // Debug: Log line info and routeIds
         let routeIdForShape = line.routeIds.first
         DebugLog.log("📋 [LineDetail] Loading line: \(line.name) (\(line.id))")
-        DebugLog.log("📋 [LineDetail]   routeIds: \(line.routeIds)")
-        DebugLog.log("📋 [LineDetail]   Using routeId for shape: \(routeIdForShape ?? "NONE")")
 
+        // Check if offline - try cached data first
+        if !NetworkMonitor.shared.isConnected {
+            if let routeId = line.routeIds.first,
+               let cachedStops = await OfflineLineService.shared.getCachedStops(for: routeId) {
+                stops = cachedStops
+                isOfflineData = true
+                isLoading = false
+                isShapeLoading = false
+                DebugLog.log("📋 [LineDetail] 📦 Using \(stops.count) cached stops (offline)")
+                return
+            }
+        }
+
+        // Online: fetch from API
         async let stopsTask: [Stop] = {
             if let routeId = line.routeIds.first {
                 return await dataService.fetchStopsForRoute(routeId: routeId)
@@ -156,9 +184,6 @@ struct LineDetailView: View {
             return nil
         }()
 
-        // Fetch shape points for the route
-        // Use maxGap=100 to normalize/interpolate sparse points for smoother curves
-        // (especially important for Cercanías which have sparser shape data)
         async let shapeTask: [CLLocationCoordinate2D] = {
             if let routeId = line.routeIds.first {
                 let points = await dataService.fetchRouteShape(routeId: routeId, maxGap: 100)
@@ -172,6 +197,14 @@ struct LineDetailView: View {
         operatingHoursResult = await hoursTask
         shapePoints = await shapeTask
         isShapeLoading = false
+
+        // If online fetch failed, try cached data
+        if stops.isEmpty, let routeId = line.routeIds.first,
+           let cachedStops = await OfflineLineService.shared.getCachedStops(for: routeId) {
+            stops = cachedStops
+            isOfflineData = true
+            DebugLog.log("📋 [LineDetail] 📦 API failed, using \(stops.count) cached stops")
+        }
 
         DebugLog.log("📋 [LineDetail] ✅ Loaded: \(stops.count) stops, \(shapePoints.count) shape coords, \(alerts.count) alerts")
         isLoading = false
@@ -361,6 +394,7 @@ struct LineStopRowView: View {
     let lineColor: Color
     let isFirst: Bool
     let isLast: Bool
+    let isCircular: Bool  // For circular lines (L6, L12)
     let dataService: DataService
 
     // Default colors for connection badges
@@ -432,11 +466,17 @@ struct LineStopRowView: View {
         !connectionBadges.isEmpty
     }
 
+    // For circular lines, don't highlight first/last as terminals
+    private var isTerminal: Bool {
+        !isCircular && (isFirst || isLast)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Vertical line with stop circle
             VStack(spacing: 0) {
-                if !isFirst {
+                // For circular lines, show continuous line (no gap at start)
+                if !isFirst || isCircular {
                     Rectangle()
                         .fill(lineColor)
                         .frame(width: 3, height: 20)
@@ -453,7 +493,8 @@ struct LineStopRowView: View {
                             .stroke(Color(.systemBackground), lineWidth: 2)
                     )
 
-                if !isLast {
+                // For circular lines, show continuous line (no gap at end)
+                if !isLast || isCircular {
                     Rectangle()
                         .fill(lineColor)
                         .frame(width: 3, height: 20)
@@ -466,8 +507,8 @@ struct LineStopRowView: View {
             // Stop info
             VStack(alignment: .leading, spacing: 4) {
                 Text(stop.name)
-                    .font(isFirst || isLast ? .headline : .body)
-                    .fontWeight(isFirst || isLast ? .bold : .regular)
+                    .font(isTerminal ? .headline : .body)
+                    .fontWeight(isTerminal ? .bold : .regular)
 
                 // Show connection badges (Metro, Cercanías, Tranvía, ML)
                 if hasConnections {
@@ -508,7 +549,8 @@ struct LineStopRowView: View {
                 type: .cercanias,
                 colorHex: "#813380",
                 nucleo: "madrid",
-                routeIds: ["RENFE_C3_34"]
+                routeIds: ["RENFE_C3_34"],
+                isCircular: false
             ),
             dataService: DataService(),
             locationService: LocationService()

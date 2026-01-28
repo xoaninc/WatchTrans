@@ -133,6 +133,7 @@ struct RouteResponse: Codable, Identifiable {
     let agencyId: String
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
+    let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
 
     enum CodingKeys: String, CodingKey {
         case id, color, description
@@ -142,6 +143,7 @@ struct RouteResponse: Codable, Identifiable {
         case textColor = "text_color"
         case agencyId = "agency_id"
         case networkId = "network_id"
+        case isCircular = "is_circular"
     }
 }
 

@@ -60,10 +60,29 @@ class DataService {
     var isLoading = false
     var error: Error?
 
+    /// Get filtered lines based on user's transport type preferences
+    var filteredLines: [Line] {
+        let enabledTypes = Self.getEnabledTransportTypes()
+        // If empty set, show all lines
+        if enabledTypes.isEmpty {
+            return lines
+        }
+        return lines.filter { enabledTypes.contains($0.type) }
+    }
+
+    /// Get enabled transport types from UserDefaults
+    static func getEnabledTransportTypes() -> Set<TransportType> {
+        guard let data = UserDefaults.standard.data(forKey: "enabledTransportTypes"),
+              let types = try? JSONDecoder().decode([TransportType].self, from: data) else {
+            return [] // Empty means all enabled
+        }
+        return Set(types)
+    }
+
     // MARK: - GTFS-Realtime Services
 
     private let networkService: NetworkService
-    private let gtfsRealtimeService: GTFSRealtimeService
+    let gtfsRealtimeService: GTFSRealtimeService  // Internal for OfflineScheduleService access
     @ObservationIgnored private lazy var gtfsMapper = GTFSRealtimeMapper(dataService: self)
 
     // MARK: - Initialization
@@ -102,7 +121,7 @@ class DataService {
 
     /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
     private var shapeCache: [String: [ShapePoint]] = [:]
-    private let shapeCacheLock = NSLock()
+    private let shapeCacheQueue = DispatchQueue(label: "com.watchtrans.shapecache")
 
     // MARK: - Public Methods
 
@@ -359,7 +378,7 @@ class DataService {
         DebugLog.log("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
 
         // Group routes by short name to create lines, collecting all route IDs
-        var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
+        var lineDict: [String: (line: Line, routeIds: [String], longName: String, isCircular: Bool)] = [:]
 
         // Default color
         let defaultColor = "#75B6E0"
@@ -371,6 +390,10 @@ class DataService {
 
             if var existing = lineDict[lineId] {
                 existing.routeIds.append(route.id)
+                // If any route is circular, mark the line as circular
+                if route.isCircular == true {
+                    existing.isCircular = true
+                }
                 lineDict[lineId] = existing
             } else {
                 let color = route.color ?? defaultColor
@@ -390,9 +413,10 @@ class DataService {
                     type: transportType,
                     colorHex: color,
                     nucleo: provinceName,
-                    routeIds: [route.id]
+                    routeIds: [route.id],
+                    isCircular: route.isCircular ?? false
                 )
-                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName)
+                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName, isCircular: route.isCircular ?? false)
             }
         }
 
@@ -405,7 +429,8 @@ class DataService {
                 type: value.line.type,
                 colorHex: value.line.colorHex,
                 nucleo: value.line.nucleo,
-                routeIds: value.routeIds
+                routeIds: value.routeIds,
+                isCircular: value.isCircular
             )
         }
 
@@ -624,6 +649,7 @@ class DataService {
     }
 
     // Fetch arrivals for a specific stop using RenfeServer API
+    // Falls back to offline cached schedules when there's no network
     func fetchArrivals(for stopId: String) async -> [Arrival] {
         DebugLog.log("🔍 [DataService] Fetching arrivals for stop: \(stopId)")
 
@@ -633,7 +659,17 @@ class DataService {
             return cached
         }
 
-        // 2. Fetch from RenfeServer API (redcercanias.com)
+        // 2. Check if we're offline - use offline schedule cache
+        if !NetworkMonitor.shared.isConnected {
+            DebugLog.log("📴 [DataService] Offline - checking offline schedule cache...")
+            if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
+                let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
+                DebugLog.log("📦 [DataService] Returning \(arrivals.count) offline arrivals")
+                return arrivals
+            }
+        }
+
+        // 3. Fetch from RenfeServer API (redcercanias.com)
         do {
             DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
             let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 10)
@@ -642,13 +678,24 @@ class DataService {
             let arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
             DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
 
-            // 3. Cache results
+            // 4. Cache results
             cacheArrivals(arrivals, for: stopId)
+
+            // 5. Also cache for offline use (if this is a favorite stop)
+            let stopName = getStop(by: stopId)?.name ?? stopId
+            await OfflineScheduleService.shared.cacheSchedules(for: stopId, stopName: stopName, departures: departures)
 
             return arrivals
         } catch {
-            // 4. Handle errors gracefully
+            // 6. Handle errors gracefully
             DebugLog.log("⚠️ [DataService] RenfeServer API Error: \(error)")
+
+            // Try offline schedule cache as fallback
+            if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
+                let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
+                DebugLog.log("📦 [DataService] API failed, returning \(arrivals.count) offline arrivals")
+                return arrivals
+            }
 
             // Try stale cache as fallback
             if let stale = getStaleCachedArrivals(for: stopId) {
@@ -660,6 +707,59 @@ class DataService {
             DebugLog.log("ℹ️ [DataService] No data available for stop \(stopId)")
             self.error = error
             return []
+        }
+    }
+
+    /// Map offline departures to Arrival model
+    private func mapOfflineDeparturesToArrivals(_ departures: [OfflineDeparture], stopId: String) -> [Arrival] {
+        let now = Date()
+        return departures.map { dep in
+            let expectedTime = now.addingTimeInterval(TimeInterval(dep.minutesUntil * 60))
+            return Arrival(
+                id: UUID().uuidString,
+                lineId: dep.routeId,
+                lineName: dep.routeShortName,
+                destination: dep.headsign,
+                scheduledTime: expectedTime,  // For offline, scheduled = expected
+                expectedTime: expectedTime,
+                platform: nil,
+                platformEstimated: false,
+                trainCurrentStop: nil,
+                trainProgressPercent: nil,
+                trainLatitude: nil,
+                trainLongitude: nil,
+                trainStatus: nil,
+                trainEstimated: nil,
+                delaySeconds: nil,
+                routeColor: dep.routeColor,
+                routeId: dep.routeId,
+                frequencyBased: false,
+                headwayMinutes: nil,
+                isOfflineData: true,  // Mark as offline data
+                occupancyStatus: nil,
+                occupancyPercentage: nil
+            )
+        }
+    }
+
+    /// Cache offline schedules for all favorite stops (call when online)
+    func cacheOfflineSchedulesForFavorites() async {
+        guard NetworkMonitor.shared.isConnected else {
+            DebugLog.log("📴 [DataService] Cannot cache offline - no network")
+            return
+        }
+
+        let favorites = SharedStorage.shared.getFavorites().map { $0.stopId }
+        DebugLog.log("📦 [DataService] Caching offline schedules for \(favorites.count) favorites")
+
+        for stopId in favorites {
+            do {
+                let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 50)
+                let stopName = getStop(by: stopId)?.name ?? stopId
+                await OfflineScheduleService.shared.cacheSchedules(for: stopId, stopName: stopName, departures: departures)
+            } catch {
+                DebugLog.log("⚠️ [DataService] Failed to cache \(stopId): \(error.localizedDescription)")
+            }
         }
     }
 
@@ -855,6 +955,12 @@ class DataService {
 
     /// Fetch alerts for a specific stop (uses direct endpoint for efficiency)
     func fetchAlertsForStop(stopId: String) async -> [AlertResponse] {
+        // Skip network call if offline
+        guard NetworkMonitor.shared.isConnected else {
+            DebugLog.log("📴 [DataService] Offline - skipping alerts fetch")
+            return []
+        }
+
         do {
             // Use direct endpoint instead of fetching all + filtering
             let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
@@ -907,10 +1013,19 @@ class DataService {
 
     /// Fetch walking correspondences from a station
     /// Returns nearby stations connected by walking passages (e.g., underground tunnels)
-    func fetchCorrespondences(stopId: String) async -> [CorrespondenceInfo] {
+    /// - Parameters:
+    ///   - stopId: The station ID
+    ///   - includeShape: If true, includes walking route coordinates (for map display)
+    func fetchCorrespondences(stopId: String, includeShape: Bool = false) async -> [CorrespondenceInfo] {
+        // Skip network call if offline
+        guard NetworkMonitor.shared.isConnected else {
+            DebugLog.log("📴 [DataService] Offline - skipping correspondences fetch")
+            return []
+        }
+
         do {
-            let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId)
-            DebugLog.log("🚶 [DataService] Fetched \(response.correspondences.count) correspondences for \(stopId)")
+            let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId, includeShape: includeShape)
+            DebugLog.log("🚶 [DataService] Fetched \(response.correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
             return response.correspondences
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch correspondences for \(stopId): \(error)")
@@ -928,14 +1043,12 @@ class DataService {
         // Create cache key including maxGap to differentiate normalized vs raw shapes
         let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
 
-        // Check cache first
-        shapeCacheLock.lock()
-        if let cached = shapeCache[cacheKey] {
-            shapeCacheLock.unlock()
+        // Check cache first (thread-safe)
+        let cached: [ShapePoint]? = shapeCacheQueue.sync { shapeCache[cacheKey] }
+        if let cached = cached {
             DebugLog.log("🗺️ [DataService] ✅ Shape CACHE HIT for \(routeId) (\(cached.count) points)")
             return cached
         }
-        shapeCacheLock.unlock()
 
         // Fetch from API
         do {
@@ -943,10 +1056,8 @@ class DataService {
             let sorted = response.shape.sorted { $0.sequence < $1.sequence }
             DebugLog.log("🗺️ [DataService] Fetched \(sorted.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
 
-            // Store in cache
-            shapeCacheLock.lock()
-            shapeCache[cacheKey] = sorted
-            shapeCacheLock.unlock()
+            // Store in cache (thread-safe)
+            shapeCacheQueue.sync { shapeCache[cacheKey] = sorted }
 
             // Debug: Show first 5 and last 2 coordinates to verify shape data
             if sorted.count >= 5 {
@@ -1222,7 +1333,50 @@ class DataService {
                     }
                 }
 
-                // Keep original segment (walking or no shape available)
+                // For walking segments (transfers/correspondences), try to get walking shape
+                if segment.type == .walking {
+                    // Fetch correspondences from origin with shapes
+                    let correspondences = await fetchCorrespondences(stopId: segment.origin.id, includeShape: true)
+
+                    // Find correspondence that matches the destination
+                    // Match by stop ID or by name (some stops have different IDs across systems)
+                    let matchingCorrespondence = correspondences.first { corr in
+                        corr.toStopId == segment.destination.id ||
+                        corr.toStopName.lowercased() == segment.destination.name.lowercased()
+                    }
+
+                    if let correspondence = matchingCorrespondence,
+                       let walkingShape = correspondence.walkingShape,
+                       walkingShape.count > 2 {
+                        // Convert to CLLocationCoordinate2D
+                        let walkingCoords = walkingShape.map {
+                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)
+                        }
+
+                        DebugLog.log("🚶 [DataService] Enriched walking segment: \(segment.origin.name) → \(segment.destination.name): \(segment.coordinates.count) → \(walkingCoords.count) coords")
+
+                        // Create new segment with walking shape coordinates
+                        let enrichedSegment = JourneySegment(
+                            type: segment.type,
+                            transportMode: segment.transportMode,
+                            lineName: segment.lineName,
+                            lineColor: segment.lineColor,
+                            origin: segment.origin,
+                            destination: segment.destination,
+                            intermediateStops: segment.intermediateStops,
+                            durationMinutes: segment.durationMinutes,
+                            coordinates: walkingCoords,
+                            departureTime: segment.departureTime,
+                            arrivalTime: segment.arrivalTime
+                        )
+                        enrichedSegments.append(enrichedSegment)
+                        continue
+                    } else {
+                        DebugLog.log("🚶 [DataService] No walking shape for: \(segment.origin.name) → \(segment.destination.name)")
+                    }
+                }
+
+                // Keep original segment (no shape available)
                 enrichedSegments.append(segment)
             }
 

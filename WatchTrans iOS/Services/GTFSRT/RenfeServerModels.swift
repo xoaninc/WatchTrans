@@ -35,6 +35,11 @@ struct DepartureResponse: Codable, Identifiable {
     let frequencyBased: Bool?
     let headwaySecs: Int?
 
+    // Occupancy data (GTFS-RT standard)
+    let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
+    let occupancyPercentage: Int?   // 0-100 percentage
+    let occupancyPerCar: [Int]?     // Per-car occupancy percentages
+
     var id: String { tripId }
 
     /// Returns headway in minutes (for frequency-based services like Metro)
@@ -72,6 +77,9 @@ struct DepartureResponse: Codable, Identifiable {
         case trainPosition = "train_position"
         case frequencyBased = "frequency_based"
         case headwaySecs = "headway_secs"
+        case occupancyStatus = "occupancy_status"
+        case occupancyPercentage = "occupancy_percentage"
+        case occupancyPerCar = "occupancy_per_car"
     }
 }
 
@@ -133,6 +141,7 @@ struct RouteResponse: Codable, Identifiable {
     let agencyId: String
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
+    let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
 
     enum CodingKeys: String, CodingKey {
         case id, color, description
@@ -142,6 +151,7 @@ struct RouteResponse: Codable, Identifiable {
         case textColor = "text_color"
         case agencyId = "agency_id"
         case networkId = "network_id"
+        case isCircular = "is_circular"
     }
 }
 

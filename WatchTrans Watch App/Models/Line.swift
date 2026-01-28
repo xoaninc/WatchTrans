@@ -16,6 +16,7 @@ struct Line: Identifiable, Codable {
     let colorHex: String      // Store as hex string for Codable
     let nucleo: String        // Province/network name: "madrid", "sevilla", "barcelona", etc.
     let routeIds: [String]    // Actual API route IDs (e.g., ["RENFE_C1_34"])
+    let isCircular: Bool      // true for circular lines (L6, L12 MetroSur)
 
     // Computed property for SwiftUI Color (uses Color+Hex extension)
     var color: Color {

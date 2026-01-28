@@ -353,7 +353,7 @@ class DataService {
         DebugLog.log("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
 
         // Group routes by short name to create lines, collecting all route IDs
-        var lineDict: [String: (line: Line, routeIds: [String], longName: String)] = [:]
+        var lineDict: [String: (line: Line, routeIds: [String], longName: String, isCircular: Bool)] = [:]
 
         // Default color
         let defaultColor = "#75B6E0"
@@ -365,6 +365,10 @@ class DataService {
 
             if var existing = lineDict[lineId] {
                 existing.routeIds.append(route.id)
+                // If any route is circular, mark the line as circular
+                if route.isCircular == true {
+                    existing.isCircular = true
+                }
                 lineDict[lineId] = existing
             } else {
                 let color = route.color ?? defaultColor
@@ -384,9 +388,10 @@ class DataService {
                     type: transportType,
                     colorHex: color,
                     nucleo: provinceName,
-                    routeIds: [route.id]
+                    routeIds: [route.id],
+                    isCircular: route.isCircular ?? false
                 )
-                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName)
+                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName, isCircular: route.isCircular ?? false)
             }
         }
 
@@ -399,7 +404,8 @@ class DataService {
                 type: value.line.type,
                 colorHex: value.line.colorHex,
                 nucleo: value.line.nucleo,
-                routeIds: value.routeIds
+                routeIds: value.routeIds,
+                isCircular: value.isCircular
             )
         }
 

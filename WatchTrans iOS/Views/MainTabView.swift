@@ -13,6 +13,9 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
+    // User preferences
+    @AppStorage("autoRefreshEnabled") private var autoRefreshEnabled = true
+
     @State private var locationService = LocationService()
     @State private var dataService = DataService()
     @State private var favoritesManager: FavoritesManager?
@@ -68,9 +71,9 @@ struct MainTabView: View {
             .tag(3)
 
             // Tab 5: Settings/More
-            SettingsView()
+            SettingsView(dataService: dataService)
             .tabItem {
-                Label("Mas", systemImage: "ellipsis")
+                Label("Otros", systemImage: "ellipsis")
             }
             .tag(4)
         }
@@ -102,12 +105,28 @@ struct MainTabView: View {
                 break
             }
         }
+        .onChange(of: autoRefreshEnabled) { _, newValue in
+            if newValue {
+                DebugLog.log("📱 [iOS] Auto-refresh activado")
+                startAutoRefresh()
+            } else {
+                DebugLog.log("📱 [iOS] Auto-refresh desactivado")
+                stopAutoRefresh()
+            }
+        }
     }
 
     // MARK: - Auto Refresh
 
     private func startAutoRefresh() {
         stopAutoRefresh() // Cancel existing timer
+
+        // Only start if auto-refresh is enabled in settings
+        guard autoRefreshEnabled else {
+            DebugLog.log("📱 [iOS] Auto-refresh desactivado en ajustes")
+            return
+        }
+
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
                 // Clear arrival cache to force fresh data
@@ -222,6 +241,13 @@ struct MainTabView: View {
             let networkName = location.primaryNetworkName ?? location.provinceName
             SharedStorage.shared.saveNucleo(name: networkName, id: 0)
             DebugLog.log("📱 [iOS] Nucleo detectado: \(networkName)")
+        }
+
+        // Cache offline schedules for favorites (in background)
+        if NetworkMonitor.shared.isConnected {
+            Task {
+                await dataService.cacheOfflineSchedulesForFavorites()
+            }
         }
 
         DebugLog.log("📱 [iOS] ========== APP LISTA ==========")

@@ -154,13 +154,27 @@ struct RouteMapView: View {
                 }
             }
 
-            // Stop markers - small circles (all same color)
+            // Stop markers - interchange stations get white circle with black border
             ForEach(stops) { stop in
-                let isTerminal = stop.id == stops.first?.id || stop.id == stops.last?.id
+                // For circular lines, no terminal markers
+                let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
+                let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
-                    Circle()
-                        .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                        .frame(width: isTerminal ? 10 : 6, height: isTerminal ? 10 : 6)
+                    if hasCorrespondence {
+                        // Interchange: white circle with black border (like Metro Madrid map)
+                        Circle()
+                            .fill(.white)
+                            .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: isTerminal ? 2 : 1.5)
+                            )
+                    } else {
+                        // Regular stop: colored circle
+                        Circle()
+                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                            .frame(width: isTerminal ? 10 : 6, height: isTerminal ? 10 : 6)
+                    }
                 }
             }
         }
@@ -334,13 +348,27 @@ struct FullScreenMapView: View {
                 }
             }
 
-            // Stop markers - small circles (all same color)
+            // Stop markers - interchange stations get white circle with black border
             ForEach(stops) { stop in
-                let isTerminal = stop.id == stops.first?.id || stop.id == stops.last?.id
+                // For circular lines, no terminal markers
+                let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
+                let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
-                    Circle()
-                        .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                        .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
+                    if hasCorrespondence {
+                        // Interchange: white circle with black border (like Metro Madrid map)
+                        Circle()
+                            .fill(.white)
+                            .frame(width: isTerminal ? 14 : 10, height: isTerminal ? 14 : 10)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: isTerminal ? 2.5 : 2)
+                            )
+                    } else {
+                        // Regular stop: colored circle
+                        Circle()
+                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                            .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
+                    }
                 }
             }
         }
@@ -367,7 +395,8 @@ struct FullScreenMapView: View {
             type: .metro,
             colorHex: "#38A3DC",
             nucleo: "madrid",
-            routeIds: ["METRO_1"]
+            routeIds: ["METRO_1"],
+            isCircular: false
         ),
         stops: [
             Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corMl: nil, corCercanias: nil, corTranvia: nil),

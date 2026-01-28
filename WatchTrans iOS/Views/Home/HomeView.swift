@@ -81,8 +81,7 @@ struct HomeView: View {
             }
             .navigationTitle("WatchTrans")
             .refreshable {
-                dataService.clearArrivalCache()
-                localRefreshTrigger = UUID()
+                await refreshData()
             }
             .alert("Favoritos", isPresented: $showFavoriteAlert) {
                 Button("OK", role: .cancel) { }
@@ -90,6 +89,25 @@ struct HomeView: View {
                 Text(favoriteAlertMessage)
             }
         }
+    }
+
+    // MARK: - Pull to Refresh
+
+    /// Refresh data from server
+    private func refreshData() async {
+        // Clear cache to force fresh data
+        dataService.clearArrivalCache()
+
+        // Fetch new data from server
+        if let location = locationService.currentLocation {
+            await dataService.fetchTransportData(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude
+            )
+        }
+
+        // Trigger UI update
+        localRefreshTrigger = UUID()
     }
 }
 
@@ -119,7 +137,7 @@ struct OfflineBannerView: View {
         HStack {
             Image(systemName: "wifi.slash")
                 .foregroundStyle(.orange)
-            Text("Sin conexion - Mostrando datos en cache")
+            Text("Sin conexion - Modo offline")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

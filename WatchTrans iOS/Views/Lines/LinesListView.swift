@@ -94,45 +94,45 @@ struct LinesListView: View {
     // Get Cercanias/Rodalies lines for the current location
     var cercaniasLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.lines.filter { $0.type == .cercanias })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .cercanias })
         }
-        return sortedNumerically(dataService.lines
+        return sortedNumerically(dataService.filteredLines
             .filter { $0.type == .cercanias && $0.nucleo.lowercased() == province })
     }
 
     // Get Metro lines for the current location
     var metroLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.lines.filter { $0.type == .metro })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .metro })
         }
-        return sortedNumerically(dataService.lines
+        return sortedNumerically(dataService.filteredLines
             .filter { $0.type == .metro && $0.nucleo.lowercased() == province })
     }
 
     // Get Metro Ligero lines for the current location
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.lines.filter { $0.type == .metroLigero })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .metroLigero })
         }
-        return sortedNumerically(dataService.lines
+        return sortedNumerically(dataService.filteredLines
             .filter { $0.type == .metroLigero && $0.nucleo.lowercased() == province })
     }
 
     // Get Tram lines for the current location
     var tramLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.lines.filter { $0.type == .tram })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .tram })
         }
-        return sortedNumerically(dataService.lines
+        return sortedNumerically(dataService.filteredLines
             .filter { $0.type == .tram && $0.nucleo.lowercased() == province })
     }
 
     // Get FGC lines for Barcelona
     var fgcLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.lines.filter { $0.type == .fgc })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .fgc })
         }
-        return sortedNumerically(dataService.lines
+        return sortedNumerically(dataService.filteredLines
             .filter { $0.type == .fgc && $0.nucleo.lowercased() == province })
     }
 
@@ -270,7 +270,23 @@ struct LinesListView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle(dataService.currentLocation?.provinceName ?? "Lineas")
+            .task {
+                // Cache line itineraries for offline use when in a province
+                await cacheItinerariesIfNeeded()
+            }
         }
+    }
+
+    /// Cache all line itineraries for the current province (for offline use)
+    private func cacheItinerariesIfNeeded() async {
+        guard NetworkMonitor.shared.isConnected else { return }
+        guard let province = dataService.currentLocation?.provinceName else { return }
+
+        await OfflineLineService.shared.cacheItinerariesForProvince(
+            province: province,
+            lines: dataService.filteredLines,
+            dataService: dataService
+        )
     }
 }
 

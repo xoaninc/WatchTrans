@@ -45,3 +45,4 @@ playground.xcworkspace
 # Secrets
 *.xcconfig
 Secrets/
+**/Secrets.swift
