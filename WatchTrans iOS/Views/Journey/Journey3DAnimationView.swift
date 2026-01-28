@@ -16,26 +16,18 @@ struct Journey3DAnimationView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var mapPosition: MapCameraPosition = .automatic
     @State private var isPlaying = false
     @State private var isPaused = false
     @State private var currentSegmentIndex = 0
-    @State private var currentPointIndex = 0
+    @State private var currentProgress: Double = 0  // 0.0 to 1.0 for entire journey
     @State private var showControls = true
-    @State private var animatedMarkerPosition: CLLocationCoordinate2D?
 
     // CADisplayLink animation controller
     @State private var animationController: AnimationController?
 
     // Animation configuration
-    // Base speed - start conservative, can increase with speed button
     private let baseSpeedKmPerSec: Double = 0.15
-    @State private var speedMultiplier: Double = 1.0  // 1.0 = normal, 0.5 = slow
-
-    // Camera transition state
-    @State private var currentCameraAltitude: Double = 3000
-    @State private var currentCameraPitch: Double = 55
-    @State private var currentCameraHeading: Double = 0
+    @State private var speedMultiplier: Double = 1.0
 
     var currentSegment: JourneySegment? {
         guard currentSegmentIndex < journey.segments.count else { return nil }
@@ -44,53 +36,13 @@ struct Journey3DAnimationView: View {
 
     var body: some View {
         ZStack {
-            // 3D Map
-            Map(position: $mapPosition) {
-                // Route polylines - all segments visible from start
-                // Current segment is highlighted with thicker line
-                ForEach(Array(journey.segments.enumerated()), id: \.element.id) { index, segment in
-                    let color = segmentColor(segment)
-                    let lineWidth: CGFloat = index == currentSegmentIndex ? 6 : 4
-                    let opacity: Double = index < currentSegmentIndex ? 0.6 : 1.0  // Dim completed segments
-                    MapPolyline(coordinates: segment.coordinates)
-                        .stroke(color.opacity(opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-                }
-
-                // Current position marker - using MapCircle instead of Annotation
-                // MapCircle is rendered as map overlay (less susceptible to frustum culling)
-                if let markerCoord = animatedMarkerPosition {
-                    // Outer glow circle
-                    MapCircle(center: markerCoord, radius: 25)
-                        .foregroundStyle(currentMarkerColor.opacity(0.3))
-
-                    // Main marker circle
-                    MapCircle(center: markerCoord, radius: 12)
-                        .foregroundStyle(currentMarkerColor)
-                        .stroke(Color.white, lineWidth: 3)
-                }
-
-                // Stop markers
-                ForEach(journey.segments) { segment in
-                    // Origin marker
-                    Annotation(segment.origin.name, coordinate: CLLocationCoordinate2D(
-                        latitude: segment.origin.latitude,
-                        longitude: segment.origin.longitude
-                    )) {
-                        stopMarker(for: segment.origin, isOrigin: segment.id == journey.segments.first?.id)
-                    }
-                }
-
-                // Final destination marker
-                if let lastSegment = journey.segments.last {
-                    Annotation(lastSegment.destination.name, coordinate: CLLocationCoordinate2D(
-                        latitude: lastSegment.destination.latitude,
-                        longitude: lastSegment.destination.longitude
-                    )) {
-                        destinationMarker
-                    }
-                }
-            }
-            .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+            // 3D Map - Native MKMapView for smooth 60fps animation
+            NativeAnimatedMapView(
+                segments: journey.segments,
+                currentProgress: $currentProgress,
+                currentSegmentIndex: $currentSegmentIndex,
+                isPlaying: isPlaying
+            )
             .ignoresSafeArea()
 
             // Overlay UI
@@ -124,9 +76,6 @@ struct Journey3DAnimationView: View {
             withAnimation {
                 showControls.toggle()
             }
-        }
-        .onAppear {
-            setupInitialCamera()
         }
         .onDisappear {
             animationController?.stop()
@@ -404,166 +353,75 @@ struct Journey3DAnimationView: View {
     }
 
     private func progressOffset(totalWidth: CGFloat) -> CGFloat {
-        let totalPoints = journey.segments.reduce(0) { $0 + $1.coordinates.count }
-        var completedPoints = 0
-        for i in 0..<currentSegmentIndex {
-            completedPoints += journey.segments[i].coordinates.count
-        }
-        completedPoints += currentPointIndex
-
-        guard totalPoints > 0 else { return 0 }
-        let ratio = CGFloat(completedPoints) / CGFloat(totalPoints)
-        return (totalWidth - 12) * ratio
-    }
-
-    // MARK: - Camera Control
-
-    private func setupInitialCamera() {
-        // First show the entire route (zoomed out) to pre-load all map tiles
-        // Then zoom in to the start position
-        guard let firstSegment = journey.segments.first,
-              let startCoord = firstSegment.coordinates.first else { return }
-
-        // Initialize marker position
-        animatedMarkerPosition = startCoord
-
-        // Calculate center and distance to show entire route
-        let allCoords = journey.segments.flatMap { $0.coordinates }
-        let center = calculateCenter(of: allCoords)
-        let distance = calculateDistanceToFit(coordinates: allCoords)
-
-        // Step 1: Show entire route (zoomed out, flat view to load tiles)
-        mapPosition = .camera(MapCamera(
-            centerCoordinate: center,
-            distance: distance,
-            heading: 0,
-            pitch: 0  // Flat view for faster tile loading
-        ))
-
-        // Step 2: After tiles load, zoom in to start position
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation(.easeInOut(duration: 0.8)) {
-                mapPosition = .camera(MapCamera(
-                    centerCoordinate: startCoord,
-                    distance: 2500,
-                    heading: 0,
-                    pitch: 55
-                ))
-            }
-        }
-    }
-
-    /// Calculate the center point of a set of coordinates
-    private func calculateCenter(of coordinates: [CLLocationCoordinate2D]) -> CLLocationCoordinate2D {
-        guard !coordinates.isEmpty else {
-            return CLLocationCoordinate2D(latitude: 0, longitude: 0)
-        }
-        let lats = coordinates.map { $0.latitude }
-        let lons = coordinates.map { $0.longitude }
-        return CLLocationCoordinate2D(
-            latitude: (lats.min()! + lats.max()!) / 2,
-            longitude: (lons.min()! + lons.max()!) / 2
-        )
-    }
-
-    /// Calculate camera distance needed to fit all coordinates in view
-    private func calculateDistanceToFit(coordinates: [CLLocationCoordinate2D]) -> Double {
-        guard coordinates.count > 1 else { return 5000 }
-
-        let lats = coordinates.map { $0.latitude }
-        let lons = coordinates.map { $0.longitude }
-
-        let latSpan = (lats.max()! - lats.min()!) * 111000  // ~111km per degree lat
-        let lonSpan = (lons.max()! - lons.min()!) * 85000   // ~85km per degree lon at mid-latitudes
-
-        let maxSpan = max(latSpan, lonSpan)
-
-        // Add padding and convert to camera distance
-        // Camera distance is roughly 2x the span for good framing
-        return max(maxSpan * 2.5, 5000)
-    }
-
-    private func animateCamera(to coordinate: CLLocationCoordinate2D, mode: TransportMode, heading: Double = 0) {
-        // Move camera instantly to follow the marker
-        mapPosition = .camera(MapCamera(
-            centerCoordinate: coordinate,
-            distance: mode.cameraAltitude,
-            heading: heading,
-            pitch: mode.cameraPitch
-        ))
-    }
-
-    private func calculateHeading(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
-        let deltaLon = to.longitude - from.longitude
-        let y = sin(deltaLon * .pi / 180)
-        let x = cos(from.latitude * .pi / 180) * tan(to.latitude * .pi / 180) -
-                sin(from.latitude * .pi / 180) * cos(deltaLon * .pi / 180)
-        let heading = atan2(y, x) * 180 / .pi
-        return (heading + 360).truncatingRemainder(dividingBy: 360)
+        // Use currentProgress (0.0 to 1.0) directly
+        return (totalWidth - 12) * currentProgress
     }
 
     // MARK: - Playback Control
 
+    /// Total distance of the journey in kilometers
+    private var totalJourneyDistance: Double {
+        journey.segments.flatMap { $0.coordinates }.reduce(into: (0.0, nil as CLLocationCoordinate2D?)) { result, coord in
+            if let prev = result.1 {
+                let from = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
+                let to = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+                result.0 += from.distance(from: to) / 1000.0
+            }
+            result.1 = coord
+        }.0
+    }
+
     private func play() {
-        // Prevent double-play
         guard !isPlaying || isPaused else { return }
 
         isPlaying = true
         isPaused = false
-        playSegment(at: currentSegmentIndex)
-    }
 
-    private func playSegment(at index: Int) {
-        guard index < journey.segments.count else {
-            // All segments complete
-            isPlaying = false
-            return
-        }
-
-        // Stop any existing animation before starting new one
+        // Stop any existing animation
         animationController?.stop()
 
-        currentSegmentIndex = index
-        let segment = journey.segments[index]
+        // All coordinates flattened
+        let allCoords = journey.segments.flatMap { $0.coordinates }
 
-        // Create new animation controller for this segment
+        // Create new animation controller
         let controller = AnimationController()
         animationController = controller
 
-        // Target camera settings for this segment
-        let targetAltitude = segment.transportMode.cameraAltitude
-        let targetPitch = segment.transportMode.cameraPitch
+        // Calculate effective speed based on multiplier
+        let effectiveSpeed = baseSpeedKmPerSec * speedMultiplier
 
         controller.start(
-            coordinates: segment.coordinates,
-            speedKmPerSec: baseSpeedKmPerSec * segment.transportMode.animationSpeed * speedMultiplier,
-            onUpdate: { [self] coord, heading, progress, _ in
-                // Update marker position
-                animatedMarkerPosition = coord
+            coordinates: allCoords,
+            speedKmPerSec: effectiveSpeed,
+            onUpdate: { [self] _, _, progress, _ in
+                // Update progress (0.0 to 1.0) - NativeAnimatedMapView handles the rest
+                currentProgress = progress
 
-                // Gradually transition camera altitude and pitch (smooth blend)
-                let altitudeDelta = targetAltitude - currentCameraAltitude
-                let pitchDelta = targetPitch - currentCameraPitch
-                currentCameraAltitude += altitudeDelta * 0.05
-                currentCameraPitch += pitchDelta * 0.05
-
-                // Camera rotation disabled - causes polyline to disappear in MapKit
-                // TODO: API team will handle route calculations with proper camera hints
-                mapPosition = .camera(MapCamera(
-                    centerCoordinate: coord,
-                    distance: currentCameraAltitude,
-                    heading: 0,  // Fixed north
-                    pitch: currentCameraPitch
-                ))
-                currentPointIndex = Int(progress * Double(segment.coordinates.count - 1))
+                // Update current segment index based on progress
+                updateCurrentSegmentIndex(progress: progress)
             },
             onComplete: { [self] in
-                // Play next segment immediately
-                if !isPaused {
-                    playSegment(at: index + 1)
-                }
+                isPlaying = false
+                currentProgress = 1.0
             }
         )
+    }
+
+    /// Update currentSegmentIndex based on overall progress
+    private func updateCurrentSegmentIndex(progress: Double) {
+        let allCoords = journey.segments.flatMap { $0.coordinates }
+        let currentIndex = Int(progress * Double(allCoords.count - 1))
+
+        var accumulated = 0
+        for (index, segment) in journey.segments.enumerated() {
+            accumulated += segment.coordinates.count
+            if currentIndex < accumulated {
+                if currentSegmentIndex != index {
+                    currentSegmentIndex = index
+                }
+                break
+            }
+        }
     }
 
     private func pause() {
@@ -574,28 +432,15 @@ struct Journey3DAnimationView: View {
     private func restart() {
         animationController?.stop()
         currentSegmentIndex = 0
-        currentPointIndex = 0
+        currentProgress = 0
         isPlaying = false
         isPaused = false
-        animatedMarkerPosition = nil
-        setupInitialCamera()
     }
 
     private func skipToEnd() {
         animationController?.stop()
         currentSegmentIndex = journey.segments.count - 1
-        if let lastSegment = journey.segments.last {
-            currentPointIndex = lastSegment.coordinates.count - 1
-            if let lastCoord = lastSegment.coordinates.last {
-                animatedMarkerPosition = lastCoord
-                mapPosition = .camera(MapCamera(
-                    centerCoordinate: lastCoord,
-                    distance: 2500,
-                    heading: 0,
-                    pitch: 55
-                ))
-            }
-        }
+        currentProgress = 1.0
         isPlaying = false
         isPaused = false
     }
