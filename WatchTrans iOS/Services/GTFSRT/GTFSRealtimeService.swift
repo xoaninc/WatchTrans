@@ -349,12 +349,12 @@ class GTFSRealtimeService {
             for (i, journey) in journeys.enumerated() {
                 DebugLog.log("🗺️ [RT]   ━━━ Journey \(i+1)/\(journeys.count) ━━━")
                 DebugLog.log("🗺️ [RT]     Duration: \(journey.totalDurationMinutes) min")
-                DebugLog.log("🗺️ [RT]     Transfers: \(journey.transfers)")
-                DebugLog.log("🗺️ [RT]     Walking: \(journey.walkingMinutes) min")
+                DebugLog.log("🗺️ [RT]     Transfers: \(journey.transferCount)")
+                DebugLog.log("🗺️ [RT]     Walking: \(journey.totalWalkingMinutes) min")
                 DebugLog.log("🗺️ [RT]     Segments: \(journey.segments.count)")
 
                 for (j, seg) in journey.segments.enumerated() {
-                    let lineInfo = seg.routeName ?? "🚶 walk"
+                    let lineInfo = seg.lineName ?? "🚶 walk"
                     let coordCount = seg.coordinates.count
                     let intermediateCount = seg.intermediateStops?.count ?? 0
                     DebugLog.log("🗺️ [RT]       [\(j+1)] \(seg.type.uppercased()): \(lineInfo)")
