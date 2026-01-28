@@ -1248,16 +1248,18 @@ class DataService {
             }
         }
 
-        // Ensure correct order (origin before destination)
-        let startIndex = min(originIndex, destIndex)
-        let endIndex = max(originIndex, destIndex)
-
-        // Return the segment between origin and destination
-        if startIndex < endIndex {
-            return Array(coordinates[startIndex...endIndex])
+        // Extract segment and preserve travel direction
+        // If origin comes before destination in shape array, use normal order
+        // If origin comes after destination, reverse the coordinates
+        if originIndex <= destIndex {
+            // Travel direction matches shape direction
+            DebugLog.log("🗺️ [DataService] Segment direction: normal (origin idx \(originIndex) → dest idx \(destIndex))")
+            return Array(coordinates[originIndex...destIndex])
+        } else {
+            // Travel direction is opposite to shape direction - reverse it
+            DebugLog.log("🗺️ [DataService] Segment direction: REVERSED (origin idx \(originIndex) → dest idx \(destIndex))")
+            return Array(coordinates[destIndex...originIndex].reversed())
         }
-
-        return coordinates
     }
 
     /// Calculate squared distance between two coordinates (faster than actual distance)

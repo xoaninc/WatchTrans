@@ -46,14 +46,14 @@ struct Journey3DAnimationView: View {
         ZStack {
             // 3D Map
             Map(position: $mapPosition) {
-                // Route polyline for current and completed segments
-                // Use rounded line caps and joins for smoother appearance
+                // Route polylines - all segments visible from start
+                // Current segment is highlighted with thicker line
                 ForEach(Array(journey.segments.enumerated()), id: \.element.id) { index, segment in
-                    if index <= currentSegmentIndex {
-                        let color = segmentColor(segment)
-                        MapPolyline(coordinates: segment.coordinates)
-                            .stroke(color, style: StrokeStyle(lineWidth: index == currentSegmentIndex ? 6 : 4, lineCap: .round, lineJoin: .round))
-                    }
+                    let color = segmentColor(segment)
+                    let lineWidth: CGFloat = index == currentSegmentIndex ? 6 : 4
+                    let opacity: Double = index < currentSegmentIndex ? 0.6 : 1.0  // Dim completed segments
+                    MapPolyline(coordinates: segment.coordinates)
+                        .stroke(color.opacity(opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                 }
 
                 // Current position marker (uses animated position for smooth movement)
@@ -86,7 +86,7 @@ struct Journey3DAnimationView: View {
                     }
                 }
             }
-            .mapStyle(.standard(elevation: .realistic, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+            .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
             .ignoresSafeArea()
 
             // Overlay UI
