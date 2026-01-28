@@ -41,6 +41,96 @@ struct SettingsView: View {
         return Array(types).sorted { $0.rawValue < $1.rawValue }
     }
 
+    // MARK: - Dynamic Credits
+
+    struct CreditItem: Identifiable {
+        let id = UUID()
+        let name: String
+        let icon: String
+        let color: Color
+    }
+
+    /// Credits relevant to the current province
+    private var relevantCredits: [CreditItem] {
+        let province = dataService.currentLocation?.provinceName.lowercased() ?? ""
+
+        var credits: [CreditItem] = []
+
+        switch province {
+        case "madrid":
+            credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
+            credits.append(CreditItem(name: "Metro de Madrid", icon: "tram.tunnel.fill", color: .red))
+            if dataService.lines.contains(where: { $0.type == .metroLigero }) {
+                credits.append(CreditItem(name: "Metro Ligero", icon: "tram.fill", color: .blue))
+            }
+
+        case "barcelona", "rodalies de catalunya":
+            credits.append(CreditItem(name: "Rodalies de Catalunya", icon: "tram.fill", color: .purple))
+            credits.append(CreditItem(name: "TMB Metro Barcelona", icon: "tram.tunnel.fill", color: .red))
+            credits.append(CreditItem(name: "FGC", icon: "tram.fill", color: .orange))
+            if dataService.lines.contains(where: { $0.type == .tram }) {
+                credits.append(CreditItem(name: "Tram Barcelona", icon: "tram", color: .green))
+            }
+
+        case "sevilla":
+            credits.append(CreditItem(name: "Cercanías Sevilla", icon: "tram.fill", color: .cyan))
+            credits.append(CreditItem(name: "Metro Sevilla", icon: "tram.tunnel.fill", color: .red))
+
+        case "valencia":
+            credits.append(CreditItem(name: "Cercanías Valencia", icon: "tram.fill", color: .cyan))
+            credits.append(CreditItem(name: "Metrovalencia", icon: "tram.tunnel.fill", color: .red))
+
+        case "vizcaya", "bilbao":
+            credits.append(CreditItem(name: "Cercanías Bilbao", icon: "tram.fill", color: .cyan))
+            credits.append(CreditItem(name: "Metro Bilbao", icon: "tram.tunnel.fill", color: .red))
+
+        case "málaga", "malaga":
+            credits.append(CreditItem(name: "Cercanías Málaga", icon: "tram.fill", color: .cyan))
+            credits.append(CreditItem(name: "Metro Málaga", icon: "tram.tunnel.fill", color: .red))
+
+        case "asturias":
+            credits.append(CreditItem(name: "Cercanías Asturias", icon: "tram.fill", color: .cyan))
+
+        case "cantabria", "santander":
+            credits.append(CreditItem(name: "Cercanías Santander", icon: "tram.fill", color: .cyan))
+
+        case "murcia":
+            credits.append(CreditItem(name: "Cercanías Murcia", icon: "tram.fill", color: .cyan))
+            if dataService.lines.contains(where: { $0.type == .tram }) {
+                credits.append(CreditItem(name: "Tranvía Murcia", icon: "tram", color: .green))
+            }
+
+        case "cádiz", "cadiz":
+            credits.append(CreditItem(name: "Cercanías Cádiz", icon: "tram.fill", color: .cyan))
+
+        case "zaragoza":
+            credits.append(CreditItem(name: "Tranvía Zaragoza", icon: "tram", color: .green))
+
+        case "alicante":
+            credits.append(CreditItem(name: "TRAM Alicante", icon: "tram", color: .green))
+
+        default:
+            // Fallback: show based on available transport types
+            if dataService.lines.contains(where: { $0.type == .cercanias }) {
+                credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
+            }
+            if dataService.lines.contains(where: { $0.type == .metro }) {
+                credits.append(CreditItem(name: "Metro", icon: "tram.tunnel.fill", color: .red))
+            }
+            if dataService.lines.contains(where: { $0.type == .metroLigero }) {
+                credits.append(CreditItem(name: "Metro Ligero", icon: "tram.fill", color: .blue))
+            }
+            if dataService.lines.contains(where: { $0.type == .tram }) {
+                credits.append(CreditItem(name: "Tranvía", icon: "tram", color: .green))
+            }
+            if dataService.lines.contains(where: { $0.type == .fgc }) {
+                credits.append(CreditItem(name: "FGC", icon: "tram.fill", color: .orange))
+            }
+        }
+
+        return credits
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -188,41 +278,19 @@ struct SettingsView: View {
                     Text("Soporte")
                 }
 
-                // Credits section
+                // Credits section (dynamic based on province)
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Datos proporcionados por:")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        HStack {
-                            Image(systemName: "tram.fill")
-                                .foregroundStyle(.cyan)
-                            Text("RENFE Cercanias")
-                        }
-
-                        HStack {
-                            Image(systemName: "tram.tunnel.fill")
-                                .foregroundStyle(.red)
-                            Text("Metro de Madrid")
-                        }
-
-                        HStack {
-                            Image(systemName: "tram.tunnel.fill")
-                                .foregroundStyle(.red)
-                            Text("TMB Metro Barcelona")
-                        }
-
-                        HStack {
-                            Image(systemName: "tram.fill")
-                                .foregroundStyle(.purple)
-                            Text("Rodalies de Catalunya")
-                        }
-
-                        HStack {
-                            Image(systemName: "tram.fill")
-                                .foregroundStyle(.orange)
-                            Text("FGC")
+                        ForEach(relevantCredits) { credit in
+                            HStack {
+                                Image(systemName: credit.icon)
+                                    .foregroundStyle(credit.color)
+                                Text(credit.name)
+                            }
                         }
                     }
                     .padding(.vertical, 4)
