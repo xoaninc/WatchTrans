@@ -153,20 +153,20 @@ struct RouteMapView: View {
             if let shape = shapePoints, shape.count > 2 {
                 if isSuspended {
                     MapPolyline(coordinates: shape)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 4]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [8, 4]))
                 } else {
                     MapPolyline(coordinates: shape)
-                        .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }
             } else {
                 // Fallback: connect stops with straight lines
                 let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
                 if isSuspended {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [8, 4]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 4]))
                 } else {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                        .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                 }
             }
 
@@ -184,30 +184,30 @@ struct RouteMapView: View {
                         // Interchange: white circle with black border - BIGGER to stand out
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 18 : 14, height: isTerminal ? 18 : 14)
+                            .frame(width: isTerminal ? 14 : 12, height: isTerminal ? 14 : 12)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: isTerminal ? 3 : 2.5)
+                                    .stroke(Color.black, lineWidth: 2)
                             )
                     } else if isTerminal {
                         // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 10, height: 10)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 10, height: 10)
+                                    .frame(width: 6, height: 6)
                             )
                     } else {
-                        // Regular stop: colored circle with white center (60%)
+                        // Regular stop: small colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 12, height: 12)
+                            .frame(width: 7, height: 7)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 7, height: 7)
+                                    .frame(width: 4, height: 4)
                             )
                     }
                 }
@@ -412,23 +412,13 @@ struct FullScreenMapView: View {
                         // Interchange: white circle with black border - BIGGER to stand out
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 22 : 18, height: isTerminal ? 22 : 18)
+                            .frame(width: isTerminal ? 18 : 16, height: isTerminal ? 18 : 16)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: isTerminal ? 3.5 : 3)
+                                    .stroke(Color.black, lineWidth: 2.5)
                             )
                     } else if isTerminal {
                         // Terminal stop: colored circle with white center
-                        Circle()
-                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 18, height: 18)
-                            .overlay(
-                                Circle()
-                                    .fill(.white)
-                                    .frame(width: 11, height: 11)
-                            )
-                    } else {
-                        // Regular stop: colored circle with white center (60%)
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 14, height: 14)
@@ -436,6 +426,16 @@ struct FullScreenMapView: View {
                                 Circle()
                                     .fill(.white)
                                     .frame(width: 8, height: 8)
+                            )
+                    } else {
+                        // Regular stop: small colored circle with white center
+                        Circle()
+                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                            .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 6, height: 6)
                             )
                     }
                 }
