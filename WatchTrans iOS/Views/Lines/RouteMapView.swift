@@ -181,29 +181,29 @@ struct RouteMapView: View {
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
                     if hasCorrespondence {
-                        // Interchange: white circle with black border (like Metro Madrid map)
+                        // Interchange: white circle with black border - BIGGER to stand out
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
+                            .frame(width: isTerminal ? 18 : 14, height: isTerminal ? 18 : 14)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: isTerminal ? 2 : 1.5)
+                                    .stroke(Color.black, lineWidth: isTerminal ? 3 : 2.5)
                             )
                     } else if isTerminal {
-                        // Terminal stop: colored circle with white center (60%)
+                        // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 14, height: 14)
+                            .frame(width: 16, height: 16)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 8, height: 8)
+                                    .frame(width: 10, height: 10)
                             )
                     } else {
                         // Regular stop: colored circle with white center (60%)
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 11, height: 11)
+                            .frame(width: 12, height: 12)
                             .overlay(
                                 Circle()
                                     .fill(.white)
@@ -409,29 +409,29 @@ struct FullScreenMapView: View {
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
                     if hasCorrespondence {
-                        // Interchange: white circle with black border (like Metro Madrid map)
+                        // Interchange: white circle with black border - BIGGER to stand out
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 14 : 10, height: isTerminal ? 14 : 10)
+                            .frame(width: isTerminal ? 22 : 18, height: isTerminal ? 22 : 18)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: isTerminal ? 2.5 : 2)
+                                    .stroke(Color.black, lineWidth: isTerminal ? 3.5 : 3)
                             )
                     } else if isTerminal {
-                        // Terminal stop: colored circle with white center (60%)
+                        // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 18, height: 18)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 10, height: 10)
+                                    .frame(width: 11, height: 11)
                             )
                     } else {
                         // Regular stop: colored circle with white center (60%)
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 13, height: 13)
+                            .frame(width: 14, height: 14)
                             .overlay(
                                 Circle()
                                     .fill(.white)
