@@ -26,6 +26,19 @@ struct RouteMapView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
+    /// Deduplicated stops (removes duplicates by name, keeps first occurrence)
+    private var uniqueStops: [Stop] {
+        var seen = Set<String>()
+        return stops.filter { stop in
+            let normalized = stop.name.lowercased().trimmingCharacters(in: .whitespaces)
+            if seen.contains(normalized) {
+                return false
+            }
+            seen.insert(normalized)
+            return true
+        }
+    }
+
     init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
         self.line = line
         self.stops = stops
@@ -159,9 +172,10 @@ struct RouteMapView: View {
 
             // Stop markers - interchange stations get white circle with black border
             // Use on_shape coordinates when available for precise placement on the line
-            ForEach(stops) { stop in
+            // Use uniqueStops to avoid duplicate markers at the same station
+            ForEach(uniqueStops) { stop in
                 // For circular lines, no terminal markers
-                let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
+                let isTerminal = !line.isCircular && (stop.id == uniqueStops.first?.id || stop.id == uniqueStops.last?.id)
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
@@ -281,6 +295,19 @@ struct FullScreenMapView: View {
         case hybrid = "Hibrido"
     }
 
+    /// Deduplicated stops (removes duplicates by name, keeps first occurrence)
+    private var uniqueStops: [Stop] {
+        var seen = Set<String>()
+        return stops.filter { stop in
+            let normalized = stop.name.lowercased().trimmingCharacters(in: .whitespaces)
+            if seen.contains(normalized) {
+                return false
+            }
+            seen.insert(normalized)
+            return true
+        }
+    }
+
     init(line: Line, stops: [Stop], shapePoints: [CLLocationCoordinate2D]?, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, lineColor: Color, initialPosition: MapCameraPosition, isSuspended: Bool = false) {
         self.line = line
         self.stops = stops
@@ -358,9 +385,10 @@ struct FullScreenMapView: View {
 
             // Stop markers - interchange stations get white circle with black border
             // Use on_shape coordinates when available for precise placement on the line
-            ForEach(stops) { stop in
+            // Use uniqueStops to avoid duplicate markers at the same station
+            ForEach(uniqueStops) { stop in
                 // For circular lines, no terminal markers
-                let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
+                let isTerminal = !line.isCircular && (stop.id == uniqueStops.first?.id || stop.id == uniqueStops.last?.id)
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
