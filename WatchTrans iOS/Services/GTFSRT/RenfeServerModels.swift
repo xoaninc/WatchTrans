@@ -553,15 +553,18 @@ struct CorrespondenceInfo: Codable, Identifiable {
 
 /// Response from GET /api/v1/gtfs/routes/{route_id}/shape
 /// Contains the polyline coordinates for drawing the route on a map
+/// Use ?include_stops=true to get stop coordinates projected onto the shape
 struct RouteShapeResponse: Codable {
     let routeId: String
     let routeShortName: String?
     let shape: [ShapePoint]
+    let stops: [ShapeStop]?  // Only present with ?include_stops=true
 
     enum CodingKeys: String, CodingKey {
         case routeId = "route_id"
         case routeShortName = "route_short_name"
         case shape
+        case stops
     }
 }
 
@@ -574,6 +577,29 @@ struct ShapePoint: Codable {
     enum CodingKeys: String, CodingKey {
         case lat, lon, sequence
     }
+}
+
+/// Stop info with projected coordinates onto the shape
+struct ShapeStop: Codable {
+    let stopId: String
+    let name: String
+    let sequence: Int
+    let onShape: Coordinate      // Coordinates projected onto the line shape (for map markers)
+    let platform: Coordinate?    // Real platform coordinates (for navigation)
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case name
+        case sequence
+        case onShape = "on_shape"
+        case platform
+    }
+}
+
+/// Simple coordinate pair
+struct Coordinate: Codable {
+    let lat: Double
+    let lon: Double
 }
 
 // MARK: - Route Planner Response

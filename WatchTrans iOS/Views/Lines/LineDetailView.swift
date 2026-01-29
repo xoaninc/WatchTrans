@@ -17,6 +17,7 @@ struct LineDetailView: View {
     @State private var alerts: [AlertResponse] = []
     @State private var operatingHoursResult: OperatingHoursResult?
     @State private var shapePoints: [CLLocationCoordinate2D] = []
+    @State private var stopOnShapeCoords: [String: CLLocationCoordinate2D] = [:]  // Stop coordinates projected onto shape
     @State private var isLoading = true
     @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
@@ -97,6 +98,7 @@ struct LineDetailView: View {
                         stops: stops,
                         dataService: dataService,
                         shapePoints: shapePoints.isEmpty ? nil : shapePoints,
+                        stopOnShapeCoords: stopOnShapeCoords.isEmpty ? nil : stopOnShapeCoords,
                         isSuspended: operatingHoursResult?.isSuspended ?? false,
                         isShapeLoading: isShapeLoading
                     )
@@ -184,18 +186,19 @@ struct LineDetailView: View {
             return nil
         }()
 
-        async let shapeTask: [CLLocationCoordinate2D] = {
+        async let shapeTask: DataService.ShapeWithStops = {
             if let routeId = line.routeIds.first {
-                let points = await dataService.fetchRouteShape(routeId: routeId, maxGap: 100)
-                return points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                return await dataService.fetchRouteShapeWithStops(routeId: routeId, maxGap: 100)
             }
-            return []
+            return DataService.ShapeWithStops(shapePoints: [], stopCoordinates: [:])
         }()
 
         stops = await stopsTask
         alerts = await alertsTask
         operatingHoursResult = await hoursTask
-        shapePoints = await shapeTask
+        let shapeResult = await shapeTask
+        shapePoints = shapeResult.shapePoints.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+        stopOnShapeCoords = shapeResult.stopCoordinates
         isShapeLoading = false
 
         // If online fetch failed, try cached data

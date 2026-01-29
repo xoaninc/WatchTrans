@@ -1077,6 +1077,49 @@ class DataService {
         }
     }
 
+    /// Result type for shape with stops (on_shape coordinates for map markers)
+    struct ShapeWithStops {
+        let shapePoints: [ShapePoint]
+        let stopCoordinates: [String: CLLocationCoordinate2D]  // stopId -> on_shape coordinate
+    }
+
+    /// Fetch route shape with stop coordinates projected onto the line
+    /// Use this for maps to place stop markers exactly on the line shape
+    func fetchRouteShapeWithStops(routeId: String, maxGap: Int? = nil) async -> ShapeWithStops {
+        // Fetch shape with include_stops=true
+        do {
+            let response = try await gtfsRealtimeService.fetchRouteShape(
+                routeId: routeId,
+                maxGap: maxGap,
+                includeStops: true
+            )
+            let sortedShape = response.shape.sorted { $0.sequence < $1.sequence }
+
+            // Build mapping of stop_id -> on_shape coordinate
+            var stopCoords: [String: CLLocationCoordinate2D] = [:]
+            if let stops = response.stops {
+                for stop in stops {
+                    stopCoords[stop.stopId] = CLLocationCoordinate2D(
+                        latitude: stop.onShape.lat,
+                        longitude: stop.onShape.lon
+                    )
+                }
+                DebugLog.log("🗺️ [DataService] Fetched shape with \(sortedShape.count) points and \(stops.count) stop coordinates for \(routeId)")
+            } else {
+                DebugLog.log("🗺️ [DataService] Fetched shape with \(sortedShape.count) points (no stop coords) for \(routeId)")
+            }
+
+            // Also cache the shape points for the regular fetchRouteShape function
+            let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
+            shapeCacheQueue.sync { shapeCache[cacheKey] = sortedShape }
+
+            return ShapeWithStops(shapePoints: sortedShape, stopCoordinates: stopCoords)
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch shape with stops for \(routeId): \(error)")
+            return ShapeWithStops(shapePoints: [], stopCoordinates: [:])
+        }
+    }
+
     // MARK: - Route Planner
 
     /// Result of route planning including alternatives and alerts

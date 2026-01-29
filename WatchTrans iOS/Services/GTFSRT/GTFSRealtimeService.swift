@@ -301,10 +301,23 @@ class GTFSRealtimeService {
 
     /// Fetch shape (polyline) for a route
     /// Returns the coordinates to draw the route on a map
-    func fetchRouteShape(routeId: String, maxGap: Int? = nil) async throws -> RouteShapeResponse {
+    /// - Parameters:
+    ///   - routeId: The route ID
+    ///   - maxGap: Maximum gap between points
+    ///   - includeStops: If true, includes stops with on_shape coordinates projected onto the line
+    func fetchRouteShape(routeId: String, maxGap: Int? = nil, includeStops: Bool = false) async throws -> RouteShapeResponse {
         var urlString = "\(baseURL)/routes/\(routeId)/shape"
+        var params: [String] = []
+
         if let maxGap = maxGap {
-            urlString += "?max_gap=\(maxGap)"
+            params.append("max_gap=\(maxGap)")
+        }
+        if includeStops {
+            params.append("include_stops=true")
+        }
+
+        if !params.isEmpty {
+            urlString += "?" + params.joined(separator: "&")
         }
 
         guard let url = URL(string: urlString) else {
@@ -313,7 +326,7 @@ class GTFSRealtimeService {
 
         DebugLog.log("🗺️ [RT] 📡 Shape request: \(urlString)")
         let response: RouteShapeResponse = try await networkService.fetch(url)
-        DebugLog.log("🗺️ [RT] ✅ Shape response: \(response.shape.count) points for \(response.routeId)")
+        DebugLog.log("🗺️ [RT] ✅ Shape response: \(response.shape.count) points, \(response.stops?.count ?? 0) stops for \(response.routeId)")
         return response
     }
 

@@ -14,6 +14,7 @@ struct RouteMapView: View {
     let stops: [Stop]
     let dataService: DataService
     let shapePoints: [CLLocationCoordinate2D]?
+    let stopOnShapeCoords: [String: CLLocationCoordinate2D]?  // Projected coordinates for markers
     let isSuspended: Bool
     let isShapeLoading: Bool
 
@@ -25,11 +26,12 @@ struct RouteMapView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
-    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
+    init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
         self.line = line
         self.stops = stops
         self.dataService = dataService
         self.shapePoints = shapePoints
+        self.stopOnShapeCoords = stopOnShapeCoords
         self.isSuspended = isSuspended
         self.isShapeLoading = isShapeLoading
 
@@ -93,6 +95,7 @@ struct RouteMapView: View {
                 line: line,
                 stops: stops,
                 shapePoints: shapePoints,
+                stopOnShapeCoords: stopOnShapeCoords,
                 lineColor: lineColor,
                 initialPosition: mapPosition,
                 isSuspended: isSuspended
@@ -155,11 +158,14 @@ struct RouteMapView: View {
             }
 
             // Stop markers - interchange stations get white circle with black border
+            // Use on_shape coordinates when available for precise placement on the line
             ForEach(stops) { stop in
                 // For circular lines, no terminal markers
                 let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
-                Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
+                // Use projected coordinates if available, otherwise fall back to stop coordinates
+                let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
+                Annotation("", coordinate: coord) {
                     if hasCorrespondence {
                         // Interchange: white circle with black border (like Metro Madrid map)
                         Circle()
@@ -260,6 +266,7 @@ struct FullScreenMapView: View {
     let line: Line
     let stops: [Stop]
     let shapePoints: [CLLocationCoordinate2D]?
+    let stopOnShapeCoords: [String: CLLocationCoordinate2D]?  // Projected coordinates for markers
     let lineColor: Color
     let initialPosition: MapCameraPosition
     let isSuspended: Bool
@@ -274,10 +281,11 @@ struct FullScreenMapView: View {
         case hybrid = "Hibrido"
     }
 
-    init(line: Line, stops: [Stop], shapePoints: [CLLocationCoordinate2D]?, lineColor: Color, initialPosition: MapCameraPosition, isSuspended: Bool = false) {
+    init(line: Line, stops: [Stop], shapePoints: [CLLocationCoordinate2D]?, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, lineColor: Color, initialPosition: MapCameraPosition, isSuspended: Bool = false) {
         self.line = line
         self.stops = stops
         self.shapePoints = shapePoints
+        self.stopOnShapeCoords = stopOnShapeCoords
         self.lineColor = lineColor
         self.initialPosition = initialPosition
         self.isSuspended = isSuspended
@@ -349,11 +357,14 @@ struct FullScreenMapView: View {
             }
 
             // Stop markers - interchange stations get white circle with black border
+            // Use on_shape coordinates when available for precise placement on the line
             ForEach(stops) { stop in
                 // For circular lines, no terminal markers
                 let isTerminal = !line.isCircular && (stop.id == stops.first?.id || stop.id == stops.last?.id)
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
-                Annotation("", coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
+                // Use projected coordinates if available, otherwise fall back to stop coordinates
+                let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
+                Annotation("", coordinate: coord) {
                     if hasCorrespondence {
                         // Interchange: white circle with black border (like Metro Madrid map)
                         Circle()
