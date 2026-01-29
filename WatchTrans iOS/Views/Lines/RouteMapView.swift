@@ -181,23 +181,23 @@ struct RouteMapView: View {
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
                     if hasCorrespondence {
-                        // Interchange: white circle with black border - BIGGER to stand out
+                        // Interchange: white circle with black border
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 14 : 12, height: isTerminal ? 14 : 12)
+                            .frame(width: isTerminal ? 10 : 9, height: isTerminal ? 10 : 9)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: 2)
+                                    .stroke(Color.black, lineWidth: 1.5)
                             )
                     } else if isTerminal {
                         // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 9, height: 9)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 6, height: 6)
+                                    .frame(width: 5, height: 5)
                             )
                     } else {
                         // Regular stop: small colored circle with white center
@@ -409,33 +409,33 @@ struct FullScreenMapView: View {
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
                     if hasCorrespondence {
-                        // Interchange: white circle with black border - BIGGER to stand out
+                        // Interchange: white circle with black border
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 18 : 16, height: isTerminal ? 18 : 16)
+                            .frame(width: isTerminal ? 14 : 12, height: isTerminal ? 14 : 12)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: 2.5)
+                                    .stroke(Color.black, lineWidth: 2)
                             )
                     } else if isTerminal {
                         // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 14, height: 14)
+                            .frame(width: 12, height: 12)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 8, height: 8)
+                                    .frame(width: 7, height: 7)
                             )
                     } else {
                         // Regular stop: small colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 9, height: 9)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 6, height: 6)
+                                    .frame(width: 5, height: 5)
                             )
                     }
                 }
