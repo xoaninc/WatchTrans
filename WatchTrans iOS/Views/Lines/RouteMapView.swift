@@ -193,21 +193,21 @@ struct RouteMapView: View {
                         // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 14, height: 14)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 5, height: 5)
+                                    .frame(width: 7, height: 7)
                             )
                     } else {
                         // Regular stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 8, height: 8)
+                            .frame(width: 11, height: 11)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 4, height: 4)
+                                    .frame(width: 5, height: 5)
                             )
                     }
                 }
@@ -421,21 +421,21 @@ struct FullScreenMapView: View {
                         // Terminal stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 12, height: 12)
+                            .frame(width: 16, height: 16)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 6, height: 6)
+                                    .frame(width: 8, height: 8)
                             )
                     } else {
                         // Regular stop: colored circle with white center
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 13, height: 13)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 5, height: 5)
+                                    .frame(width: 6, height: 6)
                             )
                     }
                 }
