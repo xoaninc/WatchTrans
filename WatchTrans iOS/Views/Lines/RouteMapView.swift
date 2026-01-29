@@ -39,16 +39,38 @@ struct RouteMapView: View {
         }
     }
 
-    /// Scale factor for marker sizes based on number of stops
-    /// Short routes (< 15 stops): 1.3x, Medium (15-25): 1.0x, Long (> 25): 0.8x
+    /// Scale factor for marker sizes based on route density (stops per geographic area)
+    /// Dense routes (many stops in small area): smaller markers
+    /// Sparse routes (few stops spread out): larger markers
     private var markerScale: CGFloat {
         let count = uniqueStops.count
-        if count < 15 {
-            return 1.3
-        } else if count <= 25 {
+        guard count > 0 else { return 1.0 }
+
+        // Calculate geographic span
+        let coordinates = shapePoints ?? stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        guard !coordinates.isEmpty else { return 1.0 }
+
+        let lats = coordinates.map { $0.latitude }
+        let lons = coordinates.map { $0.longitude }
+        let latSpan = (lats.max() ?? 0) - (lats.min() ?? 0)
+        let lonSpan = (lons.max() ?? 0) - (lons.min() ?? 0)
+
+        // Geographic size in approximate km (rough conversion)
+        let spanKm = sqrt(pow(latSpan * 111, 2) + pow(lonSpan * 85, 2))
+
+        // Density: stops per km
+        let density = Double(count) / max(spanKm, 0.1)
+
+        // Scale based on density:
+        // Low density (< 2 stops/km): 1.4x (sparse, like Cercanías)
+        // Medium density (2-5 stops/km): 1.0x
+        // High density (> 5 stops/km): 0.75x (dense, like Metro)
+        if density < 2 {
+            return 1.4
+        } else if density <= 5 {
             return 1.0
         } else {
-            return 0.8
+            return 0.75
         }
     }
 
