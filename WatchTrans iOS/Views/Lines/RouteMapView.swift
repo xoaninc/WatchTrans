@@ -189,11 +189,16 @@ struct RouteMapView: View {
                                 Circle()
                                     .stroke(Color.black, lineWidth: isTerminal ? 2 : 1.5)
                             )
-                    } else {
-                        // Regular stop: colored circle
+                    } else if isTerminal {
+                        // Terminal stop: larger colored circle
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: isTerminal ? 10 : 6, height: isTerminal ? 10 : 6)
+                            .frame(width: 10, height: 10)
+                    } else {
+                        // Regular stop: small rectangle (tick-like)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                            .frame(width: 8, height: 8)
                     }
                 }
             }
@@ -402,11 +407,16 @@ struct FullScreenMapView: View {
                                 Circle()
                                     .stroke(Color.black, lineWidth: isTerminal ? 2.5 : 2)
                             )
-                    } else {
-                        // Regular stop: colored circle
+                    } else if isTerminal {
+                        // Terminal stop: larger colored circle
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: isTerminal ? 12 : 8, height: isTerminal ? 12 : 8)
+                            .frame(width: 12, height: 12)
+                    } else {
+                        // Regular stop: small rectangle (tick-like)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
+                            .frame(width: 10, height: 10)
                     }
                 }
             }
