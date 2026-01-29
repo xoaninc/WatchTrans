@@ -39,6 +39,19 @@ struct RouteMapView: View {
         }
     }
 
+    /// Scale factor for marker sizes based on number of stops
+    /// Short routes (< 15 stops): 1.3x, Medium (15-25): 1.0x, Long (> 25): 0.8x
+    private var markerScale: CGFloat {
+        let count = uniqueStops.count
+        if count < 15 {
+            return 1.3
+        } else if count <= 25 {
+            return 1.0
+        } else {
+            return 0.8
+        }
+    }
+
     init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
         self.line = line
         self.stops = stops
@@ -180,34 +193,40 @@ struct RouteMapView: View {
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
+                    let scale = markerScale
                     if hasCorrespondence {
                         // Interchange: white circle with black border
+                        let size = (isTerminal ? 10 : 9) * scale
                         Circle()
                             .fill(.white)
-                            .frame(width: isTerminal ? 10 : 9, height: isTerminal ? 10 : 9)
+                            .frame(width: size, height: size)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: 1.5)
+                                    .stroke(Color.black, lineWidth: 1.5 * scale)
                             )
                     } else if isTerminal {
                         // Terminal stop: colored circle with white center
+                        let outer = 9 * scale
+                        let inner = 5 * scale
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 9, height: 9)
+                            .frame(width: outer, height: outer)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 5, height: 5)
+                                    .frame(width: inner, height: inner)
                             )
                     } else {
                         // Regular stop: small colored circle with white center
+                        let outer = 7 * scale
+                        let inner = 4 * scale
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: 7, height: 7)
+                            .frame(width: outer, height: outer)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: 4, height: 4)
+                                    .frame(width: inner, height: inner)
                             )
                     }
                 }
