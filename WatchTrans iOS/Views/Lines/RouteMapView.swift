@@ -195,8 +195,8 @@ struct RouteMapView: View {
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 10, height: 10)
                     } else {
-                        // Regular stop: small rectangle (tick-like)
-                        RoundedRectangle(cornerRadius: 1)
+                        // Regular stop: colored circle
+                        Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 8, height: 8)
                     }
@@ -413,8 +413,8 @@ struct FullScreenMapView: View {
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 12, height: 12)
                     } else {
-                        // Regular stop: small rectangle (tick-like)
-                        RoundedRectangle(cornerRadius: 1)
+                        // Regular stop: colored circle
+                        Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 10, height: 10)
                     }
