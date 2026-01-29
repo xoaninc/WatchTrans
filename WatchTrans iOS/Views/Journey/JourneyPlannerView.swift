@@ -316,6 +316,39 @@ struct JourneyPlannerView: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    // MARK: - Transport Type Filter
+
+    /// Extract network type from stop ID
+    private func networkType(for stop: Stop) -> String {
+        if let underscore = stop.id.firstIndex(of: "_") {
+            return String(stop.id.prefix(upTo: underscore))
+        }
+        return "OTHER"
+    }
+
+    /// Check if stop matches any of the enabled transport types
+    private func stopMatchesEnabledTypes(_ stop: Stop, enabledTypes: Set<TransportType>) -> Bool {
+        if enabledTypes.isEmpty { return true }
+
+        let network = networkType(for: stop).uppercased()
+
+        for type in enabledTypes {
+            switch type {
+            case .metro:
+                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) { return true }
+            case .metroLigero:
+                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
+            case .cercanias:
+                if network == "RENFE" || (stop.corCercanias != nil && !stop.corCercanias!.isEmpty) { return true }
+            case .tram:
+                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
+            case .fgc:
+                if network == "FGC" { return true }
+            }
+        }
+        return false
+    }
+
     // MARK: - Actions
 
     private func searchStops(query: String, isOrigin: Bool) {
@@ -330,11 +363,14 @@ struct JourneyPlannerView: View {
 
         Task {
             let stops = await dataService.searchStops(query: query)
+            // Apply transport type filter
+            let enabledTypes = DataService.getEnabledTransportTypes()
+            let filtered = stops.filter { stopMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
             await MainActor.run {
                 if isOrigin {
-                    originSuggestions = stops
+                    originSuggestions = filtered
                 } else {
-                    destinationSuggestions = stops
+                    destinationSuggestions = filtered
                 }
             }
         }

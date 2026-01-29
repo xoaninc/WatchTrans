@@ -381,10 +381,45 @@ struct NearbyStopsSectionView: View {
         return "\(stop.name)_\(networkType(for: stop))"
     }
 
+    /// Check if stop matches any of the enabled transport types
+    private func stopMatchesEnabledTypes(_ stop: Stop, enabledTypes: Set<TransportType>) -> Bool {
+        // No filter = show all
+        if enabledTypes.isEmpty { return true }
+
+        let network = networkType(for: stop).uppercased()
+
+        for type in enabledTypes {
+            switch type {
+            case .metro:
+                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
+                    return true
+                }
+            case .metroLigero:
+                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) {
+                    return true
+                }
+            case .cercanias:
+                if network == "RENFE" || (stop.corCercanias != nil && !stop.corCercanias!.isEmpty) {
+                    return true
+                }
+            case .tram:
+                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) {
+                    return true
+                }
+            case .fgc:
+                if network == "FGC" {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     var nearbyStops: [Stop] {
         var stops: [Stop] = []
         var seenKeys: Set<String> = []  // Deduplicate by name + network type
         let favoriteIds = favoritesManager?.favorites.map { $0.stopId } ?? []
+        let enabledTypes = DataService.getEnabledTransportTypes()
 
         // Sort by distance
         let sortedByDistance: [Stop]
@@ -401,6 +436,8 @@ struct NearbyStopsSectionView: View {
             let key = deduplicationKey(for: stop)
             if seenKeys.contains(key) { continue }
             if favoriteIds.contains(stop.id) { continue }
+            // Apply transport type filter
+            if !stopMatchesEnabledTypes(stop, enabledTypes: enabledTypes) { continue }
 
             stops.append(stop)
             seenKeys.insert(key)

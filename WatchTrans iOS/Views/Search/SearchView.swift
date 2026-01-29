@@ -112,11 +112,45 @@ struct SearchView: View {
         }
     }
 
+    // MARK: - Transport Type Filter
+
+    /// Extract network type from stop ID
+    private func networkType(for stop: Stop) -> String {
+        if let underscore = stop.id.firstIndex(of: "_") {
+            return String(stop.id.prefix(upTo: underscore))
+        }
+        return "OTHER"
+    }
+
+    /// Check if stop matches any of the enabled transport types
+    private func stopMatchesEnabledTypes(_ stop: Stop, enabledTypes: Set<TransportType>) -> Bool {
+        if enabledTypes.isEmpty { return true }
+
+        let network = networkType(for: stop).uppercased()
+
+        for type in enabledTypes {
+            switch type {
+            case .metro:
+                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) { return true }
+            case .metroLigero:
+                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
+            case .cercanias:
+                if network == "RENFE" || (stop.corCercanias != nil && !stop.corCercanias!.isEmpty) { return true }
+            case .tram:
+                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
+            case .fgc:
+                if network == "FGC" { return true }
+            }
+        }
+        return false
+    }
+
     // MARK: - Popular Stops
 
     private var popularStops: [Stop] {
-        // Return first 10 stops sorted by name
-        Array(dataService.stops.sorted { $0.name < $1.name }.prefix(10))
+        let enabledTypes = DataService.getEnabledTransportTypes()
+        let filtered = dataService.stops.filter { stopMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
+        return Array(filtered.sorted { $0.name < $1.name }.prefix(10))
     }
 
     // MARK: - Search
@@ -129,7 +163,10 @@ struct SearchView: View {
         }
 
         isSearching = true
-        searchResults = await dataService.searchStops(query: query)
+        let results = await dataService.searchStops(query: query)
+        // Apply transport type filter
+        let enabledTypes = DataService.getEnabledTransportTypes()
+        searchResults = results.filter { stopMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
         isSearching = false
     }
 
