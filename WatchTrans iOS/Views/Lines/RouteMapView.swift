@@ -190,15 +190,23 @@ struct RouteMapView: View {
                                     .stroke(Color.black, lineWidth: isTerminal ? 2 : 1.5)
                             )
                     } else if isTerminal {
-                        // Terminal stop: larger colored circle
+                        // Terminal stop: larger colored circle with black border
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: 1.5)
+                            )
                     } else {
-                        // Regular stop: colored circle
+                        // Regular stop: colored circle with black border
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 8, height: 8)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: 1)
+                            )
                     }
                 }
             }
@@ -408,15 +416,23 @@ struct FullScreenMapView: View {
                                     .stroke(Color.black, lineWidth: isTerminal ? 2.5 : 2)
                             )
                     } else if isTerminal {
-                        // Terminal stop: larger colored circle
+                        // Terminal stop: larger colored circle with black border
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 12, height: 12)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: 2)
+                            )
                     } else {
-                        // Regular stop: colored circle
+                        // Regular stop: colored circle with black border
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
                             .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: 1.5)
+                            )
                     }
                 }
             }
