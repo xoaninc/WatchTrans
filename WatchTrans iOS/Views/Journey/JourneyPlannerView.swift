@@ -271,7 +271,15 @@ struct JourneyPlannerView: View {
                 Button {
                     selectStop(stop, isOrigin: isOrigin)
                 } label: {
-                    HStack {
+                    HStack(spacing: 10) {
+                        // Transport logo
+                        LogoImageView(
+                            type: stop.transportType,
+                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                            height: 24
+                        )
+                        .frame(width: 28)
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(stop.name)
                                 .font(.subheadline)
@@ -307,13 +315,25 @@ struct JourneyPlannerView: View {
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 
+    /// Format connections showing ONLY lines of the same transport type as the stop
     private func formatConnections(_ stop: Stop) -> String? {
-        var parts: [String] = []
-        if let metro = stop.corMetro { parts.append(metro) }
-        if let cercanias = stop.corCercanias { parts.append(cercanias) }
-        if let ml = stop.corMl { parts.append(ml) }
-        if let tram = stop.corTranvia { parts.append(tram) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        // Get the transport type from stop ID prefix
+        let stopType = stop.transportType
+
+        // Only show connections of the SAME transport type
+        switch stopType {
+        case .metro:
+            return stop.corMetro
+        case .cercanias:
+            return stop.corCercanias
+        case .metroLigero:
+            return stop.corMl
+        case .tram:
+            return stop.corTranvia
+        case .fgc:
+            // FGC doesn't have a specific corFgc field, show all FGC-related
+            return nil
+        }
     }
 
     // MARK: - Transport Type Filter

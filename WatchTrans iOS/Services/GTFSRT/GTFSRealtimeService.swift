@@ -401,4 +401,21 @@ class GTFSRealtimeService {
 
         return response
     }
+
+    // MARK: - Station Accesses
+
+    /// Fetch physical entrances (bocas de metro) for a station
+    /// Returns all access points with coordinates, accessibility info, and opening hours
+    func fetchAccesses(stopId: String) async throws -> AccessesResponse {
+        let urlString = "\(baseURL)/stops/\(stopId)/accesses"
+        DebugLog.log("🚪 [RT] Fetching accesses: \(urlString)")
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.badResponse
+        }
+
+        let response: AccessesResponse = try await networkService.fetch(url)
+        DebugLog.log("🚪 [RT] ✅ Got \(response.accesses.count) accesses for \(response.stopName)")
+        return response
+    }
 }

@@ -70,6 +70,14 @@ struct Arrival: Identifiable, Codable {
         return formatter.string(from: scheduledTime)
     }
 
+    /// Formatted expected time string (e.g., "18:54")
+    /// Uses expectedTime which includes any delays
+    var expectedTimeString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: expectedTime)
+    }
+
     /// Check if this line has GTFS-RT (real-time data with precise schedules)
     /// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, etc.
     /// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Tranvía (frequency-based only)
@@ -88,8 +96,8 @@ struct Arrival: Identifiable, Codable {
         } else if minutes == 1 {
             return "1 min"
         } else if minutes >= 30 && hasGTFSRT {
-            // GTFS-RT lines: show actual time when >= 30 min away
-            return scheduledTimeString
+            // GTFS-RT lines: show expected time (with delays) when >= 30 min away
+            return expectedTimeString
         } else if minutes > 30 {
             // Frequency-based lines (no GTFS-RT): cap at +30 min
             return "+ 30 min"

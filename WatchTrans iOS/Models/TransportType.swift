@@ -7,12 +7,14 @@
 
 import Foundation
 
-enum TransportType: String, Codable {
+enum TransportType: String, Codable, Identifiable {
     case metro = "Metro"
     case metroLigero = "Metro Ligero"
     case cercanias = "Cercanías"
     case tram = "Tram"
     case fgc = "FGC"  // Ferrocarrils de la Generalitat de Catalunya
+
+    var id: String { rawValue }
 
     /// Get transport type from API agency_id
     static func from(agencyId: String) -> TransportType {

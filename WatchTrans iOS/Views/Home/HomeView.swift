@@ -41,7 +41,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVStack(spacing: 20) {
                     // Offline banner
                     if !networkMonitor.isConnected {
                         OfflineBannerView()
@@ -290,9 +290,16 @@ struct FrequentStopCardView: View {
             // Stop header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(stop.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        LogoImageView(
+                            type: stop.transportType,
+                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                            height: 18
+                        )
+                        Text(stop.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
 
                     HStack(spacing: 8) {
                         if let location = locationService.currentLocation {
@@ -351,10 +358,17 @@ struct FrequentStopCardView: View {
     }
 
     private func loadArrivals() async {
-        if !hasLoadedOnce {
+        // CACHE-FIRST: Mostrar datos en cache inmediatamente
+        if let cached = dataService.getStaleCachedArrivals(for: stop.id), !cached.isEmpty {
+            arrivals = cached
+            hasLoadedOnce = true
+        } else if !hasLoadedOnce {
             isLoading = true
         }
-        arrivals = await dataService.fetchArrivals(for: stop.id)
+
+        // Actualizar con datos frescos
+        let fresh = await dataService.fetchArrivals(for: stop.id)
+        arrivals = fresh
         hasLoadedOnce = true
         isLoading = false
     }
@@ -512,9 +526,16 @@ struct StopCardView: View {
             // Stop header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(stop.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        LogoImageView(
+                            type: stop.transportType,
+                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                            height: 18
+                        )
+                        Text(stop.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
 
                     if let location = locationService.currentLocation {
                         Text(stop.formattedDistance(from: location))
@@ -604,12 +625,21 @@ struct StopCardView: View {
 
     private func loadArrivals() async {
         DebugLog.log("📱 [StopCard] Cargando llegadas para: \(stop.name) (id: \(stop.id))")
-        // Solo mostrar spinner en la primera carga, no en auto-refresh
-        if !hasLoadedOnce {
+
+        // CACHE-FIRST: Mostrar datos en cache inmediatamente (si existen)
+        if let cached = dataService.getStaleCachedArrivals(for: stop.id), !cached.isEmpty {
+            arrivals = cached
+            hasLoadedOnce = true
+            DebugLog.log("📱 [StopCard] \(stop.name): Mostrando \(cached.count) llegadas en cache")
+            // No mostrar spinner - ya tenemos datos
+        } else if !hasLoadedOnce {
             isLoading = true
         }
-        arrivals = await dataService.fetchArrivals(for: stop.id)
-        DebugLog.log("📱 [StopCard] \(stop.name): \(arrivals.count) llegadas obtenidas")
+
+        // Actualizar con datos frescos en background
+        let fresh = await dataService.fetchArrivals(for: stop.id)
+        arrivals = fresh
+        DebugLog.log("📱 [StopCard] \(stop.name): \(fresh.count) llegadas frescas")
         hasLoadedOnce = true
         isLoading = false
     }

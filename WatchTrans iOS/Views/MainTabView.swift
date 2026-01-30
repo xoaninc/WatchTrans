@@ -23,6 +23,10 @@ struct MainTabView: View {
     @State private var lastKnownProvince: String?
     @State private var refreshTrigger = UUID()
 
+    // Control de carga inicial para evitar duplicados
+    @State private var isInitialLoadComplete = false
+    @State private var isLoadingData = false
+
     @State private var selectedTab = 0
 
     var body: some View {
@@ -84,7 +88,7 @@ struct MainTabView: View {
             if favoritesManager == nil {
                 favoritesManager = FavoritesManager(modelContext: modelContext)
             }
-            startAutoRefresh()
+            // NO iniciar auto-refresh aquí - se inicia cuando loadData() termina
         }
         .onDisappear {
             stopAutoRefresh()
@@ -92,11 +96,17 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
-                DebugLog.log("📱 [iOS] App activa - iniciando auto-refresh")
-                startAutoRefresh()
-                // Check if location changed while in background
-                Task {
-                    await checkAndUpdateLocation()
+                DebugLog.log("📱 [iOS] App activa")
+                // Solo iniciar auto-refresh si la carga inicial ya termino
+                if isInitialLoadComplete {
+                    DebugLog.log("📱 [iOS] Iniciando auto-refresh (carga inicial completa)")
+                    startAutoRefresh()
+                    // Check if location changed while in background
+                    Task {
+                        await checkAndUpdateLocation()
+                    }
+                } else {
+                    DebugLog.log("📱 [iOS] ⏳ Esperando carga inicial antes de auto-refresh")
                 }
             case .inactive, .background:
                 DebugLog.log("📱 [iOS] App en background - deteniendo auto-refresh")
@@ -127,6 +137,13 @@ struct MainTabView: View {
             return
         }
 
+        // NO iniciar si la carga inicial no ha terminado
+        guard isInitialLoadComplete else {
+            DebugLog.log("📱 [iOS] ⏳ Auto-refresh pospuesto - carga inicial en progreso")
+            return
+        }
+
+        DebugLog.log("📱 [iOS] ✅ Iniciando timer de auto-refresh")
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
                 // Clear arrival cache to force fresh data
@@ -145,6 +162,12 @@ struct MainTabView: View {
 
     /// Check if location changed (different province) and reload data if needed
     private func checkAndUpdateLocation() async {
+        // No ejecutar si la carga inicial esta en progreso
+        guard !isLoadingData else {
+            DebugLog.log("📱 [iOS] checkAndUpdateLocation: ⏳ Saltando - carga inicial en progreso")
+            return
+        }
+
         guard let currentLocation = locationService.currentLocation else {
             DebugLog.log("📱 [iOS] checkAndUpdateLocation: No hay ubicacion actual")
             return
@@ -161,17 +184,25 @@ struct MainTabView: View {
             return
         }
 
-        // Check if province changed by making a lightweight check
-        // The API will return the province based on coordinates
-        let currentProvince = dataService.currentLocation?.provinceName
+        // Solo recargar si la ubicacion cambio significativamente
+        // No hacer reload completo en cada refresh - solo limpiar cache de arrivals
+        let savedLocation = SharedStorage.shared.getLocation()
+        if let saved = savedLocation {
+            let distance = abs(lat - saved.latitude) + abs(lon - saved.longitude)
+            if distance < 0.01 {
+                // Ubicacion similar - no recargar datos de transporte
+                DebugLog.log("📱 [iOS] checkAndUpdateLocation: Ubicacion similar, omitiendo recarga")
+                return
+            }
+        }
 
-        // Force reload to detect province change
-        DebugLog.log("📱 [iOS] checkAndUpdateLocation: Verificando cambio de ubicacion...")
+        // Ubicacion cambio significativamente - recargar
+        DebugLog.log("📱 [iOS] checkAndUpdateLocation: 🔄 Ubicacion cambio, recargando...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
 
         let newProvince = dataService.currentLocation?.provinceName
-        if newProvince != currentProvince {
-            DebugLog.log("📱 [iOS] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
+        if newProvince != lastKnownProvince {
+            DebugLog.log("📱 [iOS] ⚠️ PROVINCIA CAMBIO: \(lastKnownProvince ?? "nil") -> \(newProvince ?? "nil")")
             lastKnownProvince = newProvince
 
             // Save new location for Widget
@@ -184,73 +215,140 @@ struct MainTabView: View {
     }
 
     private func loadData() async {
+        // Evitar carga duplicada
+        guard !isLoadingData else {
+            DebugLog.log("📱 [iOS] ⚠️ loadData() ya en progreso - ignorando")
+            return
+        }
+        isLoadingData = true
+
         DebugLog.log("📱 [iOS] ========== INICIANDO APP ==========")
         DebugLog.log("📱 [iOS] loadData() comenzando...")
 
-        // Request location permission if needed
-        DebugLog.log("📱 [iOS] Authorization status: \(locationService.authorizationStatus.rawValue)")
-        if locationService.authorizationStatus == .notDetermined {
-            DebugLog.log("📱 [iOS] Solicitando permisos de ubicacion...")
-            locationService.requestPermission()
-        }
+        // FASE 1: CARGA INSTANTANEA - Usar ubicacion guardada si existe
+        if let savedLocation = SharedStorage.shared.getLocation() {
+            DebugLog.log("📱 [iOS] ✅ Ubicacion guardada encontrada: (\(savedLocation.latitude), \(savedLocation.longitude))")
+            DebugLog.log("📱 [iOS] Cargando datos con ubicacion guardada (instantaneo)...")
+            await dataService.fetchTransportData(latitude: savedLocation.latitude, longitude: savedLocation.longitude)
+            DebugLog.log("📱 [iOS] ✅ Datos cargados: \(dataService.stops.count) paradas, \(dataService.lines.count) lineas")
 
-        // Wait for authorization (max 10 seconds)
-        var authWaitCount = 0
-        while locationService.authorizationStatus == CLAuthorizationStatus.notDetermined && authWaitCount < 20 {
-            DebugLog.log("📱 [iOS] Esperando autorizacion... (\(authWaitCount))")
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            authWaitCount += 1
-        }
-        DebugLog.log("📱 [iOS] Authorization final: \(locationService.authorizationStatus.rawValue)")
-
-        // Start location updates if authorized
-        if locationService.authorizationStatus == CLAuthorizationStatus.authorizedWhenInUse ||
-           locationService.authorizationStatus == CLAuthorizationStatus.authorizedAlways {
-            DebugLog.log("📱 [iOS] Iniciando actualizacion de ubicacion...")
-            locationService.startUpdating()
-
-            // Wait for location (max 5 seconds)
-            var locationWaitCount = 0
-            while locationService.currentLocation == nil && locationWaitCount < 10 {
-                DebugLog.log("📱 [iOS] Esperando ubicacion... (\(locationWaitCount))")
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                locationWaitCount += 1
+            // Save network info for Widget
+            if let location = dataService.currentLocation {
+                let networkName = location.primaryNetworkName ?? location.provinceName
+                SharedStorage.shared.saveNucleo(name: networkName, id: 0)
+                DebugLog.log("📱 [iOS] Nucleo detectado: \(networkName)")
             }
         } else {
-            DebugLog.log("📱 [iOS] ⚠️ Ubicacion no autorizada, continuando sin ubicacion...")
+            DebugLog.log("📱 [iOS] ⚠️ No hay ubicacion guardada - esperando GPS...")
         }
 
-        // Get user's coordinates
-        let lat = locationService.currentLocation?.coordinate.latitude
-        let lon = locationService.currentLocation?.coordinate.longitude
-        DebugLog.log("📱 [iOS] Ubicacion obtenida: lat=\(lat ?? 0), lon=\(lon ?? 0)")
-
-        // Save location for Widget
-        if let latitude = lat, let longitude = lon {
-            SharedStorage.shared.saveLocation(latitude: latitude, longitude: longitude)
-            DebugLog.log("📱 [iOS] Ubicacion guardada en SharedStorage")
+        // FASE 3.1: Prefetch arrivals de favoritos en paralelo (antes de mostrar UI)
+        if let manager = favoritesManager, !manager.favorites.isEmpty {
+            let favoriteIds = manager.favorites.map { $0.stopId }
+            DebugLog.log("📱 [iOS] 🚀 Prefetching arrivals para \(favoriteIds.count) favoritos...")
+            await withTaskGroup(of: Void.self) { group in
+                for stopId in favoriteIds {
+                    group.addTask {
+                        _ = await dataService.fetchArrivals(for: stopId)
+                    }
+                }
+            }
+            DebugLog.log("📱 [iOS] ✅ Prefetch de favoritos completado")
         }
 
-        // Fetch transport data based on location
-        DebugLog.log("📱 [iOS] Obteniendo datos de transporte...")
-        await dataService.fetchTransportData(latitude: lat, longitude: lon)
-        DebugLog.log("📱 [iOS] Datos obtenidos: \(dataService.stops.count) paradas, \(dataService.lines.count) lineas")
+        // Marcar carga inicial como completa ANTES de iniciar tareas en background
+        isLoadingData = false
+        isInitialLoadComplete = true
+        DebugLog.log("📱 [iOS] ========== CARGA INICIAL COMPLETA ==========")
 
-        // Save network info for Widget
-        if let location = dataService.currentLocation {
-            let networkName = location.primaryNetworkName ?? location.provinceName
-            SharedStorage.shared.saveNucleo(name: networkName, id: 0)
-            DebugLog.log("📱 [iOS] Nucleo detectado: \(networkName)")
+        // Ahora que la carga inicial termino, iniciar auto-refresh
+        startAutoRefresh()
+
+        // FASE 2: EN PARALELO - Obtener ubicacion actual y actualizar si es diferente
+        Task {
+            await requestAndUpdateLocation()
         }
 
-        // Cache offline schedules for favorites (in background)
+        // Cache offline schedules for favorites (diferido 5 segundos para no competir)
         if NetworkMonitor.shared.isConnected {
             Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 segundos
+                DebugLog.log("📱 [iOS] 🔄 Iniciando cache de lineas offline...")
                 await dataService.cacheOfflineSchedulesForFavorites()
             }
         }
 
         DebugLog.log("📱 [iOS] ========== APP LISTA ==========")
+    }
+
+    /// Request location permission and update data if location changed
+    private func requestAndUpdateLocation() async {
+        // Request location permission if needed
+        DebugLog.log("📱 [iOS] Authorization status: \(locationService.authorizationStatus.rawValue)")
+        if locationService.authorizationStatus == .notDetermined {
+            DebugLog.log("📱 [iOS] Solicitando permisos de ubicacion...")
+            locationService.requestPermission()
+
+            // Wait for authorization (max 5 seconds - reduced from 10)
+            var authWaitCount = 0
+            while locationService.authorizationStatus == CLAuthorizationStatus.notDetermined && authWaitCount < 10 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                authWaitCount += 1
+            }
+        }
+
+        // Start location updates if authorized
+        guard locationService.authorizationStatus == CLAuthorizationStatus.authorizedWhenInUse ||
+              locationService.authorizationStatus == CLAuthorizationStatus.authorizedAlways else {
+            DebugLog.log("📱 [iOS] ⚠️ Ubicacion no autorizada")
+            return
+        }
+
+        DebugLog.log("📱 [iOS] Iniciando actualizacion de ubicacion...")
+        locationService.startUpdating()
+
+        // Wait for location (max 3 seconds - reduced from 5)
+        var locationWaitCount = 0
+        while locationService.currentLocation == nil && locationWaitCount < 6 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            locationWaitCount += 1
+        }
+
+        guard let currentLocation = locationService.currentLocation else {
+            DebugLog.log("📱 [iOS] ⚠️ No se pudo obtener ubicacion GPS")
+            return
+        }
+
+        let lat = currentLocation.coordinate.latitude
+        let lon = currentLocation.coordinate.longitude
+        DebugLog.log("📱 [iOS] Ubicacion GPS obtenida: (\(lat), \(lon))")
+
+        // Save new location
+        SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
+
+        // Check if we need to reload (different province or no data yet)
+        let savedLocation = SharedStorage.shared.getLocation()
+        let distanceFromSaved: Double
+        if let saved = savedLocation {
+            // Calculate rough distance (degrees)
+            distanceFromSaved = abs(lat - saved.latitude) + abs(lon - saved.longitude)
+        } else {
+            distanceFromSaved = 999 // Force reload
+        }
+
+        // Reload if moved significantly (> 0.01 degrees ~ 1km) or no data
+        if distanceFromSaved > 0.01 || dataService.stops.isEmpty {
+            DebugLog.log("📱 [iOS] 🔄 Ubicacion cambio significativamente, recargando datos...")
+            await dataService.fetchTransportData(latitude: lat, longitude: lon)
+
+            if let location = dataService.currentLocation {
+                let networkName = location.primaryNetworkName ?? location.provinceName
+                SharedStorage.shared.saveNucleo(name: networkName, id: 0)
+                lastKnownProvince = location.provinceName
+            }
+        } else {
+            DebugLog.log("📱 [iOS] ✅ Ubicacion similar, no es necesario recargar")
+        }
     }
 }
 

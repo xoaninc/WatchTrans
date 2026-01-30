@@ -636,7 +636,7 @@ class DataService {
         // 2. Fetch from RenfeServer API (redcercanias.com)
         do {
             DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
-            let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 10)
+            let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
             DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
             let arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
@@ -682,7 +682,8 @@ class DataService {
         arrivalCache[stopId] = CacheEntry(arrivals: arrivals, timestamp: Date())
     }
 
-    private func getStaleCachedArrivals(for stopId: String) -> [Arrival]? {
+    /// Get stale cached arrivals (within grace period) - useful for showing data immediately while refreshing
+    func getStaleCachedArrivals(for stopId: String) -> [Arrival]? {
         cacheLock.lock()
         defer { cacheLock.unlock() }
 

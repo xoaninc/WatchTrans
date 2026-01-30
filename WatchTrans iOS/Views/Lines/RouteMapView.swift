@@ -39,40 +39,11 @@ struct RouteMapView: View {
         }
     }
 
-    /// Scale factor for marker sizes based on route density (stops per geographic area)
-    /// Dense routes (many stops in small area): smaller markers
-    /// Sparse routes (few stops spread out): larger markers
-    private var markerScale: CGFloat {
-        let count = uniqueStops.count
-        guard count > 0 else { return 1.0 }
-
-        // Calculate geographic span
-        let coordinates = shapePoints ?? stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-        guard !coordinates.isEmpty else { return 1.0 }
-
-        let lats = coordinates.map { $0.latitude }
-        let lons = coordinates.map { $0.longitude }
-        let latSpan = (lats.max() ?? 0) - (lats.min() ?? 0)
-        let lonSpan = (lons.max() ?? 0) - (lons.min() ?? 0)
-
-        // Geographic size in approximate km (rough conversion)
-        let spanKm = sqrt(pow(latSpan * 111, 2) + pow(lonSpan * 85, 2))
-
-        // Density: stops per km
-        let density = Double(count) / max(spanKm, 0.1)
-
-        // Scale based on density:
-        // Low density (< 2 stops/km): 1.4x (sparse, like Cercanías)
-        // Medium density (2-5 stops/km): 1.0x
-        // High density (> 5 stops/km): 0.75x (dense, like Metro)
-        if density < 2 {
-            return 1.4
-        } else if density <= 5 {
-            return 1.0
-        } else {
-            return 0.75
-        }
-    }
+    // Fixed marker sizes - the map zoom already adjusts visually for different route sizes
+    private let terminalInterchangeSize: CGFloat = 8
+    private let interchangeSize: CGFloat = 6
+    private let terminalSize: CGFloat = 6
+    private let regularSize: CGFloat = 4
 
     init(line: Line, stops: [Stop], dataService: DataService, shapePoints: [CLLocationCoordinate2D]? = nil, stopOnShapeCoords: [String: CLLocationCoordinate2D]? = nil, isSuspended: Bool = false, isShapeLoading: Bool = false) {
         self.line = line
@@ -205,9 +176,11 @@ struct RouteMapView: View {
                 }
             }
 
-            // Stop markers - interchange stations get white circle with black border
-            // Use on_shape coordinates when available for precise placement on the line
-            // Use uniqueStops to avoid duplicate markers at the same station
+            // Stop markers - 4 levels of hierarchy (fixed sizes):
+            // 1. Terminal + Interchange: BIGGEST (white with thick black border)
+            // 2. Interchange only: MEDIUM (white with thin black border)
+            // 3. Terminal only: colored donut
+            // 4. Regular: small colored donut
             ForEach(uniqueStops) { stop in
                 // For circular lines, no terminal markers
                 let isTerminal = !line.isCircular && (stop.id == uniqueStops.first?.id || stop.id == uniqueStops.last?.id)
@@ -215,40 +188,43 @@ struct RouteMapView: View {
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
                 Annotation("", coordinate: coord) {
-                    let scale = markerScale
-                    if hasCorrespondence {
-                        // Interchange: white circle with black border
-                        let size = (isTerminal ? 10 : 9) * scale
+                    if isTerminal && hasCorrespondence {
+                        // Terminal + Interchange: BIGGEST - white with thick black border
                         Circle()
                             .fill(.white)
-                            .frame(width: size, height: size)
+                            .frame(width: terminalInterchangeSize, height: terminalInterchangeSize)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.black, lineWidth: 1.5 * scale)
+                                    .stroke(Color.black, lineWidth: 1.5)
+                            )
+                    } else if hasCorrespondence {
+                        // Interchange only: MEDIUM - white with thin black border
+                        Circle()
+                            .fill(.white)
+                            .frame(width: interchangeSize, height: interchangeSize)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.black, lineWidth: 1.0)
                             )
                     } else if isTerminal {
-                        // Terminal stop: colored circle with white center
-                        let outer = 9 * scale
-                        let inner = 5 * scale
+                        // Terminal only: colored donut
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: outer, height: outer)
+                            .frame(width: terminalSize, height: terminalSize)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: inner, height: inner)
+                                    .frame(width: terminalSize * 0.55, height: terminalSize * 0.55)
                             )
                     } else {
-                        // Regular stop: small colored circle with white center
-                        let outer = 7 * scale
-                        let inner = 4 * scale
+                        // Regular stop: small colored donut
                         Circle()
                             .fill(isSuspended ? lineColor.opacity(0.5) : lineColor)
-                            .frame(width: outer, height: outer)
+                            .frame(width: regularSize, height: regularSize)
                             .overlay(
                                 Circle()
                                     .fill(.white)
-                                    .frame(width: inner, height: inner)
+                                    .frame(width: regularSize * 0.5, height: regularSize * 0.5)
                             )
                     }
                 }

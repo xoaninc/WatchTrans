@@ -318,11 +318,13 @@ struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Icon
-            Image(systemName: "tram.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 40)
+            // Transport logo from API
+            LogoImageView(
+                type: stop.transportType,
+                nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                height: 28
+            )
+            .frame(width: 40)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(stop.name)

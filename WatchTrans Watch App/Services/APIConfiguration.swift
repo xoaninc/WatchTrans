@@ -24,12 +24,14 @@ enum APIConfiguration {
     // MARK: - Refresh Intervals
 
     /// Auto-refresh interval for main app (seconds)
-    static let autoRefreshInterval: TimeInterval = 50
+    /// API updates every ~30s, so poll at 25s to catch changes quickly
+    static let autoRefreshInterval: TimeInterval = 25
 
     // MARK: - Cache
 
     /// Arrival cache TTL (seconds)
-    static let arrivalCacheTTL: TimeInterval = 60
+    /// Must be shorter than autoRefreshInterval to ensure fresh data on each refresh
+    static let arrivalCacheTTL: TimeInterval = 20
 
     /// Stale cache grace period (seconds)
     static let staleCacheGracePeriod: TimeInterval = 300  // 5 minutes

@@ -388,6 +388,11 @@ class DataService {
             let transportType = TransportType.from(agencyId: route.agencyId)
             let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
 
+            // Debug: Log longName for Cercanías routes (to diagnose RENFE issue)
+            if transportType == .cercanias {
+                DebugLog.log("🚃 [API] Route \(route.shortName) longName: \"\(route.longName)\"")
+            }
+
             if var existing = lineDict[lineId] {
                 existing.routeIds.append(route.id)
                 // If any route is circular, mark the line as circular
@@ -672,7 +677,7 @@ class DataService {
         // 3. Fetch from RenfeServer API (redcercanias.com)
         do {
             DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
-            let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 10)
+            let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
             DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
             let arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
@@ -782,7 +787,8 @@ class DataService {
         arrivalCache[stopId] = CacheEntry(arrivals: arrivals, timestamp: Date())
     }
 
-    private func getStaleCachedArrivals(for stopId: String) -> [Arrival]? {
+    /// Get stale cached arrivals (within grace period) - useful for showing data immediately while refreshing
+    func getStaleCachedArrivals(for stopId: String) -> [Arrival]? {
         cacheLock.lock()
         defer { cacheLock.unlock() }
 
@@ -955,12 +961,7 @@ class DataService {
 
     /// Fetch alerts for a specific stop (uses direct endpoint for efficiency)
     func fetchAlertsForStop(stopId: String) async -> [AlertResponse] {
-        // Skip network call if offline
-        guard NetworkMonitor.shared.isConnected else {
-            DebugLog.log("📴 [DataService] Offline - skipping alerts fetch")
-            return []
-        }
-
+        // Don't check NetworkMonitor here - let the request fail naturally if offline
         do {
             // Use direct endpoint instead of fetching all + filtering
             let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
@@ -1017,18 +1018,28 @@ class DataService {
     ///   - stopId: The station ID
     ///   - includeShape: If true, includes walking route coordinates (for map display)
     func fetchCorrespondences(stopId: String, includeShape: Bool = false) async -> [CorrespondenceInfo] {
-        // Skip network call if offline
-        guard NetworkMonitor.shared.isConnected else {
-            DebugLog.log("📴 [DataService] Offline - skipping correspondences fetch")
-            return []
-        }
-
+        // Don't check NetworkMonitor here - let the request fail naturally if offline
         do {
             let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId, includeShape: includeShape)
             DebugLog.log("🚶 [DataService] Fetched \(response.correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
             return response.correspondences
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch correspondences for \(stopId): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch physical entrances (accesses) for a station
+    /// Returns all access points with coordinates, accessibility info, and opening hours
+    func fetchAccesses(stopId: String) async -> [StationAccess] {
+        // Don't check NetworkMonitor here - let the request fail naturally if offline
+        // The guard was causing false negatives due to MainActor isolation race conditions
+        do {
+            let response = try await gtfsRealtimeService.fetchAccesses(stopId: stopId)
+            DebugLog.log("🚪 [DataService] Fetched \(response.accesses.count) accesses for \(stopId)")
+            return response.accesses
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch accesses for \(stopId): \(error)")
             return []
         }
     }

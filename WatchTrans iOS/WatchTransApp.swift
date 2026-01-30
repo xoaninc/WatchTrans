@@ -7,9 +7,29 @@
 
 import SwiftUI
 import SwiftData
+import BackgroundTasks
+
+// MARK: - App Delegate for Background Tasks
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Register background refresh task
+        BackgroundRefreshService.shared.register()
+        return true
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        // Schedule background refresh when app goes to background
+        BackgroundRefreshService.shared.scheduleRefresh()
+    }
+}
 
 @main
 struct WatchTransApp: App {
+    // Use AppDelegate for background task registration
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Initialize iCloud sync on app launch
@@ -42,5 +62,11 @@ struct WatchTransApp: App {
             MainTabView()
         }
         .modelContainer(sharedModelContainer)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                // Schedule background refresh when app goes to background
+                BackgroundRefreshService.shared.scheduleRefresh()
+            }
+        }
     }
 }

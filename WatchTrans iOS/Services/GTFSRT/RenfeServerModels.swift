@@ -731,3 +731,90 @@ struct RoutePlanCoordinate: Codable {
     let lat: Double
     let lon: Double
 }
+
+// MARK: - Station Accesses Response
+
+/// Response from GET /api/v1/gtfs/stops/{stop_id}/accesses
+/// Contains all physical entrances (bocas de metro) for a station
+struct AccessesResponse: Codable {
+    let stopId: String
+    let stopName: String
+    let accesses: [StationAccess]
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case stopName = "stop_name"
+        case accesses
+    }
+}
+
+/// A physical entrance/access point to a station
+struct StationAccess: Codable, Identifiable {
+    let id: Int
+    let stopId: String
+    let name: String
+    let lat: Double
+    let lon: Double
+    let street: String?
+    let streetNumber: String?
+    let openingTime: String?
+    let closingTime: String?
+    let wheelchair: Bool?
+    let level: Int?
+    let source: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case stopId = "stop_id"
+        case name, lat, lon, street
+        case streetNumber = "street_number"
+        case openingTime = "opening_time"
+        case closingTime = "closing_time"
+        case wheelchair, level, source
+    }
+
+    /// Full address string
+    var address: String {
+        if let street = street {
+            if let number = streetNumber, !number.isEmpty {
+                return "\(street), \(number)"
+            }
+            return street
+        }
+        return name
+    }
+
+    /// Opening hours string
+    var hoursString: String? {
+        guard let open = openingTime, let close = closingTime else { return nil }
+        return "\(open) - \(close)"
+    }
+
+    /// Check if currently open (simplified - doesn't handle overnight)
+    var isCurrentlyOpen: Bool {
+        guard let open = openingTime, let close = closingTime else { return true }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+
+        guard let openDate = formatter.date(from: open),
+              let closeDate = formatter.date(from: close) else { return true }
+
+        let now = Date()
+        let calendar = Calendar.current
+        let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
+        guard let nowTime = calendar.date(from: nowComponents) else { return true }
+
+        let openComponents = calendar.dateComponents([.hour, .minute], from: openDate)
+        let closeComponents = calendar.dateComponents([.hour, .minute], from: closeDate)
+        guard let openTime = calendar.date(from: openComponents),
+              let closeTime = calendar.date(from: closeComponents) else { return true }
+
+        // Handle overnight hours (e.g., 06:00 - 01:30)
+        if closeTime < openTime {
+            return nowTime >= openTime || nowTime <= closeTime
+        }
+
+        return nowTime >= openTime && nowTime <= closeTime
+    }
+}

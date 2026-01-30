@@ -73,8 +73,8 @@ actor OfflineScheduleService {
         // Create cache directory if needed
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
-        // Load cached schedules from disk
-        Task {
+        // Load cached schedules from disk (fire-and-forget task)
+        _ = Task {
             await loadCacheFromDisk()
         }
     }
@@ -163,7 +163,9 @@ actor OfflineScheduleService {
 
     /// Cache schedules for all favorite stops
     func cacheSchedulesForFavorites(using dataService: DataService) async {
-        let favorites = SharedStorage.shared.getFavorites().map { $0.stopId }
+        let favorites = await MainActor.run {
+            SharedStorage.shared.getFavorites().map { $0.stopId }
+        }
         DebugLog.log("📦 [Offline] Caching schedules for \(favorites.count) favorite stops")
 
         for stopId in favorites {
@@ -175,8 +177,10 @@ actor OfflineScheduleService {
                     limit: 50  // Get more for offline use
                 )
 
-                // Get stop name from dataService
-                let stopName = dataService.getStop(by: stopId)?.name ?? stopId
+                // Get stop name from dataService (MainActor isolated)
+                let stopName = await MainActor.run {
+                    dataService.getStop(by: stopId)?.name ?? stopId
+                }
 
                 await cacheSchedules(for: stopId, stopName: stopName, departures: departures)
             } catch {
@@ -375,24 +379,28 @@ actor OfflineLineService {
             return nil
         }
 
-        return itinerary.stops.map { cached in
-            Stop(
-                id: cached.id,
-                name: cached.name,
-                latitude: cached.latitude,
-                longitude: cached.longitude,
-                connectionLineIds: [],
-                province: cached.province,
-                accesibilidad: nil,
-                hasParking: false,
-                hasBusConnection: false,
-                hasMetroConnection: cached.corMetro != nil,
-                isHub: false,
-                corMetro: cached.corMetro,
-                corMl: cached.corMl,
-                corCercanias: cached.corCercanias,
-                corTranvia: cached.corTranvia
-            )
+        // Create Stop objects on MainActor since Stop init is MainActor-isolated
+        let cachedStops = itinerary.stops
+        return await MainActor.run {
+            cachedStops.map { cached in
+                Stop(
+                    id: cached.id,
+                    name: cached.name,
+                    latitude: cached.latitude,
+                    longitude: cached.longitude,
+                    connectionLineIds: [],
+                    province: cached.province,
+                    accesibilidad: nil,
+                    hasParking: false,
+                    hasBusConnection: false,
+                    hasMetroConnection: cached.corMetro != nil,
+                    isHub: false,
+                    corMetro: cached.corMetro,
+                    corMl: cached.corMl,
+                    corCercanias: cached.corCercanias,
+                    corTranvia: cached.corTranvia
+                )
+            }
         }
     }
 

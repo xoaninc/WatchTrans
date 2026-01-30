@@ -22,6 +22,10 @@ struct ContentView: View {
     @State private var showFavoriteAlert = false
     @State private var favoriteAlertMessage = ""
 
+    // Control de carga inicial para evitar duplicados
+    @State private var isInitialLoadComplete = false
+    @State private var isLoadingData = false
+
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
 
@@ -87,7 +91,7 @@ struct ContentView: View {
             if favoritesManager == nil {
                 favoritesManager = FavoritesManager(modelContext: modelContext)
             }
-            startAutoRefresh()
+            // NO iniciar auto-refresh aquí - se inicia cuando loadData() termina
         }
         .onDisappear {
             stopAutoRefresh()
@@ -95,7 +99,10 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
-                startAutoRefresh()
+                // Solo iniciar auto-refresh si la carga inicial ya termino
+                if isInitialLoadComplete {
+                    startAutoRefresh()
+                }
             case .inactive, .background:
                 stopAutoRefresh()
             @unknown default:
@@ -108,6 +115,14 @@ struct ContentView: View {
 
     private func startAutoRefresh() {
         stopAutoRefresh() // Cancel existing timer
+
+        // NO iniciar si la carga inicial no ha terminado
+        guard isInitialLoadComplete else {
+            DebugLog.log("⌚ [Watch] ⏳ Auto-refresh pospuesto - carga inicial en progreso")
+            return
+        }
+
+        DebugLog.log("⌚ [Watch] ✅ Iniciando timer de auto-refresh")
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
                 // Check if nucleo changed
@@ -121,8 +136,14 @@ struct ContentView: View {
 
     /// Check if location changed (different province) and reload data if needed
     private func checkAndUpdateNucleo() async {
+        // No ejecutar si la carga inicial esta en progreso
+        guard !isLoadingData else {
+            DebugLog.log("⌚ [Watch] checkAndUpdateNucleo: ⏳ Saltando - carga inicial en progreso")
+            return
+        }
+
         guard let currentLocation = locationService.currentLocation else {
-            DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: No hay ubicacion actual")
+            DebugLog.log("⌚ [Watch] checkAndUpdateNucleo: No hay ubicacion actual")
             return
         }
 
@@ -131,20 +152,30 @@ struct ContentView: View {
 
         // If we don't have data yet, load it
         if dataService.currentLocation == nil {
-            DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: No hay datos, cargando...")
+            DebugLog.log("⌚ [Watch] checkAndUpdateNucleo: No hay datos, cargando...")
             await loadData()
             return
         }
 
-        // Check if province changed by reloading data with current coordinates
-        let currentProvince = dataService.currentLocation?.provinceName
+        // Solo recargar si la ubicacion cambio significativamente
+        let savedLocation = SharedStorage.shared.getLocation()
+        if let saved = savedLocation {
+            let distance = abs(lat - saved.latitude) + abs(lon - saved.longitude)
+            if distance < 0.01 {
+                // Ubicacion similar - no recargar datos de transporte
+                DebugLog.log("⌚ [Watch] checkAndUpdateNucleo: Ubicacion similar, omitiendo recarga")
+                return
+            }
+        }
 
-        DebugLog.log("🏠 [ContentView] checkAndUpdateNucleo: Verificando cambio de ubicacion...")
+        // Ubicacion cambio significativamente - recargar
+        let currentProvince = dataService.currentLocation?.provinceName
+        DebugLog.log("⌚ [Watch] checkAndUpdateNucleo: 🔄 Ubicacion cambio, recargando...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
 
         let newProvince = dataService.currentLocation?.provinceName
         if newProvince != currentProvince {
-            DebugLog.log("🏠 [ContentView] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
+            DebugLog.log("⌚ [Watch] ⚠️ PROVINCIA CAMBIO: \(currentProvince ?? "nil") -> \(newProvince ?? "nil")")
 
             // Save new location for Widget
             SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
@@ -164,43 +195,79 @@ struct ContentView: View {
     }
 
     private func loadData() async {
-        DebugLog.log("🏠 [ContentView] ========== LOAD DATA ==========")
+        // Evitar carga duplicada
+        guard !isLoadingData else {
+            DebugLog.log("⌚ [Watch] ⚠️ loadData() ya en progreso - ignorando")
+            return
+        }
+        isLoadingData = true
 
-        if locationService.authorizationStatus == .notDetermined {
-            DebugLog.log("🏠 [ContentView] Requesting location permission...")
-            locationService.requestPermission()
+        DebugLog.log("⌚ [Watch] ========== LOAD DATA ==========")
+
+        // FASE 1: CARGA INSTANTANEA - Usar ubicacion guardada si existe
+        if let savedLocation = SharedStorage.shared.getLocation() {
+            DebugLog.log("⌚ [Watch] ✅ Ubicacion guardada: (\(savedLocation.latitude), \(savedLocation.longitude))")
+            await dataService.fetchTransportData(latitude: savedLocation.latitude, longitude: savedLocation.longitude)
+            DebugLog.log("⌚ [Watch] ✅ Datos cargados: \(dataService.stops.count) paradas")
+
+            if let location = dataService.currentLocation {
+                let networkName = location.primaryNetworkName ?? location.provinceName
+                SharedStorage.shared.saveNucleo(name: networkName, id: 0)
+            }
         }
 
-        locationService.startUpdating()
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        // Marcar carga inicial como completa ANTES de iniciar tareas en background
+        isLoadingData = false
+        isInitialLoadComplete = true
+        DebugLog.log("⌚ [Watch] ========== CARGA INICIAL COMPLETA ==========")
 
-        // Pass user's coordinates to load nearby stops
-        let lat = locationService.currentLocation?.coordinate.latitude
-        let lon = locationService.currentLocation?.coordinate.longitude
-        DebugLog.log("🏠 [ContentView] Location: lat=\(lat ?? 0), lon=\(lon ?? 0)")
+        // Ahora que la carga inicial termino, iniciar auto-refresh
+        startAutoRefresh()
 
-        // Save location for Widget to use (via App Group shared storage)
-        if let latitude = lat, let longitude = lon {
+        // FASE 2: En background - Obtener ubicacion GPS y actualizar si es diferente
+        Task {
+            if locationService.authorizationStatus == .notDetermined {
+                DebugLog.log("⌚ [Watch] Requesting location permission...")
+                locationService.requestPermission()
+            }
+
+            locationService.startUpdating()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+            let lat = locationService.currentLocation?.coordinate.latitude
+            let lon = locationService.currentLocation?.coordinate.longitude
+
+            guard let latitude = lat, let longitude = lon else {
+                DebugLog.log("⌚ [Watch] ⚠️ No GPS location available")
+                return
+            }
+
+            DebugLog.log("⌚ [Watch] GPS Location: (\(latitude), \(longitude))")
             SharedStorage.shared.saveLocation(latitude: latitude, longitude: longitude)
+
+            // Solo recargar si no hay datos o ubicacion cambio significativamente
+            let needsReload = dataService.stops.isEmpty || {
+                if let saved = SharedStorage.shared.getLocation() {
+                    let dist = abs(latitude - saved.latitude) + abs(longitude - saved.longitude)
+                    return dist > 0.01 // ~1km
+                }
+                return true
+            }()
+
+            if needsReload {
+                DebugLog.log("⌚ [Watch] 🔄 Recargando datos con GPS...")
+                await dataService.fetchTransportData(latitude: latitude, longitude: longitude)
+            }
+
+            // Save network info for Widget
+            if let location = dataService.currentLocation {
+                let networkName = location.primaryNetworkName ?? location.provinceName
+                DebugLog.log("⌚ [Watch] Saving network: \(networkName)")
+                SharedStorage.shared.saveNucleo(name: networkName, id: 0)
+            }
         }
 
-        // Fetch transport data (this will detect province from coordinates)
-        await dataService.fetchTransportData(latitude: lat, longitude: lon)
-
-        // Debug: Show result
-        DebugLog.log("🏠 [ContentView] ========== LOAD RESULT ==========")
-        DebugLog.log("🏠 [ContentView] currentLocation: \(dataService.currentLocation?.provinceName ?? "nil")")
-        DebugLog.log("🏠 [ContentView] Lines: \(dataService.lines.count)")
-        DebugLog.log("🏠 [ContentView] Stops: \(dataService.stops.count)")
-
-        // Save location info for Widget AFTER fetching (so we have the correct network name)
-        if let location = dataService.currentLocation {
-            // Save the primary network name (e.g., "Rodalies de Catalunya", "Cercanías Madrid")
-            // This is used by the widget to determine fallback stops
-            let networkName = location.primaryNetworkName ?? location.provinceName
-            DebugLog.log("🏠 [ContentView] Saving network to Widget: \(networkName)")
-            SharedStorage.shared.saveNucleo(name: networkName, id: 0)
-        }
+        DebugLog.log("⌚ [Watch] ========== LOAD COMPLETE ==========")
     }
 }
 
@@ -483,10 +550,15 @@ struct StopCardView: View {
     }
 
     private func loadData() async {
-        // Solo mostrar spinner en la primera carga, no en auto-refresh
-        if !hasLoadedOnce {
+        // CACHE-FIRST: Mostrar datos en cache inmediatamente
+        if let cached = dataService.getStaleCachedArrivals(for: stop.id), !cached.isEmpty {
+            arrivals = cached
+            hasLoadedOnce = true
+        } else if !hasLoadedOnce {
             isLoadingArrivals = true
         }
+
+        // Actualizar con datos frescos en paralelo
         async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         arrivals = await arrivalsTask

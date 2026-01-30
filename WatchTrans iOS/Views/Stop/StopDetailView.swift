@@ -20,9 +20,11 @@ struct StopDetailView: View {
     @State private var departures: [Arrival] = []
     @State private var alerts: [AlertResponse] = []
     @State private var correspondences: [CorrespondenceInfo] = []
+    @State private var accesses: [StationAccess] = []
     @State private var isLoading = true
     @State private var hasLoadedOnce = false
     @State private var refreshTimer: Timer?
+    @State private var refreshCount = 0  // Counter for full refresh every 5 cycles
     @State private var isAlertsExpanded = false
     @State private var showFavoriteAlert = false
     @State private var favoriteAlertMessage = ""
@@ -40,18 +42,19 @@ struct StopDetailView: View {
         self.locationService = locationService
         self.favoritesManager = favoritesManager
 
-        // Initialize map position
+        // Initialize map position - zoomed in closer to show station and nearby accesses
         _mapPosition = State(initialValue: .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude),
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
         )))
     }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
-                // Map header
+            LazyVStack(spacing: 0) {
+                // Map header with accesses
                 Map(position: $mapPosition) {
+                    // Station marker
                     Annotation(stop.name, coordinate: CLLocationCoordinate2D(
                         latitude: stop.latitude,
                         longitude: stop.longitude
@@ -69,6 +72,20 @@ struct StopDetailView: View {
                                 .padding(.vertical, 2)
                                 .background(Color(.systemBackground))
                                 .cornerRadius(4)
+                        }
+                    }
+
+                    // Access markers (entrances)
+                    ForEach(accesses) { access in
+                        Annotation("", coordinate: CLLocationCoordinate2D(
+                            latitude: access.lat,
+                            longitude: access.lon
+                        )) {
+                            Image(systemName: access.wheelchair == true ? "figure.roll" : "door.left.hand.open")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                                .padding(4)
+                                .background(Circle().fill(Color.green))
                         }
                     }
                 }
@@ -101,6 +118,14 @@ struct StopDetailView: View {
                     // Nearby stations (correspondences)
                     if !correspondences.isEmpty {
                         NearbyStationsSectionView(correspondences: correspondences)
+                    }
+
+                    // Navigate to nearest access
+                    if !accesses.isEmpty {
+                        NearestAccessSectionView(
+                            accesses: accesses,
+                            userLocation: locationService.currentLocation
+                        )
                     }
 
                     // Departures section
@@ -177,7 +202,7 @@ struct StopDetailView: View {
         }
         .refreshable {
             dataService.clearArrivalCache()
-            await loadData()
+            await refreshDepartures()
         }
         .task {
             await loadData()
@@ -218,8 +243,16 @@ struct StopDetailView: View {
         stopAutoRefresh()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
+                refreshCount += 1
                 dataService.clearArrivalCache()
-                await loadData()
+
+                // Full refresh every 5 cycles, light refresh otherwise
+                if refreshCount >= 5 {
+                    refreshCount = 0
+                    await loadData()
+                } else {
+                    await refreshDepartures()
+                }
             }
         }
     }
@@ -230,23 +263,195 @@ struct StopDetailView: View {
     }
 
     private func loadData() async {
-        // Solo mostrar spinner en la primera carga, no en auto-refresh
+        // Solo mostrar spinner en la primera carga
         if !hasLoadedOnce {
             isLoading = true
         }
 
-        // Load data with timeout protection
+        // Load ALL data on first load
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         async let correspondencesTask = dataService.fetchCorrespondences(stopId: stop.id)
+        async let accessesTask = dataService.fetchAccesses(stopId: stop.id)
 
-        // Use withTaskGroup to handle potential hangs gracefully
         departures = await departuresTask
         alerts = await alertsTask
         correspondences = await correspondencesTask
+        accesses = await accessesTask
+
+        // If no accesses found and this stop has Metro correspondence,
+        // try to load accesses from the corresponding Metro station
+        // (Metro Madrid has accesses imported, Cercanías doesn't)
+        if accesses.isEmpty, let corMetro = stop.corMetro, !corMetro.isEmpty {
+            // Find Metro station with same name in loaded stops
+            let metroStop = dataService.stops.first { otherStop in
+                otherStop.id.hasPrefix("METRO_") &&
+                otherStop.name.lowercased() == stop.name.lowercased()
+            }
+            if let metroStop = metroStop {
+                DebugLog.log("🚪 [StopDetail] No accesses for \(stop.id), trying Metro station \(metroStop.id)")
+                accesses = await dataService.fetchAccesses(stopId: metroStop.id)
+            }
+        }
+
+        // Update map region to include accesses if loaded from Metro station
+        if !accesses.isEmpty {
+            updateMapToIncludeAccesses()
+        }
 
         hasLoadedOnce = true
         isLoading = false
+    }
+
+    /// Light refresh - only fetches time-sensitive data (departures + alerts)
+    /// Used for pull-to-refresh and auto-refresh
+    private func refreshDepartures() async {
+        async let departuresTask = dataService.fetchArrivals(for: stop.id)
+        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
+
+        departures = await departuresTask
+        alerts = await alertsTask
+    }
+
+    /// Update map region to include both the station and all accesses
+    private func updateMapToIncludeAccesses() {
+        guard !accesses.isEmpty else { return }
+
+        // Collect all points: station + accesses
+        var minLat = stop.latitude
+        var maxLat = stop.latitude
+        var minLon = stop.longitude
+        var maxLon = stop.longitude
+
+        for access in accesses {
+            minLat = min(minLat, access.lat)
+            maxLat = max(maxLat, access.lat)
+            minLon = min(minLon, access.lon)
+            maxLon = max(maxLon, access.lon)
+        }
+
+        // Add padding (20% on each side)
+        let latPadding = max((maxLat - minLat) * 0.2, 0.001)
+        let lonPadding = max((maxLon - minLon) * 0.2, 0.001)
+
+        let centerLat = (minLat + maxLat) / 2
+        let centerLon = (minLon + maxLon) / 2
+        let spanLat = (maxLat - minLat) + latPadding * 2
+        let spanLon = (maxLon - minLon) + lonPadding * 2
+
+        mapPosition = .region(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
+        ))
+
+        DebugLog.log("🗺️ [StopDetail] Updated map to include \(accesses.count) accesses")
+    }
+}
+
+// MARK: - Nearest Access Section View
+
+struct NearestAccessSectionView: View {
+    let accesses: [StationAccess]
+    let userLocation: CLLocation?
+
+    /// Find the nearest access to user's location
+    private var nearestAccess: (access: StationAccess, distance: Double)? {
+        guard let userLocation = userLocation else {
+            // No user location, return first access
+            guard let first = accesses.first else { return nil }
+            return (first, 0)
+        }
+
+        var nearest: (StationAccess, Double)?
+
+        for access in accesses {
+            let accessLocation = CLLocation(latitude: access.lat, longitude: access.lon)
+            let distance = userLocation.distance(from: accessLocation)
+
+            if nearest == nil || distance < nearest!.1 {
+                nearest = (access, distance)
+            }
+        }
+
+        return nearest
+    }
+
+    /// Format distance for display
+    private func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters))m"
+        }
+        return String(format: "%.1fkm", meters / 1000)
+    }
+
+    var body: some View {
+        if let nearest = nearestAccess {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "figure.walk")
+                        .foregroundStyle(.blue)
+                    Text("Entrada más cercana")
+                        .font(.headline)
+                }
+
+                Button {
+                    openNavigationToAccess(nearest.access)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                if nearest.access.wheelchair == true {
+                                    Image(systemName: "figure.roll")
+                                        .font(.caption)
+                                        .foregroundStyle(.blue)
+                                }
+                                Text(nearest.access.address)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+
+                            HStack(spacing: 8) {
+                                if userLocation != nil && nearest.distance > 0 {
+                                    Text(formatDistance(nearest.distance))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                if let hours = nearest.access.hoursString {
+                                    Text(hours)
+                                        .font(.caption)
+                                        .foregroundStyle(nearest.access.isCurrentlyOpen ? .green : .red)
+                                }
+                            }
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                            .font(.title2)
+                            .foregroundStyle(.blue)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        }
+    }
+
+    private func openNavigationToAccess(_ access: StationAccess) {
+        let coordinate = CLLocationCoordinate2D(latitude: access.lat, longitude: access.lon)
+
+        // Use URL scheme to avoid deprecated MKPlacemark API
+        let urlString = "maps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&dirflg=w&t=m"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 

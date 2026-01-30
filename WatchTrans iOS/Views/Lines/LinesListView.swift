@@ -11,6 +11,8 @@ struct LinesListView: View {
     let dataService: DataService
     let locationService: LocationService
 
+    @State private var showingPlanFor: TransportType?
+
     // Current province name helper
     private var currentProvince: String? {
         dataService.currentLocation?.provinceName.lowercased()
@@ -152,13 +154,14 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack(spacing: 8) {
-                            LogoImageView(
+                        SectionHeaderWithPlan(
+                            logo: LogoImageView(
                                 logoType: isRodalies ? .rodalies : .cercanias,
                                 height: 22
-                            )
-                            Text(isRodalies ? "Rodalies" : "Cercanías")
-                        }
+                            ),
+                            title: isRodalies ? "Rodalies" : "Cercanías",
+                            onShowPlan: { showingPlanFor = .cercanias }
+                        )
                     }
                 }
 
@@ -175,13 +178,14 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack(spacing: 8) {
-                            LogoImageView(
+                        SectionHeaderWithPlan(
+                            logo: LogoImageView(
                                 logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? "Madrid"),
                                 height: 18
-                            )
-                            Text(metroSectionTitle)
-                        }
+                            ),
+                            title: metroSectionTitle,
+                            onShowPlan: { showingPlanFor = .metro }
+                        )
                     }
                 }
 
@@ -198,13 +202,14 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack(spacing: 8) {
-                            LogoImageView(
+                        SectionHeaderWithPlan(
+                            logo: LogoImageView(
                                 logoType: .metroLigero,
                                 height: 18
-                            )
-                            Text("Metro Ligero")
-                        }
+                            ),
+                            title: "Metro Ligero",
+                            onShowPlan: { showingPlanFor = .metroLigero }
+                        )
                     }
                 }
 
@@ -221,13 +226,14 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack(spacing: 8) {
-                            LogoImageView(
+                        SectionHeaderWithPlan(
+                            logo: LogoImageView(
                                 logoType: .tram(nucleo: dataService.currentLocation?.provinceName ?? ""),
                                 height: 18
-                            )
-                            Text(tramSectionTitle)
-                        }
+                            ),
+                            title: tramSectionTitle,
+                            onShowPlan: { showingPlanFor = .tram }
+                        )
                     }
                 }
 
@@ -244,13 +250,14 @@ struct LinesListView: View {
                             }
                         }
                     } header: {
-                        HStack(spacing: 8) {
-                            LogoImageView(
+                        SectionHeaderWithPlan(
+                            logo: LogoImageView(
                                 logoType: .fgc,
                                 height: 22
-                            )
-                            Text("Ferrocarrils (FGC)")
-                        }
+                            ),
+                            title: "Ferrocarrils (FGC)",
+                            onShowPlan: { showingPlanFor = .fgc }
+                        )
                     }
                 }
 
@@ -273,6 +280,12 @@ struct LinesListView: View {
             .task {
                 // Cache line itineraries for offline use when in a province
                 await cacheItinerariesIfNeeded()
+            }
+            .fullScreenCover(item: $showingPlanFor) { lineType in
+                NetworkPlanView(
+                    lineType: lineType,
+                    nucleo: dataService.currentLocation?.provinceName ?? "madrid"
+                )
             }
         }
     }
@@ -299,20 +312,45 @@ struct LineRowView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
+    /// Metro Ligero uses inverted style: white background, colored border and text
+    var isMetroLigero: Bool {
+        line.type == .metroLigero
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Line badge
-            Text(line.name)
-                .font(.headline)
-                .fontWeight(.heavy)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(lineColor)
-                )
-                .frame(minWidth: 50)
+            if isMetroLigero {
+                // Metro Ligero: white background, colored border and text
+                Text(line.name)
+                    .font(.headline)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(lineColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(lineColor, lineWidth: 2)
+                            )
+                    )
+                    .frame(minWidth: 50)
+            } else {
+                // Standard: colored background, white text
+                Text(line.name)
+                    .font(.headline)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(lineColor)
+                    )
+                    .frame(minWidth: 50)
+            }
 
             // Line description
             VStack(alignment: .leading, spacing: 2) {
@@ -328,6 +366,154 @@ struct LineRowView: View {
             Spacer()
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Section Header with Plan Button
+
+struct SectionHeaderWithPlan<Logo: View>: View {
+    let logo: Logo
+    let title: String
+    let onShowPlan: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            logo
+            Text(title)
+            Spacer()
+            Button {
+                onShowPlan()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "map")
+                    Text("Ver Plano")
+                }
+                .font(.caption)
+                .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+// MARK: - Network Plan View (Full Screen)
+
+struct NetworkPlanView: View {
+    let lineType: TransportType
+    let nucleo: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    // API URL for the plan image (to be implemented)
+    private var planURL: URL? {
+        let baseURL = APIConfiguration.baseURL
+        let typeString = lineType.rawValue.lowercased()
+        let nucleoLower = nucleo.lowercased()
+        return URL(string: "\(baseURL)/networks/\(nucleoLower)/\(typeString)/plan")
+    }
+
+    var body: some View {
+        NavigationStack {
+            GeometryReader { geometry in
+                ZStack {
+                    Color.black.ignoresSafeArea()
+
+                    if let url = planURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .tint(.white)
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .scaleEffect(scale)
+                                    .offset(offset)
+                                    .gesture(
+                                        MagnificationGesture()
+                                            .onChanged { value in
+                                                scale = lastScale * value
+                                            }
+                                            .onEnded { _ in
+                                                lastScale = scale
+                                                // Limit zoom
+                                                if scale < 1.0 {
+                                                    withAnimation {
+                                                        scale = 1.0
+                                                        lastScale = 1.0
+                                                    }
+                                                } else if scale > 5.0 {
+                                                    scale = 5.0
+                                                    lastScale = 5.0
+                                                }
+                                            }
+                                    )
+                                    .simultaneousGesture(
+                                        DragGesture()
+                                            .onChanged { value in
+                                                offset = CGSize(
+                                                    width: lastOffset.width + value.translation.width,
+                                                    height: lastOffset.height + value.translation.height
+                                                )
+                                            }
+                                            .onEnded { _ in
+                                                lastOffset = offset
+                                            }
+                                    )
+                                    .onTapGesture(count: 2) {
+                                        withAnimation {
+                                            scale = 1.0
+                                            lastScale = 1.0
+                                            offset = .zero
+                                            lastOffset = .zero
+                                        }
+                                    }
+                            case .failure:
+                                VStack(spacing: 16) {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .font(.largeTitle)
+                                        .foregroundStyle(.orange)
+                                    Text("No se pudo cargar el plano")
+                                        .foregroundStyle(.white)
+                                    Text("Plano no disponible aun")
+                                        .font(.caption)
+                                        .foregroundStyle(.gray)
+                                }
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(planTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.black.opacity(0.8), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var planTitle: String {
+        switch lineType {
+        case .cercanias: return "Plano Cercanías"
+        case .metro: return "Plano Metro"
+        case .metroLigero: return "Plano Metro Ligero"
+        case .tram: return "Plano Tranvía"
+        case .fgc: return "Plano FGC"
+        }
     }
 }
 

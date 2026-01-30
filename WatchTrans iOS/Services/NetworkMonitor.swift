@@ -38,12 +38,15 @@ class NetworkMonitor: ObservableObject {
 
     private func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                self?.isConnected = path.status == .satisfied
-                self?.connectionType = self?.getConnectionType(path) ?? .unknown
+            let isConnected = path.status == .satisfied
+            let connectionType = self?.getConnectionType(path) ?? .unknown
 
-                if path.status == .satisfied {
-                    DebugLog.log("🌐 [Network] Connected via \(self?.connectionType ?? .unknown)")
+            Task { @MainActor [weak self] in
+                self?.isConnected = isConnected
+                self?.connectionType = connectionType
+
+                if isConnected {
+                    DebugLog.log("🌐 [Network] Connected via \(connectionType)")
                 } else {
                     DebugLog.log("🌐 [Network] Disconnected - offline mode active")
                 }
@@ -52,7 +55,7 @@ class NetworkMonitor: ObservableObject {
         monitor.start(queue: queue)
     }
 
-    private func getConnectionType(_ path: NWPath) -> ConnectionType {
+    nonisolated private func getConnectionType(_ path: NWPath) -> ConnectionType {
         if path.usesInterfaceType(.wifi) {
             return .wifi
         } else if path.usesInterfaceType(.cellular) {

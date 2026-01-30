@@ -27,6 +27,19 @@ struct LineDetailView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
+    /// Special descriptions for specific lines (hardcoded)
+    var specialLineDescription: String? {
+        let nucleo = line.nucleo.lowercased()
+        let name = line.name.uppercased()
+
+        // C4 Sevilla - circular en sentido horario
+        if nucleo == "sevilla" && name == "C4" {
+            return "Linea circular en sentido horario"
+        }
+
+        return nil
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -46,6 +59,20 @@ struct LineDetailView: View {
 
                 // Line header
                 LineHeaderView(line: line, stopsCount: stops.count, isLoading: isLoading)
+
+                // Special line description (hardcoded for specific lines)
+                if let description = specialLineDescription {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(lineColor)
+                        Text(description)
+                            .font(.subheadline)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(lineColor.opacity(0.1))
+                    .cornerRadius(10)
+                }
 
                 // Alerts (if any) - expandable
                 if !alerts.isEmpty {
@@ -153,7 +180,6 @@ struct LineDetailView: View {
         isShapeLoading = true
         isOfflineData = false
 
-        let routeIdForShape = line.routeIds.first
         DebugLog.log("📋 [LineDetail] Loading line: \(line.name) (\(line.id))")
 
         // Check if offline - try cached data first
@@ -225,19 +251,43 @@ struct LineHeaderView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
+    /// Metro Ligero uses inverted style: white background, colored border and text
+    var isMetroLigero: Bool {
+        line.type == .metroLigero
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Line badge
-            Text(line.name)
-                .font(.title)
-                .fontWeight(.heavy)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(lineColor)
-                )
+            if isMetroLigero {
+                // Metro Ligero: white background, colored border and text
+                Text(line.name)
+                    .font(.title)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(lineColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(lineColor, lineWidth: 3)
+                            )
+                    )
+            } else {
+                // Standard: colored background, white text
+                Text(line.name)
+                    .font(.title)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(lineColor)
+                    )
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(line.longName)
@@ -434,31 +484,32 @@ struct LineStopRowView: View {
     }
 
     /// All connection badges: Cercanías → Metro → Metro Ligero → Tranvía
-    private var connectionBadges: [(name: String, color: Color)] {
-        var badges: [(String, Color)] = []
+    /// Returns (name, color, isMetroLigero) for each badge
+    private var connectionBadges: [(name: String, color: Color, isMetroLigero: Bool)] {
+        var badges: [(String, Color, Bool)] = []
 
         // Cercanías connections
         for line in parseLines(stop.corCercanias) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
-            badges.append((line, color))
+            badges.append((line, color, false))
         }
 
         // Metro connections
         for line in parseLines(stop.corMetro) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMetroColor) ?? .red
-            badges.append((line, color))
+            badges.append((line, color, false))
         }
 
         // Metro Ligero connections
         for line in parseLines(stop.corMl) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
-            badges.append((line, color))
+            badges.append((line, color, true))  // isMetroLigero = true
         }
 
         // Tranvía connections
         for line in parseLines(stop.corTranvia) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red
-            badges.append((line, color))
+            badges.append((line, color, false))
         }
 
         return badges
@@ -517,14 +568,33 @@ struct LineStopRowView: View {
                 if hasConnections {
                     HStack(spacing: 4) {
                         ForEach(Array(connectionBadges.prefix(6).enumerated()), id: \.offset) { _, badge in
-                            Text(badge.name)
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(badge.color)
-                                .cornerRadius(3)
+                            if badge.isMetroLigero {
+                                // Metro Ligero: white background, colored border and text
+                                Text(badge.name)
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(badge.color)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(.white)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .stroke(badge.color, lineWidth: 1)
+                                            )
+                                    )
+                            } else {
+                                // Standard: colored background, white text
+                                Text(badge.name)
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(badge.color)
+                                    .cornerRadius(3)
+                            }
                         }
                     }
                 }

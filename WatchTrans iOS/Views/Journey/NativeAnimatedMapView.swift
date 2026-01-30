@@ -189,40 +189,12 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             map.addAnnotation(marker)
         }
 
-        // MARK: - 3D Tile Preloading
-        //
-        // El proceso de precarga funciona en 4 fases para asegurar que todos los
-        // tiles 3D estén cargados antes de que el usuario inicie la animación:
-        //
-        // FASE 1: Vista general (2D)
-        //   - Cámara: Vista cenital de toda la ruta
-        //   - Propósito: Cargar tiles 2D base del mapa
-        //   - Duración: Instantánea + 0.5s espera
-        //
-        // FASE 2: Pre-vuelo 3D
-        //   - Cámara: Recorre waypoints cada ~500m con vista 3D
-        //   - Configuración: distance=2000m, pitch=60°, heading=dirección de la ruta
-        //   - Animación: 0.3s por waypoint + 0.15s pausa para carga de tiles
-        //   - Propósito: Forzar descarga de edificios/terreno 3D a lo largo de la ruta
-        //
-        // FASE 3: Retorno al inicio
-        //   - Cámara: Vuelve al punto de origen con vista 3D
-        //   - Animación: 0.5s con curva easeOut
-        //   - Propósito: Posicionar cámara para inicio de animación
-        //
-        // FASE 4: Señal de ready
-        //   - Espera 0.3s adicionales para tiles finales
-        //   - Llama onMapReady() -> activa botón de play
-        //
+        // MARK: - Map Setup
 
         func showEntireRoute(in map: MKMapView, coordinates: [CLLocationCoordinate2D]) {
             guard !coordinates.isEmpty else { return }
 
-            print("🗺️ [Preload] Starting 3D preload for \(coordinates.count) coordinates")
-
-            // ═══════════════════════════════════════════════════════════════════
-            // FASE 1: Vista general 2D - carga tiles base
-            // ═══════════════════════════════════════════════════════════════════
+            // 1. Vista general 2D - muestra la ruta completa al usuario
             let lats = coordinates.map { $0.latitude }
             let lons = coordinates.map { $0.longitude }
 
@@ -240,149 +212,34 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             )
             map.setRegion(region, animated: false)
 
-            // ═══════════════════════════════════════════════════════════════════
-            // FASE 2: Preparar waypoints para pre-vuelo 3D
-            // ═══════════════════════════════════════════════════════════════════
-            // Genera puntos cada ~500m para asegurar cobertura completa de tiles 3D
-            let preloadPoints = self.generatePreloadWaypoints(from: coordinates, maxGapKm: 0.5)
-            print("🗺️ [Preload] Generated \(preloadPoints.count) waypoints for 3D preload")
+            // 2. Transición directa al punto de inicio en 3D
+            print("🗺️ [Map] Setting up 3D start position")
 
-            self.preloadWaypoints = preloadPoints
-            self.preloadIndex = 0
-            self.preloadMapView = map
+            if let startCoord = coordinates.first {
+                // Colocar marcador en el inicio
+                self.marker.coordinate = startCoord
 
-            // Inicia pre-vuelo tras breve espera para tiles 2D
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.preloadNextWaypoint()
-            }
-        }
+                // Calcular dirección inicial
+                let heading: Double = coordinates.count > 1 ? calculateBearing(from: startCoord, to: coordinates[1]) : 0
 
-        // Estado del pre-vuelo
-        private var preloadWaypoints: [CLLocationCoordinate2D] = []
-        private var preloadIndex: Int = 0
-        private weak var preloadMapView: MKMapView?
+                // Configurar cámara 3D en el punto de inicio
+                let startCamera = MKMapCamera(
+                    lookingAtCenter: startCoord,
+                    fromDistance: 2000,
+                    pitch: 60,
+                    heading: heading
+                )
 
-        /// Genera waypoints espaciados uniformemente para el pre-vuelo 3D
-        /// - Parameters:
-        ///   - coordinates: Coordenadas originales de la ruta
-        ///   - maxGapKm: Distancia máxima entre waypoints (default 0.5km)
-        /// - Returns: Array de coordenadas para visitar durante precarga
-        private func generatePreloadWaypoints(from coordinates: [CLLocationCoordinate2D], maxGapKm: Double) -> [CLLocationCoordinate2D] {
-            guard coordinates.count >= 2 else { return coordinates }
-
-            var waypoints: [CLLocationCoordinate2D] = [coordinates[0]]
-            var lastPoint = coordinates[0]
-
-            for coord in coordinates.dropFirst() {
-                let dist = haversineDistance(from: lastPoint, to: coord)
-                if dist >= maxGapKm {
-                    waypoints.append(coord)
-                    lastPoint = coord
-                }
-            }
-
-            // Siempre incluir el punto final
-            if let last = coordinates.last {
-                let lastWaypoint = waypoints.last
-                if lastWaypoint == nil || lastWaypoint!.latitude != last.latitude || lastWaypoint!.longitude != last.longitude {
-                    waypoints.append(last)
-                }
-            }
-
-            return waypoints
-        }
-
-        /// Visita el siguiente waypoint con cámara 3D para forzar carga de tiles
-        /// Configuración de cámara durante pre-vuelo:
-        ///   - fromDistance: 2000m (mismo que animación final)
-        ///   - pitch: 60° (vista inclinada para ver edificios 3D)
-        ///   - heading: Dirección hacia siguiente waypoint
-        private func preloadNextWaypoint() {
-            guard let map = preloadMapView else {
-                onMapReady?()
-                return
-            }
-
-            // ═══════════════════════════════════════════════════════════════════
-            // FASE 3: Retorno al inicio cuando se completa el pre-vuelo
-            // ═══════════════════════════════════════════════════════════════════
-            if preloadIndex >= preloadWaypoints.count {
-                print("🗺️ [Preload] ✅ Preload complete, returning to start")
-                finishPreloading(map: map)
-                return
-            }
-
-            let waypoint = preloadWaypoints[preloadIndex]
-            let progress = preloadIndex + 1
-            let total = preloadWaypoints.count
-            print("🗺️ [Preload] Loading waypoint \(progress)/\(total)")
-
-            // Calcular heading hacia siguiente waypoint (o mantener si es el último)
-            let heading: Double
-            if preloadIndex < preloadWaypoints.count - 1 {
-                heading = calculateBearing(from: waypoint, to: preloadWaypoints[preloadIndex + 1])
-            } else if preloadIndex > 0 {
-                heading = calculateBearing(from: preloadWaypoints[preloadIndex - 1], to: waypoint)
-            } else {
-                heading = 0
-            }
-
-            // Configuración de cámara 3D para precarga
-            // - distance: 2000m (altura suficiente para ver área amplia)
-            // - pitch: 60° (inclinación para cargar edificios 3D)
-            // - heading: Apuntando hacia la dirección de la ruta
-            let camera = MKMapCamera(
-                lookingAtCenter: waypoint,
-                fromDistance: 2000,  // metros
-                pitch: 60,           // grados de inclinación
-                heading: heading     // rotación en grados (0-360)
-            )
-
-            // Animación rápida entre waypoints (0.3s) + pausa para carga (0.15s)
-            UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut], animations: {
-                map.camera = camera
-            }, completion: { [weak self] (finished: Bool) in
-                self?.preloadIndex += 1
-                // Pausa breve para que MapKit descargue los tiles 3D
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    self?.preloadNextWaypoint()
-                }
-            })
-        }
-
-        /// Finaliza el pre-vuelo y posiciona la cámara en el inicio
-        private func finishPreloading(map: MKMapView) {
-            guard let startCoord = preloadWaypoints.first else {
-                onMapReady?()
-                return
-            }
-
-            // Posicionar marcador en el origen
-            marker.coordinate = startCoord
-
-            // Cámara inicial para la animación
-            // - Misma configuración que usará la animación
-            // - heading: Apuntando hacia el segundo waypoint
-            let camera = MKMapCamera(
-                lookingAtCenter: startCoord,
-                fromDistance: 2000,
-                pitch: 60,
-                heading: preloadWaypoints.count > 1 ? calculateBearing(from: startCoord, to: preloadWaypoints[1]) : 0
-            )
-
-            // Animación suave de retorno (0.5s con easeOut)
-            UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseOut], animations: {
-                map.camera = camera
-            }, completion: { [weak self] (finished: Bool) in
-                // ═══════════════════════════════════════════════════════════════
-                // FASE 4: Señal de ready - activa botón de play
-                // ═══════════════════════════════════════════════════════════════
-                // Espera adicional para asegurar carga de últimos tiles
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    print("🗺️ [Preload] ✅ Map ready!")
+                // Transición suave de vista 2D a vista 3D (1s)
+                UIView.animate(withDuration: 1.0, delay: 0.5, options: .curveEaseInOut) {
+                    map.camera = startCamera
+                } completion: { [weak self] _ in
+                    print("🗺️ [Map] ✅ Ready to play")
                     self?.onMapReady?()
                 }
-            })
+            } else {
+                self.onMapReady?()
+            }
         }
 
         // MARK: - Animation Control

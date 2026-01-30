@@ -56,6 +56,21 @@ struct Stop: Identifiable, Equatable {
         CLLocation(latitude: latitude, longitude: longitude)
     }
 
+    /// Get the transport type from the stop ID prefix
+    var transportType: TransportType {
+        if id.hasPrefix("METRO_") {
+            return .metro
+        } else if id.hasPrefix("ML_") || id.hasPrefix("METRO_LIGERO") {
+            return .metroLigero
+        } else if id.hasPrefix("TRANVIA_") || id.hasPrefix("TRAM_") {
+            return .tram
+        } else if id.hasPrefix("FGC") {
+            return .fgc
+        } else {
+            return .cercanias
+        }
+    }
+
     // Calculate distance from current location
     func distance(from location: CLLocation) -> Double {
         return self.location.distance(from: location)
