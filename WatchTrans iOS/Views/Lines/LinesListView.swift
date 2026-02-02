@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import PDFKit
 
 struct LinesListView: View {
     let dataService: DataService
     let locationService: LocationService
+    let favoritesManager: FavoritesManager?
 
     @State private var showingPlanFor: TransportType?
 
@@ -140,15 +142,17 @@ struct LinesListView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Cercanias/Rodalies section
-                if !cercaniasLines.isEmpty {
+            ZStack {
+                List {
+                    // Cercanias/Rodalies section
+                    if !cercaniasLines.isEmpty {
                     Section {
                         ForEach(cercaniasLines) { line in
                             NavigationLink(destination: LineDetailView(
                                 line: line,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                favoritesManager: favoritesManager
                             )) {
                                 LineRowView(line: line)
                             }
@@ -172,7 +176,8 @@ struct LinesListView: View {
                             NavigationLink(destination: LineDetailView(
                                 line: line,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                favoritesManager: favoritesManager
                             )) {
                                 LineRowView(line: line)
                             }
@@ -196,7 +201,8 @@ struct LinesListView: View {
                             NavigationLink(destination: LineDetailView(
                                 line: line,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                favoritesManager: favoritesManager
                             )) {
                                 LineRowView(line: line)
                             }
@@ -220,7 +226,8 @@ struct LinesListView: View {
                             NavigationLink(destination: LineDetailView(
                                 line: line,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                favoritesManager: favoritesManager
                             )) {
                                 LineRowView(line: line)
                             }
@@ -244,7 +251,8 @@ struct LinesListView: View {
                             NavigationLink(destination: LineDetailView(
                                 line: line,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                favoritesManager: favoritesManager
                             )) {
                                 LineRowView(line: line)
                             }
@@ -274,10 +282,27 @@ struct LinesListView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                }
+                .listStyle(.insetGrouped)
+                .navigationTitle(dataService.currentLocation?.provinceName ?? "Lineas")
+
+                // Loading overlay
+                if dataService.isLoadingLines {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Cargando líneas...")
+                            .padding(.top, 8)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle(dataService.currentLocation?.provinceName ?? "Lineas")
             .task {
+                // Lazy load lines when user enters this view
+                await loadLinesIfNeeded()
                 // Cache line itineraries for offline use when in a province
                 await cacheItinerariesIfNeeded()
             }
@@ -288,6 +313,12 @@ struct LinesListView: View {
                 )
             }
         }
+    }
+
+    /// Load lines on demand (lazy loading)
+    private func loadLinesIfNeeded() async {
+        guard let location = SharedStorage.shared.getLocation() else { return }
+        await dataService.fetchLinesIfNeeded(latitude: location.latitude, longitude: location.longitude)
     }
 
     /// Cache all line itineraries for the current province (for offline use)
@@ -407,13 +438,103 @@ struct NetworkPlanView: View {
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
+    @State private var pdfDocument: PDFDocument?
+    @State private var isLoadingPDF = false
+    @State private var pdfLoadError = false
 
-    // API URL for the plan image (to be implemented)
-    private var planURL: URL? {
-        let baseURL = APIConfiguration.baseURL
-        let typeString = lineType.rawValue.lowercased()
+    private let baseURL = "https://redcercanias.com/static/planos"
+
+    /// Static plan URLs from the server
+    /// Some are images (viewable in-app), others are PDFs (open in Safari)
+    private var planInfo: (url: URL, isPDF: Bool)? {
         let nucleoLower = nucleo.lowercased()
-        return URL(string: "\(baseURL)/networks/\(nucleoLower)/\(typeString)/plan")
+        DebugLog.log("🗺️ [Plan] Getting plan for lineType=\(lineType), nucleo='\(nucleo)' -> '\(nucleoLower)'")
+
+        let path: String?
+        var isPDF = true
+
+        switch lineType {
+        case .metro:
+            switch nucleoLower {
+            case "málaga", "malaga":
+                path = "metro/malaga_metro.pdf"
+            case "bilbao", "vizcaya":
+                path = "metro/bilbao_metro.pdf"
+            case "madrid":
+                path = "metro/madrid_metro.pdf"
+            case "barcelona":
+                path = "metro/barcelona_metro.pdf"
+            case "sevilla":
+                path = "metro/sevilla_metro.png"
+                isPDF = false
+            case "granada":
+                path = "metro/granada_metro.pdf"
+            case "valencia":
+                path = "metro/valencia_metro.pdf"
+            case "tenerife":
+                path = "metro/tenerife_metro.png"
+                isPDF = false
+            default:
+                path = nil
+            }
+        case .metroLigero:
+            path = "metro_ligero/madrid_metro_ligero.pdf"
+        case .cercanias:
+            switch nucleoLower {
+            case "madrid":
+                path = "cercanias/madrid_cercanias.pdf"
+            case "barcelona", "rodalies de catalunya":
+                path = "cercanias/barcelona_cercanias.pdf"
+            case "sevilla":
+                path = "cercanias/sevilla_cercanias.pdf"
+            case "valencia":
+                path = "cercanias/valencia_cercanias.pdf"
+            case "bilbao", "vizcaya":
+                path = "cercanias/bilbao_cercanias.pdf"
+            case "málaga", "malaga":
+                path = "cercanias/malaga_cercanias.pdf"
+            case "san sebastián", "san sebastian", "guipúzcoa", "guipuzcoa", "donostia":
+                path = "cercanias/san_sebastian_cercanias.pdf"
+            case "santander", "cantabria":
+                path = "cercanias/santander_cercanias.pdf"
+            case "asturias", "oviedo", "gijón", "gijon":
+                path = "cercanias/asturias_cercanias.pdf"
+            case "murcia", "alicante", "murcia/alicante":
+                path = "cercanias/murcia_alicante_cercanias.pdf"
+            case "zaragoza", "aragón", "aragon":
+                path = "cercanias/zaragoza_cercanias.pdf"
+            case "cádiz", "cadiz":
+                path = "cercanias/cadiz_cercanias.pdf"
+            default:
+                path = nil
+            }
+        case .fgc:
+            path = "fgc/barcelona_fgc.pdf"
+        case .tram:
+            switch nucleoLower {
+            case "parla", "madrid":
+                path = "tranvia/parla_tranvia.pdf"
+            case "zaragoza":
+                path = "tranvia/zaragoza_tranvia.pdf"
+            case "barcelona":
+                path = "tranvia/barcelona_tranvia.pdf"
+            case "tenerife":
+                path = "tranvia/tenerife_tranvia.pdf"
+            case "sevilla":
+                path = "tranvia/sevilla_tranvia.pdf"
+            case "murcia":
+                path = "tranvia/murcia_tranvia.pdf"
+            case "alicante":
+                path = "tranvia/alicante_tranvia.pdf"
+            default:
+                path = nil
+            }
+        }
+
+        guard let path = path, let url = URL(string: "\(baseURL)/\(path)") else {
+            return nil
+        }
+        return (url, isPDF)
     }
 
     var body: some View {
@@ -422,71 +543,122 @@ struct NetworkPlanView: View {
                 ZStack {
                     Color.black.ignoresSafeArea()
 
-                    if let url = planURL {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .tint(.white)
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                                    .scaleEffect(scale)
-                                    .offset(offset)
-                                    .gesture(
-                                        MagnificationGesture()
-                                            .onChanged { value in
-                                                scale = lastScale * value
-                                            }
-                                            .onEnded { _ in
-                                                lastScale = scale
-                                                // Limit zoom
-                                                if scale < 1.0 {
-                                                    withAnimation {
-                                                        scale = 1.0
-                                                        lastScale = 1.0
-                                                    }
-                                                } else if scale > 5.0 {
-                                                    scale = 5.0
-                                                    lastScale = 5.0
-                                                }
-                                            }
-                                    )
-                                    .simultaneousGesture(
-                                        DragGesture()
-                                            .onChanged { value in
-                                                offset = CGSize(
-                                                    width: lastOffset.width + value.translation.width,
-                                                    height: lastOffset.height + value.translation.height
-                                                )
-                                            }
-                                            .onEnded { _ in
-                                                lastOffset = offset
-                                            }
-                                    )
-                                    .onTapGesture(count: 2) {
-                                        withAnimation {
-                                            scale = 1.0
-                                            lastScale = 1.0
-                                            offset = .zero
-                                            lastOffset = .zero
-                                        }
-                                    }
-                            case .failure:
+                    if let info = planInfo {
+                        if info.isPDF {
+                            // PDF: Show with native PDFKit viewer
+                            if isLoadingPDF {
+                                VStack(spacing: 16) {
+                                    ProgressView()
+                                        .tint(.white)
+                                    Text("Cargando plano...")
+                                        .foregroundStyle(.white)
+                                }
+                            } else if pdfLoadError {
                                 VStack(spacing: 16) {
                                     Image(systemName: "exclamationmark.triangle")
                                         .font(.largeTitle)
                                         .foregroundStyle(.orange)
                                     Text("No se pudo cargar el plano")
                                         .foregroundStyle(.white)
-                                    Text("Plano no disponible aun")
-                                        .font(.caption)
-                                        .foregroundStyle(.gray)
+                                    Button("Reintentar") {
+                                        Task { await loadPDF(from: info.url) }
+                                    }
+                                    .foregroundStyle(.blue)
                                 }
-                            @unknown default:
-                                EmptyView()
+                            } else if let document = pdfDocument {
+                                PDFKitView(document: document)
                             }
+                        } else {
+                            // Image: Show with zoom/pan
+                            AsyncImage(url: info.url) { phase in
+                                switch phase {
+                                case .empty:
+                                    VStack(spacing: 16) {
+                                        ProgressView()
+                                            .tint(.white)
+                                        Text("Cargando plano...")
+                                            .font(.caption)
+                                            .foregroundStyle(.gray)
+                                    }
+                                    .onAppear {
+                                        DebugLog.log("🗺️ [Plan] Loading image: \(info.url.absoluteString)")
+                                    }
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                        .scaleEffect(scale)
+                                        .offset(offset)
+                                        .gesture(
+                                            MagnificationGesture()
+                                                .onChanged { value in
+                                                    scale = lastScale * value
+                                                }
+                                                .onEnded { _ in
+                                                    lastScale = scale
+                                                    // Limit zoom
+                                                    if scale < 1.0 {
+                                                        withAnimation {
+                                                            scale = 1.0
+                                                            lastScale = 1.0
+                                                        }
+                                                    } else if scale > 5.0 {
+                                                        scale = 5.0
+                                                        lastScale = 5.0
+                                                    }
+                                                }
+                                        )
+                                        .simultaneousGesture(
+                                            DragGesture()
+                                                .onChanged { value in
+                                                    offset = CGSize(
+                                                        width: lastOffset.width + value.translation.width,
+                                                        height: lastOffset.height + value.translation.height
+                                                    )
+                                                }
+                                                .onEnded { _ in
+                                                    lastOffset = offset
+                                                }
+                                        )
+                                        .onTapGesture(count: 2) {
+                                            withAnimation {
+                                                scale = 1.0
+                                                lastScale = 1.0
+                                                offset = .zero
+                                                lastOffset = .zero
+                                            }
+                                        }
+                                case .failure(let error):
+                                    VStack(spacing: 16) {
+                                        Image(systemName: "exclamationmark.triangle")
+                                            .font(.largeTitle)
+                                            .foregroundStyle(.orange)
+                                        Text("No se pudo cargar el plano")
+                                            .foregroundStyle(.white)
+                                        Text(info.url.lastPathComponent)
+                                            .font(.caption)
+                                            .foregroundStyle(.gray)
+                                    }
+                                    .onAppear {
+                                        DebugLog.log("🗺️ [Plan] ❌ Image load failed: \(error.localizedDescription)")
+                                        DebugLog.log("🗺️ [Plan] URL was: \(info.url.absoluteString)")
+                                    }
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                        }
+                    } else {
+                        // No plan available
+                        VStack(spacing: 16) {
+                            Image(systemName: "map")
+                                .font(.largeTitle)
+                                .foregroundStyle(.gray)
+                            Text("Plano no disponible")
+                                .foregroundStyle(.white)
+                            Text("Aun no tenemos plano para esta red")
+                                .font(.caption)
+                                .foregroundStyle(.gray)
                         }
                     }
                 }
@@ -503,6 +675,36 @@ struct NetworkPlanView: View {
                     }
                 }
             }
+            .task {
+                if let info = planInfo, info.isPDF {
+                    await loadPDF(from: info.url)
+                }
+            }
+        }
+    }
+
+    private func loadPDF(from url: URL) async {
+        isLoadingPDF = true
+        pdfLoadError = false
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let document = PDFDocument(data: data) {
+                await MainActor.run {
+                    pdfDocument = document
+                    isLoadingPDF = false
+                }
+            } else {
+                await MainActor.run {
+                    pdfLoadError = true
+                    isLoadingPDF = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                pdfLoadError = true
+                isLoadingPDF = false
+            }
         }
     }
 
@@ -517,9 +719,30 @@ struct NetworkPlanView: View {
     }
 }
 
+// MARK: - PDFKit View Wrapper
+
+struct PDFKitView: UIViewRepresentable {
+    let document: PDFDocument
+
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+        pdfView.document = document
+        pdfView.autoScales = true
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+        pdfView.backgroundColor = .black
+        return pdfView
+    }
+
+    func updateUIView(_ uiView: PDFView, context: Context) {
+        uiView.document = document
+    }
+}
+
 #Preview {
     LinesListView(
         dataService: DataService(),
-        locationService: LocationService()
+        locationService: LocationService(),
+        favoritesManager: nil
     )
 }

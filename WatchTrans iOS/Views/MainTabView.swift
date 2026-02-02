@@ -57,7 +57,8 @@ struct MainTabView: View {
             // Tab 3: Lines
             LinesListView(
                 dataService: dataService,
-                locationService: locationService
+                locationService: locationService,
+                favoritesManager: favoritesManager
             )
             .tabItem {
                 Label("Lineas", systemImage: "list.bullet")
@@ -223,62 +224,96 @@ struct MainTabView: View {
         isLoadingData = true
 
         DebugLog.log("📱 [iOS] ========== INICIANDO APP ==========")
-        DebugLog.log("📱 [iOS] loadData() comenzando...")
 
-        // FASE 1: CARGA INSTANTANEA - Usar ubicacion guardada si existe
+        // FASE 1: CARGA RAPIDA - Stops desde cache o API
         if let savedLocation = SharedStorage.shared.getLocation() {
-            DebugLog.log("📱 [iOS] ✅ Ubicacion guardada encontrada: (\(savedLocation.latitude), \(savedLocation.longitude))")
-            DebugLog.log("📱 [iOS] Cargando datos con ubicacion guardada (instantaneo)...")
+            DebugLog.log("📱 [iOS] ✅ Ubicacion guardada: (\(savedLocation.latitude), \(savedLocation.longitude))")
             await dataService.fetchTransportData(latitude: savedLocation.latitude, longitude: savedLocation.longitude)
-            DebugLog.log("📱 [iOS] ✅ Datos cargados: \(dataService.stops.count) paradas, \(dataService.lines.count) lineas")
+            DebugLog.log("📱 [iOS] ✅ Stops cargados: \(dataService.stops.count)")
 
             // Save network info for Widget
             if let location = dataService.currentLocation {
                 let networkName = location.primaryNetworkName ?? location.provinceName
                 SharedStorage.shared.saveNucleo(name: networkName, id: 0)
-                DebugLog.log("📱 [iOS] Nucleo detectado: \(networkName)")
             }
         } else {
             DebugLog.log("📱 [iOS] ⚠️ No hay ubicacion guardada - esperando GPS...")
         }
 
-        // FASE 3.1: Prefetch arrivals de favoritos en paralelo (antes de mostrar UI)
-        if let manager = favoritesManager, !manager.favorites.isEmpty {
-            let favoriteIds = manager.favorites.map { $0.stopId }
-            DebugLog.log("📱 [iOS] 🚀 Prefetching arrivals para \(favoriteIds.count) favoritos...")
-            await withTaskGroup(of: Void.self) { group in
-                for stopId in favoriteIds {
-                    group.addTask {
-                        _ = await dataService.fetchArrivals(for: stopId)
-                    }
-                }
-            }
-            DebugLog.log("📱 [iOS] ✅ Prefetch de favoritos completado")
-        }
+        // FASE 2: PREFETCH ARRIVALS (paralelo, pero esperamos resultado)
+        // Esto llena el cache antes de mostrar la UI
+        await prefetchArrivalsForHomeView()
 
-        // Marcar carga inicial como completa ANTES de iniciar tareas en background
+        // FASE 3: MOSTRAR UI
         isLoadingData = false
         isInitialLoadComplete = true
-        DebugLog.log("📱 [iOS] ========== CARGA INICIAL COMPLETA ==========")
-
-        // Ahora que la carga inicial termino, iniciar auto-refresh
+        DebugLog.log("📱 [iOS] ========== UI LISTA ==========")
         startAutoRefresh()
 
-        // FASE 2: EN PARALELO - Obtener ubicacion actual y actualizar si es diferente
+        // FASE 4: BACKGROUND - Verificar ubicacion GPS
         Task {
             await requestAndUpdateLocation()
         }
 
-        // Cache offline schedules for favorites (diferido 5 segundos para no competir)
+        // FASE 5: BACKGROUND (diferido) - Cache offline
         if NetworkMonitor.shared.isConnected {
             Task {
                 try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 segundos
-                DebugLog.log("📱 [iOS] 🔄 Iniciando cache de lineas offline...")
                 await dataService.cacheOfflineSchedulesForFavorites()
             }
         }
 
-        DebugLog.log("📱 [iOS] ========== APP LISTA ==========")
+        DebugLog.log("📱 [iOS] ========== BACKGROUND TASKS INICIADAS ==========")
+    }
+
+    /// Prefetch arrivals for favorites, frequent stops, and nearby stops (runs in background)
+    private func prefetchArrivalsForHomeView() async {
+        var stopIds = Set<String>()
+
+        // Add favorite stops
+        if let manager = favoritesManager {
+            for favorite in manager.favorites {
+                stopIds.insert(favorite.stopId)
+            }
+        }
+
+        // Add frequent stops (top 5)
+        let frequentStops = FrequentStopsService.shared.getSuggestedStops().prefix(5)
+        for frequent in frequentStops {
+            stopIds.insert(frequent.id)
+        }
+
+        // Add nearby stops (top 5) - sorted by distance
+        let nearbyStops: [Stop]
+        if let location = locationService.currentLocation {
+            nearbyStops = dataService.stops
+                .sorted { $0.distance(from: location) < $1.distance(from: location) }
+                .filter { stop in !stopIds.contains(stop.id) }  // Exclude already added
+                .prefix(5)
+                .map { $0 }
+        } else {
+            // No location - just take first 5 stops
+            nearbyStops = Array(dataService.stops.prefix(5))
+        }
+        for stop in nearbyStops {
+            stopIds.insert(stop.id)
+        }
+
+        guard !stopIds.isEmpty else { return }
+
+        DebugLog.log("📱 [iOS] 🚀 Prefetching arrivals para \(stopIds.count) paradas (favoritos + frecuentes + cercanas)...")
+
+        await withTaskGroup(of: Void.self) { group in
+            for stopId in stopIds {
+                group.addTask {
+                    _ = await self.dataService.fetchArrivals(for: stopId)
+                }
+            }
+        }
+
+        // Trigger UI refresh
+        refreshTrigger = UUID()
+        DebugLog.log("📱 [iOS] ✅ Prefetch completado")
     }
 
     /// Request location permission and update data if location changed

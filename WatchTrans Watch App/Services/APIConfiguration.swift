@@ -24,8 +24,7 @@ enum APIConfiguration {
     // MARK: - Refresh Intervals
 
     /// Auto-refresh interval for main app (seconds)
-    /// API updates every ~30s, so poll at 25s to catch changes quickly
-    static let autoRefreshInterval: TimeInterval = 25
+    static let autoRefreshInterval: TimeInterval = 45
 
     // MARK: - Cache
 

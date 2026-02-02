@@ -91,32 +91,56 @@ struct Stop: Identifiable, Equatable {
     /// Check if this stop has correspondence with other lines (excluding the current line being viewed)
     /// Used to show interchange markers on route maps
     func hasCorrespondence(excludingLine currentLine: String) -> Bool {
+        let normalizedCurrent = Self.normalizeLineName(currentLine)
+
         // Count metro lines excluding the current one
         let metroLines = corMetro?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0 != currentLine && !$0.isEmpty } ?? []
+            .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Count metro ligero lines excluding current
         let mlLines = corMl?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0 != currentLine && !$0.isEmpty } ?? []
+            .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Count cercanías lines excluding current
         let cercaniasLines = corCercanias?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0 != currentLine && !$0.isEmpty } ?? []
+            .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Count tram lines excluding current
         let tramLines = corTranvia?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0 != currentLine && !$0.isEmpty } ?? []
+            .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Has correspondence if any other lines exist
         return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty
+    }
+
+    /// Normalize line name for comparison (handles "L1" vs "1" vs "Línea 1" etc.)
+    private static func normalizeLineName(_ name: String) -> String {
+        var normalized = name.lowercased()
+            .replacingOccurrences(of: "línea ", with: "")
+            .replacingOccurrences(of: "linea ", with: "")
+            .replacingOccurrences(of: "line ", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
+        // Remove common prefixes to get just the number/identifier
+        // "l1" -> "1", "c3" -> "3", "ml2" -> "ml2" (keep ml prefix)
+        if normalized.hasPrefix("l") && !normalized.hasPrefix("ml") {
+            normalized = String(normalized.dropFirst())
+        } else if normalized.hasPrefix("c") && normalized.count > 1 {
+            let afterC = normalized.dropFirst()
+            if afterC.first?.isNumber == true {
+                normalized = String(afterC)
+            }
+        }
+
+        return normalized
     }
 }
 

@@ -6,13 +6,27 @@
 //
 //  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (redcercanias.com)
 //  UPDATED: 2026-01-27 - Added API route planner integration
+//  UPDATED: 2026-01-31 - Performance optimization with persistent caching
+//
+//  CACHING STRATEGY:
+//  -----------------
+//  • Stops: Cache 24h, silent verification every 2h
+//  • Lines: Cache 24h, silent verification every 8h (lazy loaded)
+//  • Arrivals: Refresh every 45s (no persistent cache)
+//
+//  LOADING FLOW:
+//  -------------
+//  1. App start → Load stops from cache (instant) → Show UI immediately
+//  2. Background: Prefetch arrivals for favorites + frequent stops
+//  3. User enters Lines tab → Lazy load lines from cache or API
+//  4. Silent verification runs in background without blocking UI
 //
 
 import Foundation
 import CoreLocation
 
 /// Current location context - holds network/province info for the user's location
-struct LocationContext {
+struct LocationContext: Codable {
     let provinceName: String
     let networks: [NetworkInfo]
     let primaryNetworkName: String?  // e.g., "Rodalies de Catalunya", "Cercanías Madrid"
@@ -58,7 +72,57 @@ class DataService {
     var stops: [Stop] = []
     var currentLocation: LocationContext?
     var isLoading = false
+    var isLoadingLines = false
     var error: Error?
+
+    // MARK: - Persistent Cache Configuration
+
+    /// Cache durations
+    private static let stopsCacheDuration: TimeInterval = 24 * 60 * 60  // 24 hours
+    private static let linesCacheDuration: TimeInterval = 24 * 60 * 60  // 24 hours
+    private static let lineColorsCacheDuration: TimeInterval = 24 * 60 * 60  // 24 hours (same as stops)
+    private static let stopsVerifyInterval: TimeInterval = 2 * 60 * 60  // 2 hours - silent check for stops
+    private static let linesVerifyInterval: TimeInterval = 8 * 60 * 60  // 8 hours - silent check for lines
+    private static let lineColorsVerifyInterval: TimeInterval = 2 * 60 * 60  // 2 hours (same as stops)
+
+    /// Cache file URLs
+    private static var stopsCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("stops_cache.json")
+    }
+    private static var linesCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("lines_cache.json")
+    }
+    private static var locationCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("location_cache.json")
+    }
+    private static var lineColorsCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("line_colors_cache.json")
+    }
+
+    /// Cache metadata
+    private struct CacheMetadata: Codable {
+        let timestamp: Date
+        let lastVerified: Date
+        let coordinatesHash: String  // To detect location change
+    }
+
+    /// Line colors cache metadata (simpler, no coordinates dependency)
+    private struct LineColorsCacheMetadata: Codable {
+        let timestamp: Date
+        let lastVerified: Date
+    }
+
+    private var stopsCacheMetadata: CacheMetadata?
+    private var linesCacheMetadata: CacheMetadata?
+    private var lineColorsCacheMetadata: LineColorsCacheMetadata?
+    private var linesLoaded = false
+
+    /// In-memory cache of line colors: lineName -> colorHex (e.g., "C1" -> "#75B2E0")
+    private var lineColorsCache: [String: String] = [:]
 
     /// Get filtered lines based on user's transport type preferences
     var filteredLines: [Line] {
@@ -90,6 +154,213 @@ class DataService {
     init() {
         self.networkService = NetworkService()
         self.gtfsRealtimeService = GTFSRealtimeService(networkService: networkService)
+        loadCachedData()
+    }
+
+    // MARK: - Persistent Cache Methods
+
+    /// Load cached stops, location and line colors from disk on init
+    private func loadCachedData() {
+        // Load stops cache
+        if let data = try? Data(contentsOf: Self.stopsCacheURL),
+           let cached = try? JSONDecoder().decode(StopsCache.self, from: data) {
+            let age = Date().timeIntervalSince(cached.metadata.timestamp)
+            if age < Self.stopsCacheDuration {
+                self.stops = cached.stops
+                self.stopsCacheMetadata = cached.metadata
+                DebugLog.log("📦 [Cache] Loaded \(stops.count) stops from cache (age: \(Int(age/60))min)")
+            } else {
+                DebugLog.log("📦 [Cache] Stops cache expired (age: \(Int(age/3600))h)")
+            }
+        }
+
+        // Load location cache
+        if let data = try? Data(contentsOf: Self.locationCacheURL),
+           let cached = try? JSONDecoder().decode(LocationContext.self, from: data) {
+            self.currentLocation = cached
+            DebugLog.log("📦 [Cache] Loaded location: \(cached.provinceName)")
+        }
+
+        // Load line colors cache
+        if let data = try? Data(contentsOf: Self.lineColorsCacheURL),
+           let cached = try? JSONDecoder().decode(LineColorsCache.self, from: data) {
+            let age = Date().timeIntervalSince(cached.metadata.timestamp)
+            if age < Self.lineColorsCacheDuration {
+                self.lineColorsCache = cached.colors
+                self.lineColorsCacheMetadata = cached.metadata
+                DebugLog.log("📦 [Cache] Loaded \(lineColorsCache.count) line colors from cache (age: \(Int(age/60))min)")
+            } else {
+                DebugLog.log("📦 [Cache] Line colors cache expired (age: \(Int(age/3600))h)")
+            }
+        }
+    }
+
+    /// Save stops to persistent cache
+    private func saveStopsCache(coordinatesHash: String) {
+        let metadata = CacheMetadata(
+            timestamp: Date(),
+            lastVerified: Date(),
+            coordinatesHash: coordinatesHash
+        )
+        let cache = StopsCache(stops: stops, metadata: metadata)
+        if let data = try? JSONEncoder().encode(cache) {
+            try? data.write(to: Self.stopsCacheURL)
+            self.stopsCacheMetadata = metadata
+            DebugLog.log("📦 [Cache] Saved \(stops.count) stops to cache")
+        }
+    }
+
+    /// Save lines to persistent cache
+    private func saveLinesCache(coordinatesHash: String) {
+        let metadata = CacheMetadata(
+            timestamp: Date(),
+            lastVerified: Date(),
+            coordinatesHash: coordinatesHash
+        )
+        let cache = LinesCache(lines: lines, metadata: metadata)
+        if let data = try? JSONEncoder().encode(cache) {
+            try? data.write(to: Self.linesCacheURL)
+            self.linesCacheMetadata = metadata
+            DebugLog.log("📦 [Cache] Saved \(lines.count) lines to cache")
+        }
+
+        // Also update line colors cache
+        updateLineColorsCache()
+    }
+
+    /// Save line colors to persistent cache (lightweight, no coordinates dependency)
+    private func updateLineColorsCache() {
+        // Build color dictionary from all loaded lines
+        var newColors: [String: String] = lineColorsCache  // Keep existing colors
+        for line in lines {
+            // Store with multiple keys for flexible lookup
+            let lineName = line.name.lowercased()
+            newColors[lineName] = line.colorHex
+
+            // Also store without prefix (e.g., "1" for "L1", "3" for "C3")
+            if lineName.hasPrefix("l") || lineName.hasPrefix("c") {
+                let withoutPrefix = String(lineName.dropFirst())
+                newColors[withoutPrefix] = line.colorHex
+            }
+
+            // Store original casing too
+            newColors[line.name] = line.colorHex
+        }
+
+        lineColorsCache = newColors
+
+        // Save to disk
+        let metadata = LineColorsCacheMetadata(
+            timestamp: Date(),
+            lastVerified: Date()
+        )
+        let cache = LineColorsCache(colors: lineColorsCache, metadata: metadata)
+        if let data = try? JSONEncoder().encode(cache) {
+            try? data.write(to: Self.lineColorsCacheURL)
+            self.lineColorsCacheMetadata = metadata
+            DebugLog.log("📦 [Cache] Saved \(lineColorsCache.count) line colors to cache")
+        }
+    }
+
+    /// Save location to persistent cache
+    private func saveLocationCache() {
+        guard let location = currentLocation else { return }
+        if let data = try? JSONEncoder().encode(location) {
+            try? data.write(to: Self.locationCacheURL)
+        }
+    }
+
+    /// Load lines from cache if available and valid
+    private func loadLinesFromCache(coordinatesHash: String) -> Bool {
+        guard let data = try? Data(contentsOf: Self.linesCacheURL),
+              let cached = try? JSONDecoder().decode(LinesCache.self, from: data) else {
+            return false
+        }
+
+        let age = Date().timeIntervalSince(cached.metadata.timestamp)
+        guard age < Self.linesCacheDuration,
+              cached.metadata.coordinatesHash == coordinatesHash else {
+            DebugLog.log("📦 [Cache] Lines cache invalid (age: \(Int(age/3600))h, location changed: \(cached.metadata.coordinatesHash != coordinatesHash))")
+            return false
+        }
+
+        self.lines = cached.lines
+        self.linesCacheMetadata = cached.metadata
+        self.linesLoaded = true
+        DebugLog.log("📦 [Cache] Loaded \(lines.count) lines from cache (age: \(Int(age/60))min)")
+
+        // Also populate line colors cache from loaded lines
+        updateLineColorsCache()
+
+        return true
+    }
+
+    /// Check if stops need verification (every 2 hours)
+    private func shouldVerifyStops() -> Bool {
+        guard let metadata = stopsCacheMetadata else { return true }
+        let timeSinceVerify = Date().timeIntervalSince(metadata.lastVerified)
+        return timeSinceVerify >= Self.stopsVerifyInterval
+    }
+
+    /// Check if lines need verification (every 8 hours)
+    private func shouldVerifyLines() -> Bool {
+        guard let metadata = linesCacheMetadata else { return true }
+        let timeSinceVerify = Date().timeIntervalSince(metadata.lastVerified)
+        return timeSinceVerify >= Self.linesVerifyInterval
+    }
+
+    /// Update lastVerified timestamp without changing cache
+    private func updateStopsVerifyTimestamp() {
+        guard var metadata = stopsCacheMetadata else { return }
+        metadata = CacheMetadata(
+            timestamp: metadata.timestamp,
+            lastVerified: Date(),
+            coordinatesHash: metadata.coordinatesHash
+        )
+        let cache = StopsCache(stops: stops, metadata: metadata)
+        if let data = try? JSONEncoder().encode(cache) {
+            try? data.write(to: Self.stopsCacheURL)
+            self.stopsCacheMetadata = metadata
+        }
+    }
+
+    /// Update lines lastVerified timestamp without changing cache
+    private func updateLinesVerifyTimestamp() {
+        guard var metadata = linesCacheMetadata else { return }
+        metadata = CacheMetadata(
+            timestamp: metadata.timestamp,
+            lastVerified: Date(),
+            coordinatesHash: metadata.coordinatesHash
+        )
+        let cache = LinesCache(lines: lines, metadata: metadata)
+        if let data = try? JSONEncoder().encode(cache) {
+            try? data.write(to: Self.linesCacheURL)
+            self.linesCacheMetadata = metadata
+        }
+    }
+
+    /// Generate hash from coordinates for cache validation
+    private func coordinatesHash(lat: Double, lon: Double) -> String {
+        // Round to 2 decimals (~1km precision) to avoid cache invalidation on small GPS drift
+        let roundedLat = (lat * 100).rounded() / 100
+        let roundedLon = (lon * 100).rounded() / 100
+        return "\(roundedLat),\(roundedLon)"
+    }
+
+    // Cache structures
+    private struct StopsCache: Codable {
+        let stops: [Stop]
+        let metadata: CacheMetadata
+    }
+
+    private struct LinesCache: Codable {
+        let lines: [Line]
+        let metadata: CacheMetadata
+    }
+
+    private struct LineColorsCache: Codable {
+        let colors: [String: String]  // lineName -> colorHex
+        let metadata: LineColorsCacheMetadata
     }
 
     // MARK: - Arrival Cache
@@ -126,7 +397,7 @@ class DataService {
     // MARK: - Public Methods
 
     /// Initialize data - call this on app launch
-    /// Pass coordinates to detect user's location and load relevant data
+    /// Loads stops from cache or API. Lines are loaded lazily when needed.
     func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
         isLoading = true
         defer { isLoading = false }
@@ -136,17 +407,154 @@ class DataService {
             return
         }
 
-        DebugLog.log("📍 [DataService] ========== LOADING DATA ==========")
-        DebugLog.log("📍 [DataService] Coordinates: (\(lat), \(lon))")
+        let coordHash = coordinatesHash(lat: lat, lon: lon)
+        DebugLog.log("📍 [DataService] ========== LOADING STOPS ==========")
+        DebugLog.log("📍 [DataService] Coordinates: (\(lat), \(lon)) hash: \(coordHash)")
 
         let totalStart = Date()
 
-        // Try new coordinate-based API first, fall back to nucleo-based if needed
+        // Check if we have valid cached stops for this location
+        let cacheValid = stopsCacheMetadata != nil &&
+                         stopsCacheMetadata!.coordinatesHash == coordHash &&
+                         !stops.isEmpty
+
+        if cacheValid && !shouldVerifyStops() {
+            // Cache is valid and doesn't need verification yet
+            DebugLog.log("📦 [DataService] Using cached stops (\(stops.count) stops)")
+            await setLocationContextFromStops()
+            DebugLog.log("📍 [DataService] ========== LOAD COMPLETE (cached) ==========")
+            return
+        }
+
+        // Need to fetch from API (either no cache, expired, or needs verification)
         do {
-            // 0. Fetch networks to get transport types (only if not cached)
-            // This is non-critical - if it fails, we continue without transport type info
+            DebugLog.log("📍 [DataService] Fetching stops from API...")
+            let stopsStart = Date()
+            let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
+            let stopsTime = Date().timeIntervalSince(stopsStart)
+            DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
+
+            // Check if data changed (compare count as simple heuristic)
+            let dataChanged = stops.count != stopResponses.count
+
+            if cacheValid && !dataChanged {
+                // Data is the same, just update verify timestamp
+                DebugLog.log("📦 [DataService] Stops unchanged, updating verify timestamp")
+                updateStopsVerifyTimestamp()
+            } else {
+                // Map and save new stops
+                stops = stopResponses.map { response in
+                    Stop(
+                        id: response.id,
+                        name: response.name,
+                        latitude: response.lat,
+                        longitude: response.lon,
+                        connectionLineIds: response.lineIds,
+                        province: response.province,
+                        accesibilidad: response.accesibilidad,
+                        hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
+                        hasBusConnection: response.corBus != nil && response.corBus != "0",
+                        hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                        isHub: response.isHub ?? false,
+                        corMetro: response.corMetro,
+                        corMl: response.corMl,
+                        corCercanias: response.corCercanias,
+                        corTranvia: response.corTranvia
+                    )
+                }
+                DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops")
+
+                // Save to cache
+                saveStopsCache(coordinatesHash: coordHash)
+
+                // Save hub stops for widget
+                let hubStops = stops.filter { $0.isHub }.map {
+                    SharedStorage.SharedHubStop(stopId: $0.id, stopName: $0.name)
+                }
+                if !hubStops.isEmpty {
+                    SharedStorage.shared.saveHubStops(hubStops)
+                }
+
+                // Invalidate lines cache since location changed
+                linesLoaded = false
+            }
+
+            // Set location context
+            await setLocationContextFromStops()
+
+            let totalTime = Date().timeIntervalSince(totalStart)
+            DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
+            DebugLog.log("⏱️ [DataService] Total: \(stops.count) stops in \(String(format: "%.2f", totalTime))s")
+
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to load stops: \(error)")
+            self.error = error
+        }
+    }
+
+    /// Set location context from loaded stops (without loading routes)
+    private func setLocationContextFromStops() async {
+        guard let firstStop = stops.first, let province = firstStop.province else {
+            DebugLog.log("📍 [DataService] ⚠️ Cannot determine province from stops")
+            return
+        }
+
+        // If we already have location for this province, keep it
+        if currentLocation?.provinceName == province {
+            return
+        }
+
+        // Create minimal location context without network info (will be populated when lines load)
+        currentLocation = LocationContext(
+            provinceName: province,
+            networks: [],
+            primaryNetworkName: nil
+        )
+        saveLocationCache()
+        DebugLog.log("📍 [DataService] ✅ Location set: \(province)")
+    }
+
+    /// Load lines on demand (lazy loading) - call when user enters Lines tab
+    func fetchLinesIfNeeded(latitude: Double, longitude: Double) async {
+        let coordHash = coordinatesHash(lat: latitude, lon: longitude)
+
+        // Check if we have valid cache
+        if linesLoaded && !lines.isEmpty {
+            // Already loaded, check if needs silent verification (every 8h)
+            if shouldVerifyLines() {
+                DebugLog.log("📦 [DataService] Lines loaded, starting silent verification...")
+                Task {
+                    await silentVerifyLines(latitude: latitude, longitude: longitude, coordHash: coordHash)
+                }
+            } else {
+                DebugLog.log("📦 [DataService] Lines already loaded (\(lines.count) lines)")
+            }
+            return
+        }
+
+        // Try to load from cache
+        if loadLinesFromCache(coordinatesHash: coordHash) {
+            await updateLocationWithNetworks()
+            // Check if needs silent verification
+            if shouldVerifyLines() {
+                Task {
+                    await silentVerifyLines(latitude: latitude, longitude: longitude, coordHash: coordHash)
+                }
+            }
+            return
+        }
+
+        // No cache, fetch from API with loading indicator
+        isLoadingLines = true
+        defer { isLoadingLines = false }
+
+        DebugLog.log("📍 [DataService] ========== LOADING LINES ==========")
+        let totalStart = Date()
+
+        do {
+            // Fetch networks for transport types if needed
             if networkTransportTypes.isEmpty {
-                DebugLog.log("📍 [DataService] Step 0: Fetching networks for transport types...")
+                DebugLog.log("📍 [DataService] Fetching networks for transport types...")
                 do {
                     let networks = try await gtfsRealtimeService.fetchNetworks()
                     for network in networks {
@@ -156,118 +564,91 @@ class DataService {
                     }
                     DebugLog.log("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
                 } catch {
-                    DebugLog.log("⚠️ [DataService] Failed to fetch networks (non-critical): \(error)")
+                    DebugLog.log("⚠️ [DataService] Failed to fetch networks: \(error)")
                 }
             }
 
-            // 1. Fetch stops by coordinates (includes province detection)
-            DebugLog.log("📍 [DataService] Step 1: Fetching stops by coordinates...")
-            let stopsStart = Date()
-            let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
-            let stopsTime = Date().timeIntervalSince(stopsStart)
-            DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
-
-            // Debug: Show first 3 stops with province info
-            for (i, stop) in stopResponses.prefix(3).enumerated() {
-                DebugLog.log("📍 [DataService]   [\(i)] \(stop.name) - province: \(stop.province ?? "nil")")
-            }
-
-            stops = stopResponses.map { response in
-                Stop(
-                    id: response.id,
-                    name: response.name,
-                    latitude: response.lat,
-                    longitude: response.lon,
-                    connectionLineIds: response.lineIds,
-                    province: response.province,
-                    accesibilidad: response.accesibilidad,
-                    hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
-                    hasBusConnection: response.corBus != nil && response.corBus != "0",
-                    hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
-                    isHub: response.isHub ?? false,
-                    corMetro: response.corMetro,
-                    corMl: response.corMl,
-                    corCercanias: response.corCercanias,
-                    corTranvia: response.corTranvia
-                )
-            }
-            DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops to Stop model")
-
-            // Save hub stops for widget recommendations
-            let hubStops = stops.filter { $0.isHub }.map {
-                SharedStorage.SharedHubStop(stopId: $0.id, stopName: $0.name)
-            }
-            if !hubStops.isEmpty {
-                SharedStorage.shared.saveHubStops(hubStops)
-            }
-
-            // 2. Fetch routes by coordinates
-            DebugLog.log("📍 [DataService] Step 2: Fetching routes by coordinates...")
+            // Fetch routes
+            DebugLog.log("📍 [DataService] Fetching routes by coordinates...")
             let routesStart = Date()
-            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: lat, longitude: lon)
+            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: latitude, longitude: longitude)
             let routesTime = Date().timeIntervalSince(routesStart)
             DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
 
-            // Debug: Show networks found in routes
-            let networkIds = Set(routeResponses.compactMap { $0.networkId })
-            DebugLog.log("📍 [DataService] Networks in routes: \(networkIds.sorted().joined(separator: ", "))")
-
-            // Debug: Show route breakdown by agency
-            let byAgency = Dictionary(grouping: routeResponses, by: { $0.agencyId })
-            for (agency, routes) in byAgency.sorted(by: { $0.key < $1.key }) {
-                let shortNames = routes.map { $0.shortName }.sorted().joined(separator: ", ")
-                DebugLog.log("📍 [DataService]   \(agency): \(routes.count) routes (\(shortNames.prefix(50))...)")
-            }
-
-            // Determine province name - from stops if available, otherwise detect from coordinates
-            var provinceName = stopResponses.first?.province
-
-            // If no stops returned but we have routes, try to determine province from network
-            if provinceName == nil && !routeResponses.isEmpty {
-                // Use network to infer province (this is a fallback)
-                let networkIds = Set(routeResponses.compactMap { $0.networkId })
-                provinceName = inferProvinceFromNetworks(networkIds)
-                DebugLog.log("📍 [DataService] ⚠️ No stops returned, inferred province from networks: \(provinceName ?? "unknown")")
-            }
-
-            let finalProvinceName = provinceName ?? "WatchTrans"
-            DebugLog.log("📍 [DataService] Step 3: Processing routes with province: \(finalProvinceName)")
+            // Process routes
+            let provinceName = currentLocation?.provinceName ?? "WatchTrans"
             let processStart = Date()
-            await processRoutes(routeResponses, provinceName: finalProvinceName)
+            await processRoutes(routeResponses, provinceName: provinceName)
             let processTime = Date().timeIntervalSince(processStart)
-            DebugLog.log("📍 [DataService] ✅ Processed routes in \(String(format: "%.2f", processTime))s")
+            DebugLog.log("📍 [DataService] ✅ Processed \(lines.count) lines in \(String(format: "%.2f", processTime))s")
 
-            // 3. Set current location context
-            let networkCodes = Set(routeResponses.compactMap { $0.networkId })
-            let networks = networkCodes.map { NetworkInfo(code: $0, name: getNetworkName(for: $0)) }
-            let primaryNetworkName = getPrimaryNetworkName(from: networkCodes)
+            // Save to cache
+            saveLinesCache(coordinatesHash: coordHash)
+            linesLoaded = true
 
-            if let province = provinceName {
-                currentLocation = LocationContext(
-                    provinceName: province,
-                    networks: networks,
-                    primaryNetworkName: primaryNetworkName
-                )
-                DebugLog.log("📍 [DataService] ✅ Location context set:")
-                DebugLog.log("📍 [DataService]   Province: \(province)")
-                DebugLog.log("📍 [DataService]   Primary network: \(primaryNetworkName ?? "none")")
-                DebugLog.log("📍 [DataService]   Networks: \(networkCodes.sorted().joined(separator: ", "))")
-            } else {
-                DebugLog.log("📍 [DataService] ⚠️ Could not determine province - currentLocation is nil")
-            }
+            // Update location with network info
+            await updateLocationWithNetworks()
 
             let totalTime = Date().timeIntervalSince(totalStart)
-            DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
-            DebugLog.log("📍 [DataService] Total: \(lines.count) lines, \(stops.count) stops")
-            DebugLog.log("⏱️ [DataService] TIMING SUMMARY:")
-            DebugLog.log("⏱️ [DataService]   Stops API: \(String(format: "%.2f", stopsTime))s")
-            DebugLog.log("⏱️ [DataService]   Routes API: \(String(format: "%.2f", routesTime))s")
-            DebugLog.log("⏱️ [DataService]   Processing: \(String(format: "%.2f", processTime))s")
-            DebugLog.log("⏱️ [DataService]   TOTAL: \(String(format: "%.2f", totalTime))s")
+            DebugLog.log("📍 [DataService] ========== LINES LOADED ==========")
+            DebugLog.log("⏱️ [DataService] Total: \(lines.count) lines in \(String(format: "%.2f", totalTime))s")
 
         } catch {
-            DebugLog.log("⚠️ [DataService] Failed to load transport data: \(error)")
+            DebugLog.log("⚠️ [DataService] Failed to load lines: \(error)")
             self.error = error
+        }
+    }
+
+    /// Update location context with full network information
+    private func updateLocationWithNetworks() async {
+        guard let province = currentLocation?.provinceName else { return }
+
+        // Get unique networks from lines
+        var seenNetworks = Set<String>()
+        var networks: [NetworkInfo] = []
+        for line in lines {
+            let networkCode = line.nucleo  // Use nucleo as network identifier
+            if !seenNetworks.contains(networkCode) {
+                seenNetworks.insert(networkCode)
+                networks.append(NetworkInfo(code: networkCode, name: getNetworkName(for: networkCode)))
+            }
+        }
+
+        let primaryNetworkName = getPrimaryNetworkName(from: seenNetworks)
+
+        currentLocation = LocationContext(
+            provinceName: province,
+            networks: networks,
+            primaryNetworkName: primaryNetworkName
+        )
+        saveLocationCache()
+        DebugLog.log("📍 [DataService] ✅ Location updated with \(networks.count) networks")
+    }
+
+    /// Silent verification of lines in background (no loading indicator)
+    private func silentVerifyLines(latitude: Double, longitude: Double, coordHash: String) async {
+        DebugLog.log("📦 [DataService] Silent lines verification starting...")
+
+        do {
+            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: latitude, longitude: longitude)
+
+            // Check if data changed (compare count as simple heuristic)
+            let dataChanged = lines.count != routeResponses.count
+
+            if !dataChanged {
+                // Data is the same, just update verify timestamp
+                DebugLog.log("📦 [DataService] Lines unchanged, updating verify timestamp")
+                updateLinesVerifyTimestamp()
+            } else {
+                // Data changed, update lines
+                DebugLog.log("📦 [DataService] Lines changed (\(lines.count) -> \(routeResponses.count)), updating...")
+                let provinceName = currentLocation?.provinceName ?? "WatchTrans"
+                await processRoutes(routeResponses, provinceName: provinceName)
+                saveLinesCache(coordinatesHash: coordHash)
+                await updateLocationWithNetworks()
+            }
+        } catch {
+            DebugLog.log("⚠️ [DataService] Silent lines verification failed: \(error)")
         }
     }
 
@@ -853,6 +1234,32 @@ class DataService {
         return nil
     }
 
+    /// Get line color from cache or loaded lines
+    /// This is useful for correspondences where we need colors but might not have loaded all line data
+    /// Returns nil if color not found in cache
+    func getLineColor(by lineName: String) -> String? {
+        let lowerName = lineName.lowercased().trimmingCharacters(in: .whitespaces)
+
+        // 1. Check color cache first (fastest, persisted)
+        if let cachedColor = lineColorsCache[lowerName] {
+            return cachedColor
+        }
+        if let cachedColor = lineColorsCache[lineName] {
+            return cachedColor
+        }
+
+        // 2. Try loaded lines
+        if let line = getLine(by: lineName) {
+            // Found in loaded lines - also add to color cache for next time
+            lineColorsCache[lowerName] = line.colorHex
+            lineColorsCache[lineName] = line.colorHex
+            return line.colorHex
+        }
+
+        // 3. Not found anywhere
+        return nil
+    }
+
     /// Search stops by name (filtered to current province/network)
     func searchStops(query: String) async -> [Stop] {
         do {
@@ -975,9 +1382,15 @@ class DataService {
 
     /// Fetch alerts for a specific route
     func fetchAlertsForRoute(routeId: String) async -> [AlertResponse] {
+        DebugLog.log("🔔 [DataService] fetchAlertsForRoute called with routeId: \(routeId)")
         do {
             let alerts = try await gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
             DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for route \(routeId)")
+            
+            if alerts.isEmpty {
+                DebugLog.log("⚠️ [DataService] WARNING: Got 0 alerts for route \(routeId)")
+            }
+            
             return alerts
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
@@ -993,8 +1406,18 @@ class DataService {
             return []
         }
 
-        DebugLog.log("🔔 [Alerts] Fetching alerts for line \(line.name) via route \(routeId)")
-        return await fetchAlertsForRoute(routeId: routeId)
+        DebugLog.log("🔔 [Alerts] Fetching alerts for line \(line.name) (nucleo: \(line.nucleo)) via route \(routeId)")
+        let alerts = await fetchAlertsForRoute(routeId: routeId)
+        DebugLog.log("🔔 [Alerts] ✅ Got \(alerts.count) alerts for line \(line.name)")
+        
+        for (i, alert) in alerts.enumerated() {
+            DebugLog.log("🔔 [Alerts]   [\(i)] \(alert.alertId)")
+            DebugLog.log("🔔 [Alerts]       header: '\(alert.headerText ?? "nil")'")
+            DebugLog.log("🔔 [Alerts]       desc: '\(alert.descriptionText?.prefix(100) ?? "nil")'")
+            DebugLog.log("🔔 [Alerts]       entities: \(alert.informedEntities.count)")
+        }
+        
+        return alerts
     }
 
     // MARK: - Platforms & Correspondences

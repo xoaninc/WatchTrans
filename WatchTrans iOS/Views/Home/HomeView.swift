@@ -96,16 +96,16 @@ struct HomeView: View {
 
     /// Refresh data from server
     private func refreshData() async {
-        // Clear cache to force fresh data
-        dataService.clearArrivalCache()
-
-        // Fetch new data from server
+        // Fetch new data from server (don't clear cache first to avoid "offline" flash)
         if let location = locationService.currentLocation {
             await dataService.fetchTransportData(
                 latitude: location.coordinate.latitude,
                 longitude: location.coordinate.longitude
             )
         }
+
+        // Clear cache AFTER loading to ensure next fetch gets fresh arrivals
+        dataService.clearArrivalCache()
 
         // Trigger UI update
         localRefreshTrigger = UUID()

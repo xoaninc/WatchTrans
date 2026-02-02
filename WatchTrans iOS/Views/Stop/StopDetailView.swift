@@ -112,7 +112,12 @@ struct StopDetailView: View {
 
                     // Connection badges
                     if hasConnections {
-                        ConnectionsSectionView(stop: stop, dataService: dataService)
+                        ConnectionsSectionView(
+                            stop: stop,
+                            dataService: dataService,
+                            stopLatitude: stop.latitude,
+                            stopLongitude: stop.longitude
+                        )
                     }
 
                     // Nearby stations (correspondences)
@@ -201,8 +206,8 @@ struct StopDetailView: View {
             Button("Cancelar", role: .cancel) { }
         }
         .refreshable {
-            dataService.clearArrivalCache()
             await refreshDepartures()
+            dataService.clearArrivalCache()
         }
         .task {
             await loadData()
@@ -613,6 +618,8 @@ struct AlertsSectionView: View {
 struct ConnectionsSectionView: View {
     let stop: Stop
     let dataService: DataService
+    let stopLatitude: Double
+    let stopLongitude: Double
 
     // Default colors for when line not found (same as Watch app)
     private let defaultMetroColor = "#ED1C24"
@@ -620,31 +627,33 @@ struct ConnectionsSectionView: View {
     private let defaultCercaniasColor = "#75B2E0"
     private let defaultTranviaColor = "#E4002B"
 
+    @State private var linesLoaded = false
+
     /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía
     private var allBadges: [(name: String, colorHex: String)] {
         var badges: [(String, String)] = []
 
         // 1. Cercanías
         for line in parseLines(stop.corCercanias) {
-            let color = dataService.getLine(by: line)?.colorHex ?? defaultCercaniasColor
+            let color = dataService.getLineColor(by: line) ?? defaultCercaniasColor
             badges.append((line, color))
         }
 
         // 2. Metro
         for line in parseLines(stop.corMetro) {
-            let color = dataService.getLine(by: line)?.colorHex ?? defaultMetroColor
+            let color = dataService.getLineColor(by: line) ?? defaultMetroColor
             badges.append((line, color))
         }
 
         // 3. Metro Ligero
         for line in parseLines(stop.corMl) {
-            let color = dataService.getLine(by: line)?.colorHex ?? defaultMlColor
+            let color = dataService.getLineColor(by: line) ?? defaultMlColor
             badges.append((line, color))
         }
 
         // 4. Tranvía
         for line in parseLines(stop.corTranvia) {
-            let color = dataService.getLine(by: line)?.colorHex ?? defaultTranviaColor
+            let color = dataService.getLineColor(by: line) ?? defaultTranviaColor
             badges.append((line, color))
         }
 
@@ -680,6 +689,16 @@ struct ConnectionsSectionView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .task {
+            // Load lines if not already loaded to get correct colors
+            if dataService.lines.isEmpty {
+                await dataService.fetchLinesIfNeeded(
+                    latitude: stopLatitude,
+                    longitude: stopLongitude
+                )
+                linesLoaded = true  // Trigger view update
+            }
+        }
     }
 
     private func parseLines(_ value: String?) -> [String] {

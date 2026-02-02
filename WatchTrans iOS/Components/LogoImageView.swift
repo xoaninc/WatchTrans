@@ -12,7 +12,14 @@ struct LogoImageView: View {
     let logoType: LogoType
     let height: CGFloat
 
+    @State private var loadedImage: UIImage?
+    @State private var loadState: LoadState = .idle
+
     private static let baseURL = "https://redcercanias.com/static/logos/"
+
+    enum LoadState {
+        case idle, loading, loaded, failed
+    }
 
     enum LogoType {
         case cercanias
@@ -137,41 +144,70 @@ struct LogoImageView: View {
 
     var remoteURL: URL? {
         guard let filename = logoType.remoteFilename else { return nil }
-        let url = URL(string: "\(Self.baseURL)\(filename).\(logoType.fileExtension)")
-        DebugLog.log("🖼️ [Logo] Loading: \(url?.absoluteString ?? "nil") for \(logoType)")
-        return url
+        return URL(string: "\(Self.baseURL)\(filename).\(logoType.fileExtension)")
     }
 
     var body: some View {
-        if let url = remoteURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
+        Group {
+            switch loadState {
+            case .idle, .loading:
+                // Show SF Symbol while loading
+                Image(systemName: logoType.sfSymbol)
+                    .font(.system(size: height * 0.6))
+                    .foregroundStyle(.secondary)
+            case .loaded:
+                if let image = loadedImage {
+                    Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
                         .frame(height: height)
-                        .onAppear {
-                            DebugLog.log("🖼️ [Logo] ✅ Loaded: \(url.lastPathComponent)")
-                        }
-                case .failure(let error):
-                    // Fallback to local asset or SF Symbol
-                    localImage
-                        .onAppear {
-                            DebugLog.log("🖼️ [Logo] ❌ Failed: \(url.lastPathComponent) - \(error.localizedDescription)")
-                        }
-                case .empty:
-                    // Show SF Symbol while loading (no spinner - faster UX)
-                    Image(systemName: logoType.sfSymbol)
-                        .font(.system(size: height * 0.6))
-                        .foregroundStyle(.secondary)
-                @unknown default:
+                } else {
                     localImage
                 }
+            case .failed:
+                localImage
             }
-        } else {
-            // No remote URL available, use local asset or SF Symbol
-            localImage
+        }
+        .task(id: logoType.remoteFilename) {
+            await loadImage()
+        }
+    }
+
+    private func loadImage() async {
+        guard let filename = logoType.remoteFilename else {
+            loadState = .failed
+            return
+        }
+
+        let cacheKey = "\(filename).\(logoType.fileExtension)"
+
+        // Check cache first
+        if let cached = await ImageCacheService.shared.getImage(for: cacheKey) {
+            loadedImage = cached
+            loadState = .loaded
+            return
+        }
+
+        // Load from network
+        guard let url = remoteURL else {
+            loadState = .failed
+            return
+        }
+
+        loadState = .loading
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let image = UIImage(data: data) {
+                // Save to cache for offline use
+                await ImageCacheService.shared.saveImage(image, for: cacheKey)
+                loadedImage = image
+                loadState = .loaded
+            } else {
+                loadState = .failed
+            }
+        } catch {
+            loadState = .failed
         }
     }
 

@@ -98,7 +98,7 @@ class BackgroundRefreshService {
                 let departures = try await service.fetchDepartures(stopId: favorite.stopId, limit: 20)
                 if !departures.isEmpty {
                     successCount += 1
-                    DebugLog.log("📱 [BGRefresh] ✅ \(favorite.stopName ?? favorite.stopId): \(departures.count) departures")
+                    DebugLog.log("📱 [BGRefresh] ✅ \(favorite.stopName): \(departures.count) departures")
                 }
             } catch {
                 DebugLog.log("📱 [BGRefresh] ❌ \(favorite.stopId): \(error.localizedDescription)")

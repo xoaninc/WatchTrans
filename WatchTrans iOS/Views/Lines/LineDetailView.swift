@@ -77,10 +77,13 @@ struct LineDetailView: View {
 
                 // Alerts (if any) - expandable
                 if !alerts.isEmpty {
+                    let _ = DebugLog.log("🔔 [LineDetailView UI] Rendering AlertsSummaryView with \(alerts.count) alerts")
                     AlertsSummaryView(
                         alerts: alerts,
                         isExpanded: $isAlertsExpanded
                     )
+                } else {
+                    let _ = DebugLog.log("🔔 [LineDetailView UI] NOT rendering alerts (empty)")
                 }
 
                 // Operating hours or suspension banner
@@ -204,7 +207,12 @@ struct LineDetailView: View {
             return []
         }()
 
-        async let alertsTask = dataService.fetchAlertsForLine(line)
+        async let alertsTask = {
+            DebugLog.log("🔔 [LineDetailView] Starting to fetch alerts for line: \(line.name) (nucleo: \(line.nucleo))")
+            let fetchedAlerts = await dataService.fetchAlertsForLine(line)
+            DebugLog.log("🔔 [LineDetailView] Alerts task completed: \(fetchedAlerts.count) alerts")
+            return fetchedAlerts
+        }()
 
         async let hoursTask: OperatingHoursResult? = {
             if let routeId = line.routeIds.first {
@@ -222,6 +230,14 @@ struct LineDetailView: View {
 
         stops = await stopsTask
         alerts = await alertsTask
+        DebugLog.log("🔔 [LineDetailView] ✅ Alerts assigned to @State: \(alerts.count) alerts")
+        
+        if alerts.isEmpty {
+            DebugLog.log("⚠️ [LineDetailView] WARNING: No alerts to display for line \(line.name)")
+        } else {
+            DebugLog.log("🔔 [LineDetailView] Will display \(alerts.count) alerts in UI")
+        }
+        
         operatingHoursResult = await hoursTask
         let shapeResult = await shapeTask
         shapePoints = shapeResult.shapePoints.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
