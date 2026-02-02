@@ -200,6 +200,8 @@ struct LineDetailView: View {
         }
 
         // Online: fetch from API
+        DebugLog.log("🔔 [LineDetailView] Starting parallel fetch tasks")
+        
         async let stopsTask: [Stop] = {
             if let routeId = line.routeIds.first {
                 return await dataService.fetchStopsForRoute(routeId: routeId)
@@ -207,12 +209,8 @@ struct LineDetailView: View {
             return []
         }()
 
-        async let alertsTask = {
-            DebugLog.log("🔔 [LineDetailView] Starting to fetch alerts for line: \(line.name) (nucleo: \(line.nucleo))")
-            let fetchedAlerts = await dataService.fetchAlertsForLine(line)
-            DebugLog.log("🔔 [LineDetailView] Alerts task completed: \(fetchedAlerts.count) alerts")
-            return fetchedAlerts
-        }()
+        DebugLog.log("🔔 [LineDetailView] Calling fetchAlertsForLine for line: \(line.name)")
+        async let alertsTask: [AlertResponse] = dataService.fetchAlertsForLine(line)
 
         async let hoursTask: OperatingHoursResult? = {
             if let routeId = line.routeIds.first {
@@ -228,14 +226,21 @@ struct LineDetailView: View {
             return DataService.ShapeWithStops(shapePoints: [], stopCoordinates: [:])
         }()
 
+        DebugLog.log("🔔 [LineDetailView] Waiting for alerts task...")
+        let fetchedAlerts = await alertsTask
+        DebugLog.log("🔔 [LineDetailView] Alerts task completed: \(fetchedAlerts.count) alerts")
+        
         stops = await stopsTask
-        alerts = await alertsTask
+        alerts = fetchedAlerts
         DebugLog.log("🔔 [LineDetailView] ✅ Alerts assigned to @State: \(alerts.count) alerts")
         
         if alerts.isEmpty {
             DebugLog.log("⚠️ [LineDetailView] WARNING: No alerts to display for line \(line.name)")
         } else {
             DebugLog.log("🔔 [LineDetailView] Will display \(alerts.count) alerts in UI")
+            for (i, alert) in alerts.prefix(3).enumerated() {
+                DebugLog.log("🔔 [LineDetailView]   Alert[\(i)]: header='\(alert.headerText ?? "nil")' desc='\((alert.descriptionText ?? "nil").prefix(50))'")
+            }
         }
         
         operatingHoursResult = await hoursTask
