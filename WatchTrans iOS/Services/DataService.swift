@@ -1382,15 +1382,8 @@ class DataService {
 
     /// Fetch alerts for a specific route
     func fetchAlertsForRoute(routeId: String) async -> [AlertResponse] {
-        DebugLog.log("🔔 [DataService] fetchAlertsForRoute called with routeId: \(routeId)")
         do {
             let alerts = try await gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
-            DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for route \(routeId)")
-            
-            if alerts.isEmpty {
-                DebugLog.log("⚠️ [DataService] WARNING: Got 0 alerts for route \(routeId)")
-            }
-            
             return alerts
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
@@ -1400,24 +1393,10 @@ class DataService {
 
     /// Fetch alerts for a line using the route-specific endpoint
     func fetchAlertsForLine(_ line: Line) async -> [AlertResponse] {
-        // Use the first routeId to fetch alerts via the new endpoint
         guard let routeId = line.routeIds.first else {
-            DebugLog.log("⚠️ [Alerts] No routeId for line \(line.name)")
             return []
         }
-
-        DebugLog.log("🔔 [Alerts] Fetching alerts for line \(line.name) (nucleo: \(line.nucleo)) via route \(routeId)")
-        let alerts = await fetchAlertsForRoute(routeId: routeId)
-        DebugLog.log("🔔 [Alerts] ✅ Got \(alerts.count) alerts for line \(line.name)")
-        
-        for (i, alert) in alerts.enumerated() {
-            DebugLog.log("🔔 [Alerts]   [\(i)] \(alert.alertId)")
-            DebugLog.log("🔔 [Alerts]       header: '\(alert.headerText ?? "nil")'")
-            DebugLog.log("🔔 [Alerts]       desc: '\(alert.descriptionText?.prefix(100) ?? "nil")'")
-            DebugLog.log("🔔 [Alerts]       entities: \(alert.informedEntities.count)")
-        }
-        
-        return alerts
+        return await fetchAlertsForRoute(routeId: routeId)
     }
 
     // MARK: - Platforms & Correspondences

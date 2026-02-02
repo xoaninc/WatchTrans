@@ -233,26 +233,15 @@ class GTFSRealtimeService {
     /// Fetch alerts for a specific route
     func fetchAlertsForRoute(routeId: String) async throws -> [AlertResponse] {
         let urlString = "\(baseURL)/realtime/routes/\(routeId)/alerts"
-        DebugLog.log("🔔 [GTFSRT] Fetching alerts from: \(urlString)")
         
         guard let url = URL(string: urlString) else {
-            DebugLog.log("❌ [GTFSRT] Invalid URL: \(urlString)")
             throw NetworkError.badResponse
         }
 
         let alerts: [AlertResponse] = try await networkService.fetch(url)
-        DebugLog.log("🔔 [GTFSRT] Raw response: \(alerts.count) alerts")
         
+        // Filter for active alerts only
         let activeAlerts = alerts.filter { $0.isActive ?? true }
-        DebugLog.log("🔔 [GTFSRT] After filtering active: \(activeAlerts.count) alerts")
-        
-        if activeAlerts.isEmpty && !alerts.isEmpty {
-            DebugLog.log("⚠️ [GTFSRT] WARNING: All \(alerts.count) alerts were filtered out as inactive!")
-            for alert in alerts {
-                DebugLog.log("⚠️ [GTFSRT]   - \(alert.alertId): isActive=\(alert.isActive ?? false)")
-            }
-        }
-        
         return activeAlerts
     }
 
