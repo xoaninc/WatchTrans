@@ -12,6 +12,7 @@ struct LineDetailView: View {
     let line: Line
     let dataService: DataService
     let locationService: LocationService
+    let favoritesManager: FavoritesManager?
 
     @State private var stops: [Stop] = []
     @State private var alerts: [AlertResponse] = []
@@ -150,7 +151,7 @@ struct LineDetailView: View {
                                 stop: stop,
                                 dataService: dataService,
                                 locationService: locationService,
-                                favoritesManager: nil
+                                favoritesManager: favoritesManager
                             )) {
                                 LineStopRowView(
                                     stop: stop,
@@ -381,6 +382,23 @@ struct AlertsSummaryView: View {
 
 struct AlertBannerCompactView: View {
     let alert: AlertResponse
+    
+    // Extract first line of description as header fallback
+    private var effectiveHeader: String? {
+        if let header = alert.headerText, !header.isEmpty {
+            return header
+        }
+        // Use first line of description as header if headerText is empty
+        if let description = alert.descriptionText, !description.isEmpty {
+            return description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
+        }
+        return nil
+    }
+    
+    private var shouldShowFullDescription: Bool {
+        // Only show full description if we have a proper headerText
+        alert.headerText != nil && !alert.headerText!.isEmpty
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -390,13 +408,13 @@ struct AlertBannerCompactView: View {
                 .padding(.top, 6)
 
             VStack(alignment: .leading, spacing: 2) {
-                if let header = alert.headerText, !header.isEmpty {
+                if let header = effectiveHeader {
                     Text(header)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
-                if let description = alert.descriptionText, !description.isEmpty {
+                if shouldShowFullDescription, let description = alert.descriptionText, !description.isEmpty {
                     Text(description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -413,6 +431,33 @@ struct AlertBannerCompactView: View {
 
 struct AlertBannerView: View {
     let alert: AlertResponse
+    
+    // Extract first line of description as header fallback
+    private var effectiveHeader: String? {
+        if let header = alert.headerText, !header.isEmpty {
+            return header
+        }
+        // Use first line of description as header if headerText is empty
+        if let description = alert.descriptionText, !description.isEmpty {
+            return description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
+        }
+        return nil
+    }
+    
+    private var effectiveDescription: String? {
+        // Only show description if we have a proper headerText (not extracted from description)
+        guard let header = alert.headerText, !header.isEmpty else {
+            // If header is extracted from description, show remaining lines
+            if let description = alert.descriptionText, !description.isEmpty {
+                let lines = description.components(separatedBy: .newlines)
+                if lines.count > 1 {
+                    return lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+            return nil
+        }
+        return alert.descriptionText
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -420,12 +465,12 @@ struct AlertBannerView: View {
                 .foregroundStyle(.orange)
 
             VStack(alignment: .leading, spacing: 4) {
-                if let header = alert.headerText, !header.isEmpty {
+                if let header = effectiveHeader {
                     Text(header)
                         .font(.subheadline)
                         .fontWeight(.medium)
                 }
-                if let description = alert.descriptionText, !description.isEmpty {
+                if let description = effectiveDescription, !description.isEmpty {
                     Text(description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -626,7 +671,8 @@ struct LineStopRowView: View {
                 isCircular: false
             ),
             dataService: DataService(),
-            locationService: LocationService()
+            locationService: LocationService(),
+            favoritesManager: nil
         )
     }
 }

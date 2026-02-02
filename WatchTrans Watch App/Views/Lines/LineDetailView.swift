@@ -246,11 +246,16 @@ struct LineAlertBannerView: View {
     }
 
     private var alertText: String {
-        // Use header if available, otherwise use description
+        // Use header if available
         if let header = alert.headerText, !header.isEmpty {
             return header
         }
-        return alert.descriptionText ?? "Alerta de servicio"
+        // Extract first line of description as header fallback
+        if let description = alert.descriptionText, !description.isEmpty {
+            let firstLine = description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
+            return firstLine ?? description
+        }
+        return "Alerta de servicio"
     }
 }
 
