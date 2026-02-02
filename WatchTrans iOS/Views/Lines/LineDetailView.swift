@@ -42,7 +42,9 @@ struct LineDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
+        let _ = DebugLog.log("🔔 [LineDetailView] BODY RENDER - alerts.count = \(alerts.count), isLoading = \(isLoading)")
+        
+        return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Offline banner
                 if isOfflineData {
