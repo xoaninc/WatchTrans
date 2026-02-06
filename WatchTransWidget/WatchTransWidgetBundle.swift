@@ -12,5 +12,6 @@ import SwiftUI
 struct WatchTransWidgetBundle: WidgetBundle {
     var body: some Widget {
         WatchTransWidget()
+        WatchTransFavoritesWidget()
     }
 }

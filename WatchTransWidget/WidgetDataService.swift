@@ -35,4 +35,30 @@ class WidgetDataService {
         let departures = try decoder.decode([DepartureResponse].self, from: data)
         return departures
     }
+    
+    /// Fetch departures for multiple stops concurrently
+    func fetchMultipleDepartures(stopIds: [String], limitPerStop: Int = 2) async -> [String: [DepartureResponse]] {
+        var results: [String: [DepartureResponse]] = [:]
+        
+        await withTaskGroup(of: (String, [DepartureResponse]?).self) { group in
+            for stopId in stopIds {
+                group.addTask {
+                    do {
+                        let departures = try await self.fetchDepartures(stopId: stopId, limit: limitPerStop)
+                        return (stopId, departures)
+                    } catch {
+                        return (stopId, nil)
+                    }
+                }
+            }
+            
+            for await (stopId, departures) in group {
+                if let departures = departures {
+                    results[stopId] = departures
+                }
+            }
+        }
+        
+        return results
+    }
 }
