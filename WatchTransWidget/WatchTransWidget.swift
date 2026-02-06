@@ -13,7 +13,7 @@ import AppIntents
 // NOTE: Keep in sync with APIConfiguration.swift in main app
 
 enum WidgetAPIConfig {
-    static let baseURL = "https://redcercanias.com/api/v1/gtfs"
+    static let baseURL = "https://api.watchtrans.app/api/gtfs"
     static let refreshInterval: TimeInterval = 150  // 2.5 minutes
     static let requestTimeout: TimeInterval = 10
     static let resourceTimeout: TimeInterval = 15
@@ -180,32 +180,29 @@ struct ArrivalProvider: AppIntentTimelineProvider {
 
     // MARK: - API Fetch
 
-    private func fetchDepartures(for configuration: SelectStopIntent) async throws -> [WidgetDeparture] {
+    private func fetchDepartures(for configuration: SelectStopIntent) async throws -> [DepartureResponse] {
         // Get stop ID from configuration or use fallback
         let stopId = try await getStopId(from: configuration)
-
-        let urlString = "\(apiBaseURL)/stops/\(stopId)/departures?limit=5"
-        guard let url = URL(string: urlString) else {
-            throw WidgetError.badURL
+        
+        // 1. Try original ID
+        if let results = try? await WidgetDataService.shared.fetchDepartures(stopId: stopId, limit: 5), !results.isEmpty {
+            return results
         }
-
-        // Create a URLSession configuration that works in extensions
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = WidgetAPIConfig.requestTimeout
-        config.timeoutIntervalForResource = WidgetAPIConfig.resourceTimeout
-        let session = URLSession(configuration: config)
-
-        let (data, response) = try await session.data(from: url)
-
-        // Check HTTP status
-        if let httpResponse = response as? HTTPURLResponse {
-            guard httpResponse.statusCode == 200 else {
-                throw WidgetError.httpError(httpResponse.statusCode)
+        
+        // 2. Retry with prefixes if ID is numeric (Renfe fallback)
+        if stopId.allSatisfy({ $0.isNumber }) {
+            let prefixes = ["RENFE_C_", "RENFE_CERCANIAS_", "RENFE_F_", "RENFE_P_"]
+            for prefix in prefixes {
+                let altId = "\(prefix)\(stopId)"
+                DebugLog.log("📍 [Widget] Retrying with: \(altId)")
+                if let results = try? await WidgetDataService.shared.fetchDepartures(stopId: altId, limit: 5), !results.isEmpty {
+                    return results
+                }
             }
         }
-
-        let departures = try JSONDecoder().decode([WidgetDeparture].self, from: data)
-        return departures
+        
+        // Return empty if all failed
+        return []
     }
 
     // MARK: - Get Stop ID (User Selected or Location-Based)
@@ -240,18 +237,18 @@ struct ArrivalProvider: AppIntentTimelineProvider {
     private func getFallbackStop() -> String {
         // Main hub stations for each nucleo (most connected stations)
         let nucleoHubs: [String: String] = [
-            "Madrid": "RENFE_18000",              // Atocha RENFE
-            "Asturias": "RENFE_15211",            // Oviedo
-            "Sevilla": "RENFE_51003",             // Santa Justa
-            "Cádiz": "RENFE_51405",               // Cádiz
-            "Málaga": "RENFE_54517",              // Málaga Centro
-            "Valencia": "RENFE_65000",            // València Estació del Nord
-            "Murcia/Alicante": "RENFE_61200",     // Murcia del Carmen
-            "Rodalies de Catalunya": "RENFE_71801", // Barcelona-Sants
-            "Bilbao": "RENFE_13200",              // Abando
-            "San Sebastián": "RENFE_11511",       // Donostia-San Sebastián
-            "Cantabria": "RENFE_14223",           // Santander
-            "Zaragoza": "RENFE_70807"             // Zaragoza - Goya
+            "Madrid": "RENFE_C_18000",              // Atocha RENFE
+            "Asturias": "RENFE_C_15211",            // Oviedo
+            "Sevilla": "RENFE_C_51003",             // Santa Justa
+            "Cádiz": "RENFE_C_51405",               // Cádiz
+            "Málaga": "RENFE_C_54517",              // Málaga Centro
+            "Valencia": "RENFE_C_65000",            // València Estació del Nord
+            "Murcia/Alicante": "RENFE_C_61200",     // Murcia del Carmen
+            "Rodalies de Catalunya": "RENFE_C_71801", // Barcelona-Sants
+            "Bilbao": "RENFE_C_13200",              // Abando
+            "San Sebastián": "RENFE_C_11511",       // Donostia-San Sebastián
+            "Cantabria": "RENFE_C_14223",           // Santander
+            "Zaragoza": "RENFE_C_70807"             // Zaragoza - Goya
         ]
 
         // Check last known nucleo
@@ -261,7 +258,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
         }
 
         // Ultimate fallback: Atocha (Madrid is most common)
-        return "RENFE_18000"
+        return "RENFE_C_18000"
     }
 
     /// Fetch nearest stop from user's location
@@ -287,7 +284,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
 
     // MARK: - Create Timeline Entries
 
-    private func createEntries(from departures: [WidgetDeparture]) -> [ArrivalEntry] {
+    private func createEntries(from departures: [DepartureResponse]) -> [ArrivalEntry] {
         guard !departures.isEmpty else {
             // Return a default placeholder entry
             return [ArrivalEntry(
@@ -309,7 +306,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
             let entryDate = Calendar.current.date(byAdding: .minute, value: index * 2, to: currentDate) ?? currentDate
 
             // Recalculate minutes until based on entry date
-            let originalMinutes = departure.minutesUntil
+            let originalMinutes = departure.effectiveMinutesUntil
             let adjustedMinutes = max(0, originalMinutes - (index * 2))
 
             let entry = ArrivalEntry(
@@ -328,24 +325,6 @@ struct ArrivalProvider: AppIntentTimelineProvider {
 }
 
 // MARK: - Widget Models (simplified for widget)
-
-struct WidgetDeparture: Codable {
-    let tripId: String
-    let routeShortName: String
-    let routeColor: String?
-    let headsign: String?
-    let minutesUntil: Int
-    let isDelayed: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case tripId = "trip_id"
-        case routeShortName = "route_short_name"
-        case routeColor = "route_color"
-        case headsign
-        case minutesUntil = "minutes_until"
-        case isDelayed = "is_delayed"
-    }
-}
 
 struct WidgetStop: Codable {
     let id: String
@@ -610,6 +589,113 @@ struct WatchTransCircularView: View {
     }
 }
 
+// MARK: - Small Widget View (iOS Home Screen)
+
+struct WatchTransSmallView: View {
+    var entry: ArrivalProvider.Entry
+
+    var lineColor: Color {
+        Color(hex: entry.lineColor) ?? .blue
+    }
+
+    var progressColor: Color {
+        if entry.lineName.hasPrefix("L") || entry.lineName.hasPrefix("ML") {
+            return lineColor
+        } else {
+            return entry.isDelayed ? .orange : .green
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header: Station Name & Icon
+            HStack {
+                Image(systemName: "tram.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(entry.stopName ?? "Station")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Main Info: Line & Destination
+            HStack(spacing: 6) {
+                Text(entry.lineName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(lineColor)
+                    )
+                
+                Text(entry.destination)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(2)
+                    .layoutPriority(1)
+            }
+
+            Spacer()
+
+            // Footer: Time & Status
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(timeText)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.primary)
+                    
+                    if entry.isDelayed {
+                        Text("Delayed")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .fontWeight(.bold)
+                    } else {
+                        Text("On Time")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                // Circular Progress
+                ZStack {
+                    Circle()
+                        .stroke(progressColor.opacity(0.3), lineWidth: 4)
+                        .frame(width: 32, height: 32)
+                    
+                    Circle()
+                        .trim(from: 0, to: progressValue)
+                        .stroke(progressColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 32, height: 32)
+                }
+            }
+        }
+        .padding()
+    }
+
+    var timeText: String {
+        if entry.minutesUntilArrival == 0 {
+            return "Now"
+        } else {
+            return "\(entry.minutesUntilArrival) min"
+        }
+    }
+
+    var progressValue: Double {
+        let minutes = Double(entry.minutesUntilArrival)
+        let maxMinutes = 30.0
+        return max(0, min(1.0, 1.0 - (minutes / maxMinutes)))
+    }
+}
+
 // MARK: - Widget Configuration
 
 struct WatchTransWidget: Widget {
@@ -626,7 +712,8 @@ struct WatchTransWidget: Widget {
             .accessoryRectangular,
             .accessoryCircular,
             .accessoryCorner,
-            .accessoryInline
+            .accessoryInline,
+            .systemSmall // Added for iOS Home Screen
         ])
     }
 }
@@ -645,6 +732,8 @@ struct WatchTransWidgetContentView: View {
             WatchTransCornerView(entry: entry)
         case .accessoryInline:
             WatchTransInlineView(entry: entry)
+        case .systemSmall:
+            WatchTransSmallView(entry: entry)
         default:
             WatchTransWidgetEntryView(entry: entry)
         }
