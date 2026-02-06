@@ -31,6 +31,9 @@ class SharedStorage {
         static let lastNucleoId = "lastNucleoId"
         static let favorites = "favorites"
         static let hubStops = "hubStops"
+        static let lastBackgroundFetch = "lastBackgroundFetch"
+        static let cachedDepartures = "cachedDepartures"
+        static let activeStopId = "activeStopId"
     }
 
     /// Simple favorite structure for sharing via UserDefaults
@@ -194,5 +197,31 @@ class SharedStorage {
             DebugLog.log("⚠️ [SharedStorage] Failed to decode hub stops: \(error)")
             return []
         }
+    }
+
+    // MARK: - Background Refresh Storage
+
+    func saveLastBackgroundFetch(_ date: Date) {
+        defaults.set(date, forKey: Keys.lastBackgroundFetch)
+    }
+
+    func getLastBackgroundFetch() -> Date? {
+        defaults.object(forKey: Keys.lastBackgroundFetch) as? Date
+    }
+
+    func saveCachedDeparturesData(_ data: Data) {
+        defaults.set(data, forKey: Keys.cachedDepartures)
+    }
+
+    func getCachedDeparturesData() -> Data? {
+        defaults.data(forKey: Keys.cachedDepartures)
+    }
+
+    func saveActiveStopId(_ stopId: String) {
+        defaults.set(stopId, forKey: Keys.activeStopId)
+    }
+
+    func getActiveStopId() -> String? {
+        defaults.string(forKey: Keys.activeStopId)
     }
 }

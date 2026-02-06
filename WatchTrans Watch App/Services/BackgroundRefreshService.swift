@@ -26,8 +26,25 @@ class BackgroundRefreshService {
 
     /// Schedule the next background refresh (call after each refresh completes)
     func scheduleNextRefresh() {
-        // Schedule refresh in 15 minutes (minimum allowed by watchOS)
-        let preferredDate = Date().addingTimeInterval(15 * 60)
+        let now = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: now)
+        
+        var interval: TimeInterval = 15 * 60 // Default 15 min
+        
+        // Intelligent scheduling based on typical Spanish commute hours
+        if (7...10).contains(hour) || (17...20).contains(hour) {
+            // Commute hours: High frequency (15 min)
+            interval = 15 * 60
+        } else if (0...5).contains(hour) {
+            // Late night: Low frequency (60 min)
+            interval = 60 * 60
+        } else {
+            // Regular day: Medium frequency (30 min)
+            interval = 30 * 60
+        }
+
+        let preferredDate = now.addingTimeInterval(interval)
 
         WKApplication.shared().scheduleBackgroundRefresh(
             withPreferredDate: preferredDate,
@@ -36,7 +53,7 @@ class BackgroundRefreshService {
             if let error = error {
                 DebugLog.log("⚠️ [BackgroundRefresh] Failed to schedule: \(error)")
             } else {
-                DebugLog.log("✅ [BackgroundRefresh] Scheduled for \(preferredDate)")
+                DebugLog.log("✅ [BackgroundRefresh] Scheduled for \(preferredDate) (interval: \(Int(interval/60)) min)")
             }
         }
     }
@@ -53,9 +70,9 @@ class BackgroundRefreshService {
             task.setTaskCompletedWithSnapshot(false)
         }
 
-        // Get the favorite stop ID to fetch departures for
+        // Get the active stop ID to fetch departures for
         guard let stopId = getFavoriteStopId() else {
-            DebugLog.log("⚠️ [BackgroundRefresh] No favorite stop set")
+            DebugLog.log("⚠️ [BackgroundRefresh] No active stop set")
             return
         }
 
@@ -67,7 +84,7 @@ class BackgroundRefreshService {
             cacheDepartures(departures, for: stopId)
 
             // Update last fetch time
-            UserDefaults.standard.set(Date(), forKey: lastFetchKey)
+            SharedStorage.shared.saveLastBackgroundFetch(Date())
 
             DebugLog.log("✅ [BackgroundRefresh] Fetched \(departures.count) departures for \(stopId)")
 
@@ -83,26 +100,26 @@ class BackgroundRefreshService {
 
     /// Get the favorite stop ID for background updates
     func getFavoriteStopId() -> String? {
-        return UserDefaults.standard.string(forKey: favoriteStopIdKey)
+        return SharedStorage.shared.getActiveStopId()
     }
 
     /// Set the favorite stop ID for background updates
     func setFavoriteStopId(_ stopId: String) {
-        UserDefaults.standard.set(stopId, forKey: favoriteStopIdKey)
-        DebugLog.log("✅ [BackgroundRefresh] Set favorite stop: \(stopId)")
+        SharedStorage.shared.saveActiveStopId(stopId)
+        DebugLog.log("✅ [BackgroundRefresh] Set active stop: \(stopId)")
     }
 
     /// Cache departures for later use by complications
     private func cacheDepartures(_ departures: [DepartureResponse], for stopId: String) {
         let encoder = JSONEncoder()
         if let data = try? encoder.encode(departures) {
-            UserDefaults.standard.set(data, forKey: cachedDeparturesKey)
+            SharedStorage.shared.saveCachedDeparturesData(data)
         }
     }
 
     /// Get cached departures
     func getCachedDepartures() -> [DepartureResponse]? {
-        guard let data = UserDefaults.standard.data(forKey: cachedDeparturesKey) else {
+        guard let data = SharedStorage.shared.getCachedDeparturesData() else {
             return nil
         }
 
@@ -112,7 +129,7 @@ class BackgroundRefreshService {
 
     /// Get the last background fetch time
     func getLastFetchTime() -> Date? {
-        return UserDefaults.standard.object(forKey: lastFetchKey) as? Date
+        return SharedStorage.shared.getLastBackgroundFetch()
     }
 
     // MARK: - Complications
