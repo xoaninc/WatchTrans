@@ -81,7 +81,7 @@ struct FavoritesProvider: TimelineProvider {
     
     private func performFetch(favorites: [SharedStorage.SharedFavorite]) async -> FavoritesEntry {
         let stopIds = favorites.map { $0.stopId }
-        let results = await WidgetDataService.shared.fetchMultipleDepartures(stopIds: stopIds, limitPerStop: 2)
+        let results = await WidgetDataService.shared.fetchMultipleDepartures(stopIds: stopIds, limitPerStop: 4)
         
         var favoriteData: [FavoriteStopData] = []
         
@@ -153,7 +153,7 @@ struct FavoriteRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(favorite.departures.prefix(2)) { dep in
+                ForEach(favorite.departures.prefix(4)) { dep in
                     HStack {
                         Text(dep.routeShortName)
                             .font(.system(size: 12, weight: .bold))
@@ -170,6 +170,12 @@ struct FavoriteRow: View {
                             .lineLimit(1)
                         
                         Spacer()
+                        
+                        if let platform = dep.platform, !platform.isEmpty {
+                            Text("Vía \(platform)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                         
                         Text("\(dep.effectiveMinutesUntil) min")
                             .font(.caption2)
