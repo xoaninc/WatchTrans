@@ -46,8 +46,9 @@ struct ArrivalEntry: TimelineEntry {
     let isDelayed: Bool
     let lineColor: String // Hex color
     let stopName: String? // Name of the stop (for display)
+    let lastUpdate: Date? // When the data was actually fetched
 
-    init(date: Date, lineName: String, destination: String, minutesUntilArrival: Int, isDelayed: Bool, lineColor: String, stopName: String? = nil) {
+    init(date: Date, lineName: String, destination: String, minutesUntilArrival: Int, isDelayed: Bool, lineColor: String, stopName: String? = nil, lastUpdate: Date? = nil) {
         self.date = date
         self.lineName = lineName
         self.destination = destination
@@ -55,6 +56,13 @@ struct ArrivalEntry: TimelineEntry {
         self.isDelayed = isDelayed
         self.lineColor = lineColor
         self.stopName = stopName
+        self.lastUpdate = lastUpdate
+    }
+    
+    /// Check if data is more than 30 minutes old
+    var isStale: Bool {
+        guard let update = lastUpdate else { return false }
+        return date.timeIntervalSince(update) > 30 * 60
     }
 }
 
@@ -121,7 +129,8 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                 destination: "Aranjuez",
                 minutesUntilArrival: 5,
                 isDelayed: false,
-                lineColor: "#813380"
+                lineColor: "#813380",
+                lastUpdate: Date()
             )
         }
 
@@ -135,7 +144,8 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                     destination: first.headsign ?? "Unknown",
                     minutesUntilArrival: first.minutesUntil,
                     isDelayed: first.isDelayed,
-                    lineColor: first.routeColor ?? "#75B6E0"
+                    lineColor: first.routeColor ?? "#75B6E0",
+                    lastUpdate: Date()
                 )
             }
         } catch {
@@ -149,14 +159,16 @@ struct ArrivalProvider: AppIntentTimelineProvider {
             destination: "No data",
             minutesUntilArrival: 0,
             isDelayed: false,
-            lineColor: "#808080"
+            lineColor: "#808080",
+            lastUpdate: nil
         )
     }
 
     func timeline(for configuration: SelectStopIntent, in context: Context) async -> Timeline<ArrivalEntry> {
+        let fetchTime = Date()
         do {
             let departures = try await fetchDepartures(for: configuration)
-            let entries = createEntries(from: departures)
+            let entries = createEntries(from: departures, fetchTime: fetchTime)
 
             // Update every 2.5 minutes
             let nextUpdate = Date().addingTimeInterval(refreshIntervalSeconds)
@@ -171,7 +183,8 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                 destination: String(errorMessage),
                 minutesUntilArrival: 0,
                 isDelayed: true,
-                lineColor: "#FF0000"
+                lineColor: "#FF0000",
+                lastUpdate: fetchTime
             )
             let nextUpdate = Date().addingTimeInterval(30)
             return Timeline(entries: [fallbackEntry], policy: .after(nextUpdate))
@@ -284,7 +297,7 @@ struct ArrivalProvider: AppIntentTimelineProvider {
 
     // MARK: - Create Timeline Entries
 
-    private func createEntries(from departures: [DepartureResponse]) -> [ArrivalEntry] {
+    private func createEntries(from departures: [DepartureResponse], fetchTime: Date) -> [ArrivalEntry] {
         guard !departures.isEmpty else {
             // Return a default placeholder entry
             return [ArrivalEntry(
@@ -293,7 +306,8 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                 destination: "No data",
                 minutesUntilArrival: 0,
                 isDelayed: false,
-                lineColor: "#75B6E0"
+                lineColor: "#75B6E0",
+                lastUpdate: fetchTime
             )]
         }
 
@@ -315,7 +329,8 @@ struct ArrivalProvider: AppIntentTimelineProvider {
                 destination: departure.headsign ?? "Unknown",
                 minutesUntilArrival: adjustedMinutes,
                 isDelayed: departure.isDelayed,
-                lineColor: departure.routeColor ?? "#75B6E0"
+                lineColor: departure.routeColor ?? "#75B6E0",
+                lastUpdate: fetchTime
             )
             entries.append(entry)
         }
@@ -569,6 +584,7 @@ struct WatchTransCircularView: View {
                     .foregroundStyle(lineColor)
                 Text(timeText)
                     .font(.system(size: 11))
+                    .foregroundStyle(entry.isStale ? .secondary : .primary)
             }
         }
         .privacySensitive(false)
@@ -618,6 +634,13 @@ struct WatchTransSmallView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                
+                if entry.isStale {
+                    Spacer()
+                    Image(systemName: "clock.badge.exclamationmark.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -708,13 +731,25 @@ struct WatchTransWidget: Widget {
         }
         .configurationDisplayName("Next Arrival")
         .description("See your next train arrival. Tap to select a stop.")
-        .supportedFamilies([
+        .supportedFamilies(makeSupportedFamilies())
+    }
+    
+    private func makeSupportedFamilies() -> [WidgetFamily] {
+        var families: [WidgetFamily] = [
             .accessoryRectangular,
             .accessoryCircular,
-            .accessoryCorner,
-            .accessoryInline,
-            .systemSmall // Added for iOS Home Screen
-        ])
+            .accessoryInline
+        ]
+        
+        #if os(iOS)
+        families.append(.systemSmall)
+        #endif
+        
+        #if os(watchOS)
+        families.append(.accessoryCorner)
+        #endif
+        
+        return families
     }
 }
 
@@ -728,12 +763,16 @@ struct WatchTransWidgetContentView: View {
         switch family {
         case .accessoryCircular:
             WatchTransCircularView(entry: entry)
-        case .accessoryCorner:
-            WatchTransCornerView(entry: entry)
         case .accessoryInline:
             WatchTransInlineView(entry: entry)
+        #if os(watchOS)
+        case .accessoryCorner:
+            WatchTransCornerView(entry: entry)
+        #endif
+        #if os(iOS)
         case .systemSmall:
             WatchTransSmallView(entry: entry)
+        #endif
         default:
             WatchTransWidgetEntryView(entry: entry)
         }
