@@ -1,17 +1,19 @@
 //
-//  atchTransWidgetiOSBundle.swift
-//  atchTransWidgetiOS
+//  WatchTransWidgetBundle.swift
+//  WatchTransWidget
 //
-//  Created by Juan Macias Gomez on 6/2/26.
+//  Created by Juan Macias Gomez on 14/1/26.
 //
 
 import WidgetKit
 import SwiftUI
 
 @main
-struct atchTransWidgetiOSBundle: WidgetBundle {
+struct WatchTransWidgetBundle: WidgetBundle {
     var body: some Widget {
-        atchTransWidgetiOS()
-        atchTransWidgetiOSControl()
+        WatchTransWidget()
+        #if os(iOS)
+        WatchTransFavoritesWidget()
+        #endif
     }
 }
