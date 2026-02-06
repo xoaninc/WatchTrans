@@ -11,6 +11,7 @@ import UIKit
 
 struct StopDetailView: View {
     let stop: Stop
+    let display: StopDisplay?
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
@@ -20,6 +21,7 @@ struct StopDetailView: View {
     @State private var departures: [Arrival] = []
     @State private var alerts: [AlertResponse] = []
     @State private var correspondences: [CorrespondenceInfo] = []
+    @State private var transportModes: [TransportModeInfo] = []
     @State private var accesses: [StationAccess] = []
     @State private var isLoading = true
     @State private var hasLoadedOnce = false
@@ -36,8 +38,15 @@ struct StopDetailView: View {
     // Map camera position centered on stop
     @State private var mapPosition: MapCameraPosition
 
-    init(stop: Stop, dataService: DataService, locationService: LocationService, favoritesManager: FavoritesManager?) {
+    init(
+        stop: Stop,
+        display: StopDisplay? = nil,
+        dataService: DataService,
+        locationService: LocationService,
+        favoritesManager: FavoritesManager?
+    ) {
         self.stop = stop
+        self.display = display
         self.dataService = dataService
         self.locationService = locationService
         self.favoritesManager = favoritesManager
@@ -115,6 +124,7 @@ struct StopDetailView: View {
                         ConnectionsSectionView(
                             stop: stop,
                             dataService: dataService,
+                            transportModes: transportModes,
                             stopLatitude: stop.latitude,
                             stopLongitude: stop.longitude
                         )
@@ -235,11 +245,12 @@ struct StopDetailView: View {
     // MARK: - Connections Check
 
     private var hasConnections: Bool {
+        !transportModes.isEmpty ||
         !stop.connectionLineIds.isEmpty ||
-        stop.corMetro != nil ||
-        stop.corMl != nil ||
-        stop.corCercanias != nil ||
-        stop.corTranvia != nil
+        !(stop.corMetro?.isEmpty ?? true) ||
+        !(stop.corMl?.isEmpty ?? true) ||
+        !(stop.corCercanias?.isEmpty ?? true) ||
+        !(stop.corTranvia?.isEmpty ?? true)
     }
 
     // MARK: - Auto Refresh
@@ -277,11 +288,13 @@ struct StopDetailView: View {
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
         async let correspondencesTask = dataService.fetchCorrespondences(stopId: stop.id)
+        async let transportModesTask = dataService.fetchTransportModes(stopId: stop.id)
         async let accessesTask = dataService.fetchAccesses(stopId: stop.id)
 
-        departures = await departuresTask
+        departures = dataService.filterArrivals(await departuresTask, for: display)
         alerts = await alertsTask
         correspondences = await correspondencesTask
+        transportModes = await transportModesTask
         accesses = await accessesTask
 
         // If no accesses found and this stop has Metro correspondence,
@@ -314,7 +327,7 @@ struct StopDetailView: View {
         async let departuresTask = dataService.fetchArrivals(for: stop.id)
         async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
 
-        departures = await departuresTask
+        departures = dataService.filterArrivals(await departuresTask, for: display)
         alerts = await alertsTask
     }
 
@@ -618,14 +631,9 @@ struct AlertsSectionView: View {
 struct ConnectionsSectionView: View {
     let stop: Stop
     let dataService: DataService
+    let transportModes: [TransportModeInfo]
     let stopLatitude: Double
     let stopLongitude: Double
-
-    // Default colors for when line not found (same as Watch app)
-    private let defaultMetroColor = "#ED1C24"
-    private let defaultMlColor = "#3A7DDA"
-    private let defaultCercaniasColor = "#75B2E0"
-    private let defaultTranviaColor = "#E4002B"
 
     @State private var linesLoaded = false
 
@@ -633,27 +641,38 @@ struct ConnectionsSectionView: View {
     private var allBadges: [(name: String, colorHex: String)] {
         var badges: [(String, String)] = []
 
+        // Prefer transport modes from the correspondences endpoint if available
+        if !transportModes.isEmpty {
+            for mode in transportModes {
+                for line in parseLines(mode.lines) {
+                    let color = dataService.getLineColor(by: line) ?? ""
+                    badges.append((line, color))
+                }
+            }
+            return badges
+        }
+
         // 1. Cercanías
         for line in parseLines(stop.corCercanias) {
-            let color = dataService.getLineColor(by: line) ?? defaultCercaniasColor
+            let color = dataService.getLineColor(by: line) ?? ""
             badges.append((line, color))
         }
 
         // 2. Metro
         for line in parseLines(stop.corMetro) {
-            let color = dataService.getLineColor(by: line) ?? defaultMetroColor
+            let color = dataService.getLineColor(by: line) ?? ""
             badges.append((line, color))
         }
 
         // 3. Metro Ligero
         for line in parseLines(stop.corMl) {
-            let color = dataService.getLineColor(by: line) ?? defaultMlColor
+            let color = dataService.getLineColor(by: line) ?? ""
             badges.append((line, color))
         }
 
         // 4. Tranvía
         for line in parseLines(stop.corTranvia) {
-            let color = dataService.getLineColor(by: line) ?? defaultTranviaColor
+            let color = dataService.getLineColor(by: line) ?? ""
             badges.append((line, color))
         }
 
@@ -661,42 +680,48 @@ struct ConnectionsSectionView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "arrow.triangle.branch")
-                    .foregroundStyle(.blue)
-                Text("Correspondencias")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-            }
+        let badges = allBadges
 
-            // Wrap badges in FlowLayout
-            FlowLayout(spacing: 6) {
-                ForEach(Array(allBadges.enumerated()), id: \.offset) { _, badge in
-                    Text(badge.name)
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(hex: badge.colorHex) ?? .gray)
-                        )
+        Group {
+            if !badges.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.branch")
+                            .foregroundStyle(.blue)
+                        Text("Correspondencias")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    }
+
+                    // Wrap badges in FlowLayout
+                    FlowLayout(spacing: 6) {
+                        ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
+                            Text(badge.name)
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color(hex: badge.colorHex) ?? .gray)
+                                )
+                        }
+                    }
                 }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .task {
-            // Load lines if not already loaded to get correct colors
-            if dataService.lines.isEmpty {
-                await dataService.fetchLinesIfNeeded(
-                    latitude: stopLatitude,
-                    longitude: stopLongitude
-                )
-                linesLoaded = true  // Trigger view update
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .task {
+                    // Load lines if not already loaded to get correct colors
+                    if dataService.lines.isEmpty {
+                        await dataService.fetchLinesIfNeeded(
+                            latitude: stopLatitude,
+                            longitude: stopLongitude
+                        )
+                        linesLoaded = true  // Trigger view update
+                    }
+                }
             }
         }
     }
@@ -845,7 +870,7 @@ struct NearbyStationsSectionView: View {
             ForEach(correspondences, id: \.id) { correspondence in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(correspondence.toStopName)
+                        Text(correspondence.toStopName ?? "Estación cercana")
                             .font(.subheadline)
                             .fontWeight(.medium)
 

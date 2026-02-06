@@ -167,7 +167,7 @@ struct SiriSegmentRow: View {
                 }
 
                 if !isLast {
-                    Text("→ \(segment.toStopName)")
+                    Text("→ \(segment.toStopName ?? "Destino")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

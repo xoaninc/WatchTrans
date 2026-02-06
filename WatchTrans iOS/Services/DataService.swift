@@ -4,7 +4,7 @@
 //
 //  Created by Juan Macias Gomez on 14/1/26.
 //
-//  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (redcercanias.com)
+//  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (api.watchtrans.app)
 //  UPDATED: 2026-01-27 - Added API route planner integration
 //  UPDATED: 2026-01-31 - Performance optimization with persistent caching
 //
@@ -39,8 +39,7 @@ struct LocationContext: Codable {
 
     /// Check if this is a Rodalies de Catalunya network
     var isRodalies: Bool {
-        primaryNetworkName?.lowercased().contains("rodalies") == true ||
-        networks.contains { $0.code == "51T" }
+        primaryNetworkName?.lowercased().contains("rodalies") == true
     }
 
     /// Check if this is a specific city
@@ -108,12 +107,20 @@ class DataService {
         let timestamp: Date
         let lastVerified: Date
         let coordinatesHash: String  // To detect location change
+        let version: Int?
     }
 
     /// Line colors cache metadata (simpler, no coordinates dependency)
     private struct LineColorsCacheMetadata: Codable {
         let timestamp: Date
         let lastVerified: Date
+        let version: Int?
+    }
+
+    private enum CacheVersion {
+        static let stops = 2  // v2: refresh cached stops to include lineas from API
+        static let lines = 6  // v6: refresh cached lines (API colors/long names may change)
+        static let lineColors = 4  // v4: invalidate old line color cache (API corrections)
     }
 
     private var stopsCacheMetadata: CacheMetadata?
@@ -123,6 +130,14 @@ class DataService {
 
     /// In-memory cache of line colors: lineName -> colorHex (e.g., "C1" -> "#75B2E0")
     private var lineColorsCache: [String: String] = [:]
+
+    private struct PlatformsCacheEntry {
+        let platforms: [PlatformInfo]
+        let timestamp: Date
+    }
+
+    private var platformsCache: [String: PlatformsCacheEntry] = [:]
+    private let platformsCacheTTL: TimeInterval = 120
 
     /// Get filtered lines based on user's transport type preferences
     var filteredLines: [Line] {
@@ -165,12 +180,15 @@ class DataService {
         if let data = try? Data(contentsOf: Self.stopsCacheURL),
            let cached = try? JSONDecoder().decode(StopsCache.self, from: data) {
             let age = Date().timeIntervalSince(cached.metadata.timestamp)
-            if age < Self.stopsCacheDuration {
+            let cacheVersion = cached.metadata.version ?? 0
+            if age >= Self.stopsCacheDuration {
+                DebugLog.log("📦 [Cache] Stops cache expired (age: \(Int(age/3600))h)")
+            } else if cacheVersion == CacheVersion.stops {
                 self.stops = cached.stops
                 self.stopsCacheMetadata = cached.metadata
                 DebugLog.log("📦 [Cache] Loaded \(stops.count) stops from cache (age: \(Int(age/60))min)")
             } else {
-                DebugLog.log("📦 [Cache] Stops cache expired (age: \(Int(age/3600))h)")
+                DebugLog.log("📦 [Cache] Stops cache invalid (age: \(Int(age/3600))h, version: \(cacheVersion))")
             }
         }
 
@@ -185,12 +203,13 @@ class DataService {
         if let data = try? Data(contentsOf: Self.lineColorsCacheURL),
            let cached = try? JSONDecoder().decode(LineColorsCache.self, from: data) {
             let age = Date().timeIntervalSince(cached.metadata.timestamp)
-            if age < Self.lineColorsCacheDuration {
+            let cacheVersion = cached.metadata.version ?? 0
+            if cacheVersion == CacheVersion.lineColors && age < Self.lineColorsCacheDuration {
                 self.lineColorsCache = cached.colors
                 self.lineColorsCacheMetadata = cached.metadata
                 DebugLog.log("📦 [Cache] Loaded \(lineColorsCache.count) line colors from cache (age: \(Int(age/60))min)")
             } else {
-                DebugLog.log("📦 [Cache] Line colors cache expired (age: \(Int(age/3600))h)")
+                DebugLog.log("📦 [Cache] Line colors cache invalid (age: \(Int(age/3600))h, version: \(cacheVersion))")
             }
         }
     }
@@ -200,7 +219,8 @@ class DataService {
         let metadata = CacheMetadata(
             timestamp: Date(),
             lastVerified: Date(),
-            coordinatesHash: coordinatesHash
+            coordinatesHash: coordinatesHash,
+            version: CacheVersion.stops
         )
         let cache = StopsCache(stops: stops, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -215,7 +235,8 @@ class DataService {
         let metadata = CacheMetadata(
             timestamp: Date(),
             lastVerified: Date(),
-            coordinatesHash: coordinatesHash
+            coordinatesHash: coordinatesHash,
+            version: CacheVersion.lines
         )
         let cache = LinesCache(lines: lines, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -252,7 +273,8 @@ class DataService {
         // Save to disk
         let metadata = LineColorsCacheMetadata(
             timestamp: Date(),
-            lastVerified: Date()
+            lastVerified: Date(),
+            version: CacheVersion.lineColors
         )
         let cache = LineColorsCache(colors: lineColorsCache, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -279,8 +301,14 @@ class DataService {
 
         let age = Date().timeIntervalSince(cached.metadata.timestamp)
         guard age < Self.linesCacheDuration,
-              cached.metadata.coordinatesHash == coordinatesHash else {
-            DebugLog.log("📦 [Cache] Lines cache invalid (age: \(Int(age/3600))h, location changed: \(cached.metadata.coordinatesHash != coordinatesHash))")
+              cached.metadata.coordinatesHash == coordinatesHash,
+              cached.metadata.version == CacheVersion.lines else {
+            let version = cached.metadata.version ?? -1
+            let locationChanged = cached.metadata.coordinatesHash != coordinatesHash
+            DebugLog.log(
+                "📦 [Cache] Lines cache invalid (age: \(Int(age / 3600))h, " +
+                "location changed: \(locationChanged), version: \(version))"
+            )
             return false
         }
 
@@ -315,7 +343,8 @@ class DataService {
         metadata = CacheMetadata(
             timestamp: metadata.timestamp,
             lastVerified: Date(),
-            coordinatesHash: metadata.coordinatesHash
+            coordinatesHash: metadata.coordinatesHash,
+            version: metadata.version
         )
         let cache = StopsCache(stops: stops, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -330,7 +359,8 @@ class DataService {
         metadata = CacheMetadata(
             timestamp: metadata.timestamp,
             lastVerified: Date(),
-            coordinatesHash: metadata.coordinatesHash
+            coordinatesHash: metadata.coordinatesHash,
+            version: metadata.version
         )
         let cache = LinesCache(lines: lines, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -409,7 +439,7 @@ class DataService {
 
         let coordHash = coordinatesHash(lat: lat, lon: lon)
         DebugLog.log("📍 [DataService] ========== LOADING STOPS ==========")
-        DebugLog.log("📍 [DataService] Coordinates: (\(lat), \(lon)) hash: \(coordHash)")
+        DebugLog.log("📍 [DataService] Coordinates provided (redacted) hash: \(coordHash)")
 
         let totalStart = Date()
 
@@ -463,6 +493,11 @@ class DataService {
                     )
                 }
                 DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops")
+                
+                // DEBUG: Log province of first few stops to diagnose logo issue
+                for (i, stop) in stops.prefix(3).enumerated() {
+                    DebugLog.log("📍 [DataService] Stop[\(i)] \(stop.name) (ID: \(stop.id)) -> Province: \(stop.province ?? "nil")")
+                }
 
                 // Save to cache
                 saveStopsCache(coordinatesHash: coordHash)
@@ -482,6 +517,12 @@ class DataService {
             // Set location context
             await setLocationContextFromStops()
 
+            // Check if currentLocation was actually set. If not, force API call.
+            if currentLocation == nil {
+                DebugLog.log("📍 [DataService] Retrying province context fetch from API...")
+                await fallbackFetchProvinceAndSetContext(latitude: lat, longitude: lon)
+            }
+
             let totalTime = Date().timeIntervalSince(totalStart)
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
             DebugLog.log("⏱️ [DataService] Total: \(stops.count) stops in \(String(format: "%.2f", totalTime))s")
@@ -494,24 +535,75 @@ class DataService {
 
     /// Set location context from loaded stops (without loading routes)
     private func setLocationContextFromStops() async {
-        guard let firstStop = stops.first, let province = firstStop.province else {
-            DebugLog.log("📍 [DataService] ⚠️ Cannot determine province from stops")
+        // 1. Try to find province in loaded stops
+        if let firstStopWithProvince = stops.first(where: { $0.province != nil }),
+           let province = firstStopWithProvince.province {
+            
+            if currentLocation?.provinceName == province { return }
+
+            currentLocation = LocationContext(
+                provinceName: province,
+                networks: [],
+                primaryNetworkName: nil
+            )
+            saveLocationCache()
+            DebugLog.log("📍 [DataService] ✅ Location set from stops: \(province)")
             return
         }
+        
+        // If stops are loaded but none have province, we don't set currentLocation yet
+        // The fallback fetch will be called later by fetchTransportData if needed
+        DebugLog.log("📍 [DataService] No province found in stops, checking API fallback...")
+    }
 
-        // If we already have location for this province, keep it
-        if currentLocation?.provinceName == province {
-            return
+    /// Fallback to fetch province via API and set context if missing
+    private func fallbackFetchProvinceAndSetContext(latitude: Double, longitude: Double) async {
+        guard !stops.isEmpty else { return } // Need at least one stop to update
+        
+        do {
+            DebugLog.log("📍 [DataService] ⚠️ Stops missing province, asking API...")
+            let data = try await gtfsRealtimeService.fetchProvinceByCoordinates(
+                latitude: latitude,
+                longitude: longitude
+            )
+            
+            // Decode simple response: {"province_name": "Sevilla", "networks": [...]}
+            struct ProvinceResponse: Decodable {
+                let province: String
+                
+                enum CodingKeys: String, CodingKey {
+                    case province = "province_name"
+                }
+            }
+            
+            let response = try JSONDecoder().decode(ProvinceResponse.self, from: data)
+            let province = response.province
+            
+            currentLocation = LocationContext(
+                provinceName: province,
+                networks: [],
+                primaryNetworkName: nil
+            )
+            saveLocationCache()
+            DebugLog.log("📍 [DataService] ✅ Location set from API: \(province)")
+            
+            // Inject into stops so UI works
+            for i in stops.indices {
+                // Structs are value types, need to recreate
+                let s = stops[i]
+                stops[i] = Stop(
+                    id: s.id, name: s.name, latitude: s.latitude, longitude: s.longitude,
+                    connectionLineIds: s.connectionLineIds, province: province,
+                    accesibilidad: s.accesibilidad, hasParking: s.hasParking,
+                    hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
+                    isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
+                    corCercanias: s.corCercanias, corTranvia: s.corTranvia
+                )
+            }
+            
+        } catch {
+            DebugLog.log("📍 [DataService] ❌ Failed to fetch province from API: \(error)")
         }
-
-        // Create minimal location context without network info (will be populated when lines load)
-        currentLocation = LocationContext(
-            provinceName: province,
-            networks: [],
-            primaryNetworkName: nil
-        )
-        saveLocationCache()
-        DebugLog.log("📍 [DataService] ✅ Location set: \(province)")
     }
 
     /// Load lines on demand (lazy loading) - call when user enters Lines tab
@@ -534,14 +626,15 @@ class DataService {
 
         // Try to load from cache
         if loadLinesFromCache(coordinatesHash: coordHash) {
-            await updateLocationWithNetworks()
-            // Check if needs silent verification
-            if shouldVerifyLines() {
-                Task {
-                    await silentVerifyLines(latitude: latitude, longitude: longitude, coordHash: coordHash)
-                }
+            // HEURISTIC: If we only have 2 lines in Sevilla, the cache is likely from v1.2.6 (before C1-C5 were fixed)
+            // Force a silent refresh in this case.
+            let isSevilla = currentLocation?.provinceName.lowercased() == "sevilla"
+            if isSevilla && lines.count <= 2 {
+                DebugLog.log("📦 [Cache] Lines cache looks incomplete (\(lines.count) lines), forcing refresh...")
+            } else if !shouldVerifyLines() {
+                await updateLocationWithNetworks()
+                return
             }
-            return
         }
 
         // No cache, fetch from API with loading indicator
@@ -568,15 +661,19 @@ class DataService {
                 }
             }
 
-            // Fetch routes
-            DebugLog.log("📍 [DataService] Fetching routes by coordinates...")
+            // Fetch routes by province, which is the correct logic for this app
+            guard let provinceName = currentLocation?.provinceName else {
+                DebugLog.log("⚠️ [DataService] Cannot load lines: province is unknown (currentLocation is nil)")
+                return
+            }
+            DebugLog.log("📍 [DataService] Fetching all routes for province: \(provinceName)...")
             let routesStart = Date()
-            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: latitude, longitude: longitude)
+            let routeResponses = try await gtfsRealtimeService.fetchProvinceRoutes(provinceName: provinceName)
             let routesTime = Date().timeIntervalSince(routesStart)
             DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
 
             // Process routes
-            let provinceName = currentLocation?.provinceName ?? "WatchTrans"
+            // let provinceName is already defined above
             let processStart = Date()
             await processRoutes(routeResponses, provinceName: provinceName)
             let processTime = Date().timeIntervalSince(processStart)
@@ -603,26 +700,11 @@ class DataService {
     private func updateLocationWithNetworks() async {
         guard let province = currentLocation?.provinceName else { return }
 
-        // Get unique networks from lines
-        var seenNetworks = Set<String>()
-        var networks: [NetworkInfo] = []
-        for line in lines {
-            let networkCode = line.nucleo  // Use nucleo as network identifier
-            if !seenNetworks.contains(networkCode) {
-                seenNetworks.insert(networkCode)
-                networks.append(NetworkInfo(code: networkCode, name: getNetworkName(for: networkCode)))
-            }
-        }
-
-        let primaryNetworkName = getPrimaryNetworkName(from: seenNetworks)
-
-        currentLocation = LocationContext(
-            provinceName: province,
-            networks: networks,
-            primaryNetworkName: primaryNetworkName
-        )
+        // Do not hardcode any network/province mappings here.
+        // The UI can still use provinceName, and we only populate networks once we have a reliable API source.
+        currentLocation = LocationContext(provinceName: province, networks: [], primaryNetworkName: nil)
         saveLocationCache()
-        DebugLog.log("📍 [DataService] ✅ Location updated with \(networks.count) networks")
+        DebugLog.log("📍 [DataService] ✅ Location updated")
     }
 
     /// Silent verification of lines in background (no loading indicator)
@@ -630,10 +712,17 @@ class DataService {
         DebugLog.log("📦 [DataService] Silent lines verification starting...")
 
         do {
-            let routeResponses = try await gtfsRealtimeService.fetchRoutesByCoordinates(latitude: latitude, longitude: longitude)
+            guard let provinceName = currentLocation?.provinceName else {
+                DebugLog.log("📦 [DataService] Silent verify skipped: province unknown")
+                return
+            }
+            DebugLog.log("📦 [DataService] Silent verify using province routes: \(provinceName)")
+            let routeResponses = try await gtfsRealtimeService.fetchProvinceRoutes(provinceName: provinceName)
 
-            // Check if data changed (compare count as simple heuristic)
-            let dataChanged = lines.count != routeResponses.count
+            // Check if data changed (compare line IDs to avoid route-count mismatch)
+            let currentLineIds = Set(lines.map { $0.id.lowercased() })
+            let newLineIds = Set(routeResponses.map { "\($0.agencyId)_\($0.shortName.lowercased())" })
+            let dataChanged = currentLineIds != newLineIds
 
             if !dataChanged {
                 // Data is the same, just update verify timestamp
@@ -641,8 +730,7 @@ class DataService {
                 updateLinesVerifyTimestamp()
             } else {
                 // Data changed, update lines
-                DebugLog.log("📦 [DataService] Lines changed (\(lines.count) -> \(routeResponses.count)), updating...")
-                let provinceName = currentLocation?.provinceName ?? "WatchTrans"
+                DebugLog.log("📦 [DataService] Lines changed (\(lines.count) -> \(newLineIds.count)), updating...")
                 await processRoutes(routeResponses, provinceName: provinceName)
                 saveLinesCache(coordinatesHash: coordHash)
                 await updateLocationWithNetworks()
@@ -652,111 +740,14 @@ class DataService {
         }
     }
 
-    /// Infer province name from network IDs (fallback when stops don't return province)
-    private func inferProvinceFromNetworks(_ networkIds: Set<String>) -> String? {
-        // Map network IDs to provinces
-        for networkId in networkIds {
-            switch networkId {
-            case "51T": return "Barcelona"  // Rodalies de Catalunya
-            case "TMB_METRO": return "Barcelona"
-            case "FGC": return "Barcelona"
-            case "TRAM_BCN", "TRAM_BARCELONA_1", "TRAM_BARCELONA_BESOS_2": return "Barcelona"
-            case "10T": return "Madrid"  // Cercanías Madrid
-            case "11T": return "Madrid"  // Metro Madrid
-            case "12T": return "Madrid"  // Metro Ligero
-            case "30T": return "Sevilla"
-            case "32T": return "Sevilla"  // Metro Sevilla
-            case "40T": return "Valencia"
-            case "METRO_VALENCIA": return "Valencia"
-            case "60T": return "Vizcaya"  // Bilbao
-            case "METRO_BILBAO": return "Vizcaya"
-            case "EUSKOTREN": return "Vizcaya"
-            case "70T": return "Zaragoza"
-            case "TRANVIA_ZARAGOZA": return "Zaragoza"
-            default: continue
-            }
-        }
-        return nil
-    }
-
-    /// Get human-readable network name from network ID
-    /// This mapping matches the API /networks endpoint
-    private func getNetworkName(for networkId: String) -> String {
-        switch networkId {
-        // Cercanías RENFE networks
-        case "10T": return "Cercanías Madrid"
-        case "20T": return "Cercanías Asturias"
-        case "30T": return "Cercanías Sevilla"
-        case "31T": return "Cercanías Cádiz"
-        case "40T": return "Cercanías Valencia"
-        case "41T": return "Cercanías Murcia/Alicante"
-        case "50T": return "Cercanías Málaga"
-        case "51T": return "Rodalies de Catalunya"
-        case "60T": return "Cercanías Bilbao"
-        case "61T": return "Cercanías San Sebastián"
-        case "62T": return "Cercanías Santander"
-        case "70T": return "Cercanías Zaragoza"
-        // Metro networks
-        case "11T", "METRO_MADRID": return "Metro Madrid"
-        case "12T", "METRO_LIGERO": return "Metro Ligero Madrid"
-        case "32T", "METRO_SEVILLA": return "Metro Sevilla"
-        case "TMB_METRO": return "Metro Barcelona"
-        case "METRO_VALENCIA": return "Metrovalencia"
-        case "METRO_BILBAO": return "Metro Bilbao"
-        case "METRO_MALAGA": return "Metro Málaga"
-        case "METRO_GRANADA": return "Metro Granada"
-        // Other networks
-        case "FGC": return "Ferrocarrils de la Generalitat"
-        case "EUSKOTREN": return "Euskotren"
-        case "SFM_MALLORCA": return "Serveis Ferroviaris de Mallorca"
-        case "TRAM_BCN", "TRAM_BARCELONA_1", "TRAM_BARCELONA_BESOS_2": return "Tram Barcelona"
-        case "TRANVIA_ZARAGOZA": return "Tranvía Zaragoza"
-        case "TRANVIA_TENERIFE": return "Tranvía Tenerife"
-        case "TRAM_ALICANTE": return "TRAM Alicante"
-        case "TRANVIA_MURCIA": return "Tranvía Murcia"
-        default: return networkId
-        }
-    }
-
-    /// Get the primary (most relevant) network name from a set of network IDs
-    /// Prioritizes Cercanías/Rodalies over Metro over Tram using API transport types
-    private func getPrimaryNetworkName(from networkIds: Set<String>) -> String? {
-        // Use cached transport types from API to categorize networks
-        let cercaniasIds = networkIds.filter { networkTransportTypes[$0] == "cercanias" }
-        if let primaryId = cercaniasIds.first {
-            return getNetworkName(for: primaryId)
-        }
-        // Then Metro/Metro Ligero
-        let metroIds = networkIds.filter {
-            let type = networkTransportTypes[$0]
-            return type == "metro" || type == "metro_ligero"
-        }
-        if let metroId = metroIds.first {
-            return getNetworkName(for: metroId)
-        }
-        // Then FGC/Euskotren
-        let fgcIds = networkIds.filter {
-            let type = networkTransportTypes[$0]
-            return type == "fgc" || type == "euskotren"
-        }
-        if let fgcId = fgcIds.first {
-            return getNetworkName(for: fgcId)
-        }
-        // Then Tram
-        let tramIds = networkIds.filter { networkTransportTypes[$0] == "tranvia" }
-        if let tramId = tramIds.first {
-            return getNetworkName(for: tramId)
-        }
-        // Finally any other
-        if let firstId = networkIds.first {
-            return getNetworkName(for: firstId)
-        }
-        return nil
-    }
-
     /// Process route responses into Line models
     private func processRoutes(_ routeResponses: [RouteResponse], provinceName: String) async {
         DebugLog.log("🚃 [ProcessRoutes] Processing \(routeResponses.count) routes for province: \(provinceName)")
+
+        // Debug: Log all incoming routes
+        for route in routeResponses {
+            DebugLog.log("   -> Procesando ruta: \(route.shortName) (\(route.id)) - Agency: \(route.agencyId)")
+        }
 
         // Group routes by short name to create lines, collecting all route IDs
         var lineDict: [String: (line: Line, routeIds: [String], longName: String, isCircular: Bool)] = [:]
@@ -780,6 +771,17 @@ class DataService {
                 if route.isCircular == true {
                     existing.isCircular = true
                 }
+                // Prefer more descriptive long names when multiple route variants exist
+                let preferredLongName = choosePreferredLongName(
+                    current: existing.longName,
+                    candidate: route.longName,
+                    shortName: route.shortName,
+                    transportType: transportType
+                )
+                let displayLongName = circularDisplayName(from: preferredLongName)
+                if displayLongName != existing.longName {
+                    existing.longName = displayLongName
+                }
                 lineDict[lineId] = existing
             } else {
                 let color = route.color ?? defaultColor
@@ -792,17 +794,30 @@ class DataService {
                     displayName = route.shortName
                 }
 
+                let preferredLongName = choosePreferredLongName(
+                    current: nil,
+                    candidate: route.longName,
+                    shortName: route.shortName,
+                    transportType: transportType
+                )
+                let displayLongName = circularDisplayName(from: preferredLongName)
+
                 let line = Line(
                     id: lineId,
                     name: displayName,
-                    longName: route.longName,
+                    longName: displayLongName,
                     type: transportType,
                     colorHex: color,
                     nucleo: provinceName,
                     routeIds: [route.id],
                     isCircular: route.isCircular ?? false
                 )
-                lineDict[lineId] = (line: line, routeIds: [route.id], longName: route.longName, isCircular: route.isCircular ?? false)
+                lineDict[lineId] = (
+                    line: line,
+                    routeIds: [route.id],
+                    longName: displayLongName,
+                    isCircular: route.isCircular ?? false
+                )
             }
         }
 
@@ -827,6 +842,160 @@ class DataService {
             let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
             DebugLog.log("🚃 [ProcessRoutes]   \(type.rawValue): \(typeLines.count) lines (\(names))")
         }
+    }
+
+    /// Choose the most descriptive long name among route variants.
+    private func choosePreferredLongName(
+        current: String?,
+        candidate: String,
+        shortName: String,
+        transportType: TransportType
+    ) -> String {
+        let trimmedCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCandidate.isEmpty else { return current ?? "" }
+        guard let current = current else { return trimmedCandidate }
+
+        let currentScore = longNameScore(
+            current,
+            shortName: shortName,
+            transportType: transportType
+        )
+        let candidateScore = longNameScore(
+            trimmedCandidate,
+            shortName: shortName,
+            transportType: transportType
+        )
+
+        return candidateScore > currentScore ? trimmedCandidate : current
+    }
+
+    private func longNameScore(
+        _ value: String,
+        shortName: String,
+        transportType: TransportType
+    ) -> Int {
+        let normalizedValue = normalizeForMatching(value)
+        let normalizedShort = normalizeForMatching(shortName)
+        if normalizedValue.isEmpty { return -10 }
+
+        var score = 0
+        if value.contains(" - ") { score += 2 }
+        if isGenericCercaniasName(
+            normalizedValue: normalizedValue,
+            normalizedShortName: normalizedShort,
+            transportType: transportType
+        ) {
+            score -= 3
+        }
+        if normalizedValue.count >= 6 { score += 1 }
+        return score
+    }
+
+    private func isGenericCercaniasName(
+        normalizedValue: String,
+        normalizedShortName: String,
+        transportType: TransportType
+    ) -> Bool {
+        guard transportType == .cercanias else { return false }
+        return normalizedValue.contains("cercan")
+            && normalizedValue.contains("linea")
+            && normalizedValue.contains(normalizedShortName)
+    }
+
+    private func normalizeForMatching(_ value: String) -> String {
+        value
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Refresh line long names using cached itineraries (A - B endpoints)
+    func refreshLineLongNamesFromItineraries() async {
+        guard !lines.isEmpty else { return }
+
+        var updatedLines = lines
+        var didUpdate = false
+
+        for index in updatedLines.indices {
+            let line = updatedLines[index]
+            
+            // Always try to improve Cercanías names if they don't look like "A - B"
+            let needsImprovement = shouldDeriveLongNameForEndpoints(line) || 
+                                  (line.type == .cercanias && !line.longName.contains(" - "))
+            
+            guard needsImprovement else { continue }
+            guard let routeId = line.routeIds.first else { continue }
+
+            if let endpoints = await OfflineLineService.shared.getRouteEndpoints(for: routeId) {
+                let isCircularByStops = endpoints.start.caseInsensitiveCompare(endpoints.end) == .orderedSame
+                let derived: String
+                if line.isCircular || isCircularByStops {
+                    derived = "Circular"
+                } else {
+                    derived = "\(endpoints.start) - \(endpoints.end)"
+                }
+                
+                // Update if different, or if current is just "C1" but we have "A - B"
+                if derived != line.longName {
+                    updatedLines[index] = Line(
+                        id: line.id,
+                        name: line.name,
+                        longName: derived,
+                        type: line.type,
+                        colorHex: line.colorHex,
+                        nucleo: line.nucleo,
+                        routeIds: line.routeIds,
+                        isCircular: line.isCircular
+                    )
+                    didUpdate = true
+                    DebugLog.log("🏷️ [DataService] Improved line name: \(line.name) -> \(derived)")
+                }
+            }
+        }
+
+        if didUpdate {
+            await MainActor.run {
+                lines = updatedLines
+                // Save improved names to cache so we don't have to re-calculate next time
+                saveLinesCache(coordinatesHash: stopsCacheMetadata?.coordinatesHash ?? "")
+            }
+        }
+    }
+
+    private func shouldDeriveLongNameForEndpoints(_ line: Line) -> Bool {
+        if line.isCircular { return true }
+        if line.longName.contains(" - ") { return false }
+        if line.longName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+
+        // Metro/Tram: if API doesn't provide A - B, derive from endpoints
+        if line.type == .metro || line.type == .tram || line.type == .metroLigero {
+            return true
+        }
+
+        return isGenericLongName(line.longName, line: line)
+    }
+
+    private func isGenericLongName(_ value: String, line: Line) -> Bool {
+        let normalizedLong = normalizeForMatching(value)
+        let normalizedName = normalizeForMatching(line.name)
+        if normalizedLong == normalizedName { return true }
+        if normalizedLong.contains("linea") && normalizedLong.contains(normalizedName) { return true }
+        if line.type == .cercanias {
+            return normalizedLong.contains("cercan") && normalizedLong.contains("linea")
+        }
+        return false
+    }
+
+    private func circularDisplayName(from value: String) -> String {
+        isCircularLongName(value) ? "Circular" : value
+    }
+
+    private func isCircularLongName(_ value: String) -> Bool {
+        let parts = value.split(separator: "-", maxSplits: 1).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard parts.count == 2 else { return false }
+        let left = normalizeForMatching(parts[0])
+        let right = normalizeForMatching(parts[1])
+        return !left.isEmpty && left == right
     }
 
     /// Fetch stops for a specific route
@@ -871,9 +1040,7 @@ class DataService {
         }
     }
 
-    /// Fetch operating hours for a route (all types)
-    /// - Metro/ML/Tranvía: uses /frequencies endpoint
-    /// - Cercanías: uses /operating-hours endpoint (from stop_times)
+    /// Fetch operating hours for a route (calculated from stop_times)
     func fetchOperatingHours(routeId: String) async -> OperatingHoursResult {
         // Determine current day type (weekday=L-J, friday=V, saturday=S, sunday=D)
         let calendar = Calendar.current
@@ -892,67 +1059,21 @@ class DataService {
             dayName = "Sábado"
         default:  // Monday-Thursday
             dayType = "weekday"
-            dayName = "L-J (weekday \(weekday))"
+            dayName = "L-J"
         }
+        
         DebugLog.log("📅 [HOURS] Fetching for \(routeId), dayType=\(dayType) (\(dayName))")
 
-        // Try frequencies first (Metro/ML/Tranvía)
-        do {
-            let frequencies = try await gtfsRealtimeService.fetchFrequencies(routeId: routeId)
-
-            if !frequencies.isEmpty {
-                // DEBUG: Log all day types returned by API
-                let dayTypes = Set(frequencies.map { $0.dayType })
-                DebugLog.log("📅 [HOURS] API returned day types: \(dayTypes.sorted())")
-
-                // Filter by current day type
-                let todayFrequencies = frequencies.filter { $0.dayType == dayType }
-                DebugLog.log("📅 [HOURS] Matched \(todayFrequencies.count) frequencies for '\(dayType)'")
-
-                if !todayFrequencies.isEmpty {
-                    let result = calculateOperatingHours(from: todayFrequencies)
-                    DebugLog.log("📅 [HOURS] ✅ From frequencies (\(dayType)): \(result)")
-                    return .hours(result)
-                }
-
-                // Fallback chain: friday → weekday → any
-                let fallbackOrder = ["friday", "weekday", "saturday", "sunday"]
-                for fallback in fallbackOrder where fallback != dayType {
-                    let fallbackFrequencies = frequencies.filter { $0.dayType == fallback }
-                    if !fallbackFrequencies.isEmpty {
-                        let result = calculateOperatingHours(from: fallbackFrequencies)
-                        DebugLog.log("📅 [HOURS] ✅ From frequencies (\(fallback) fallback): \(result)")
-                        return .hours(result)
-                    }
-                }
-            }
-        } catch {
-            DebugLog.log("📅 [HOURS] Frequencies failed, trying operating-hours...")
-        }
-
-        // Try operating-hours (Cercanías - from stop_times)
         do {
             let hours = try await gtfsRealtimeService.fetchRouteOperatingHours(routeId: routeId)
 
-            // Check for suspended service first
+            // Check for suspended service
             if hours.isSuspended == true {
                 DebugLog.log("📅 [HOURS] ⚠️ Service SUSPENDED for \(routeId): \(hours.suspensionMessage ?? "No message")")
                 return .suspended(message: hours.suspensionMessage)
             }
 
-            // DEBUG: Log RAW API response
-            DebugLog.log("📅 [HOURS] RAW API response for \(routeId):")
-            if let wd = hours.weekday {
-                DebugLog.log("📅 [HOURS]   weekday: first=\(wd.firstDeparture), last=\(wd.lastDeparture), trips=\(wd.totalTrips)")
-            }
-            if let sat = hours.saturday {
-                DebugLog.log("📅 [HOURS]   saturday: first=\(sat.firstDeparture), last=\(sat.lastDeparture)")
-            }
-            if let sun = hours.sunday {
-                DebugLog.log("📅 [HOURS]   sunday: first=\(sun.firstDeparture), last=\(sun.lastDeparture)")
-            }
-
-            // Select the appropriate day
+            // Select the appropriate day based on current weekday
             let dayHours: DayOperatingHours?
             switch dayType {
             case "sunday":
@@ -967,11 +1088,11 @@ class DataService {
 
             if let dh = dayHours {
                 let result = dh.displayString
-                DebugLog.log("📅 [HOURS] ✅ From operating-hours (\(dayType)): \(result)")
+                DebugLog.log("📅 [HOURS] ✅ Result (\(dayType)): \(result)")
                 return .hours(result)
             }
         } catch {
-            DebugLog.log("📅 [HOURS] ❌ Both endpoints failed for \(routeId): \(error)")
+            DebugLog.log("📅 [HOURS] ❌ API call failed for \(routeId): \(error)")
         }
 
         DebugLog.log("📅 [HOURS] ❌ No hours found for \(routeId)")
@@ -1042,7 +1163,10 @@ class DataService {
         // 1. Check cache first
         if let cached = getCachedArrivals(for: stopId) {
             DebugLog.log("✅ [DataService] Cache hit! Returning \(cached.count) cached arrivals")
-            return cached
+            let enriched = await enrichArrivalsWithPlatforms(cached, stopId: stopId)
+            // Refresh cache so subsequent UI refreshes show platform immediately.
+            cacheArrivals(enriched, for: stopId)
+            return enriched
         }
 
         // 2. Check if we're offline - use offline schedule cache
@@ -1055,14 +1179,32 @@ class DataService {
             }
         }
 
-        // 3. Fetch from RenfeServer API (redcercanias.com)
+        // 3. Fetch from RenfeServer API (api.watchtrans.app)
         do {
             DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
-            let departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
+            var departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
+            
+            // Fallback: If empty and ID is numeric, try prefixes (Legacy & Future support)
+            if departures.isEmpty && stopId.allSatisfy({ $0.isNumber }) {
+                // Try all standardized prefixes in order of probability
+                let prefixes = ["RENFE_C_", "RENFE_CERCANIAS_", "RENFE_F_", "RENFE_P_"]
+                for prefix in prefixes {
+                    let altId = "\(prefix)\(stopId)"
+                    DebugLog.log("📡 [DataService] Retry with: \(altId)")
+                    let retryDeps = try await gtfsRealtimeService.fetchDepartures(stopId: altId, limit: 40)
+                    if !retryDeps.isEmpty {
+                        departures = retryDeps
+                        break
+                    }
+                }
+            }
+            
             DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
-            let arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
+            var arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
             DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
+
+            arrivals = await enrichArrivalsWithPlatforms(arrivals, stopId: stopId)
 
             // 4. Cache results
             cacheArrivals(arrivals, for: stopId)
@@ -1094,6 +1236,93 @@ class DataService {
             self.error = error
             return []
         }
+    }
+
+    private func enrichArrivalsWithPlatforms(_ arrivals: [Arrival], stopId: String) async -> [Arrival] {
+        let needs = arrivals.contains { ($0.platform ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard needs else { return arrivals }
+
+        let missingCount = arrivals.filter { ($0.platform ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+        DebugLog.log("🚏 [Platforms] Enrichment needed for \(stopId): \(missingCount)/\(arrivals.count) missing platform")
+
+        let platforms = await platformsForEnrichment(stopId: stopId)
+        guard !platforms.isEmpty else { return arrivals }
+
+        // Map each line to the best platform code we have.
+        // Prefer real-time sources over static/estimated sources so the UI can color accordingly.
+        var lineToPlatform: [String: (code: String, estimated: Bool)] = [:]
+        for platform in platforms {
+            let rawCode = platform.platformCode ?? platform.description ?? ""
+            let normalizedCode = normalizePlatformCode(rawCode)
+            guard !normalizedCode.isEmpty else { continue }
+
+            let source = (platform.source ?? "").lowercased()
+            let isRealtime = source.contains("rt") || source.contains("realtime")
+            let estimated = !isRealtime
+
+            for line in platform.linesList {
+                let key = normalizeLineCodeForPlatformMatch(line)
+                guard !key.isEmpty else { continue }
+                if let existing = lineToPlatform[key] {
+                    // Prefer confirmed (non-estimated) over estimated.
+                    if existing.estimated && !estimated {
+                        lineToPlatform[key] = (normalizedCode, estimated)
+                    }
+                } else {
+                    lineToPlatform[key] = (normalizedCode, estimated)
+                }
+            }
+        }
+
+        guard !lineToPlatform.isEmpty else { return arrivals }
+
+        return arrivals.map { arrival in
+            let existing = (arrival.platform ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !existing.isEmpty { return arrival }
+
+            let key = normalizeLineCodeForPlatformMatch(arrival.lineName)
+            guard let mapped = lineToPlatform[key] else { return arrival }
+            return arrival.withPlatform(mapped.code, estimated: mapped.estimated)
+        }
+    }
+
+    private func platformsForEnrichment(stopId: String) async -> [PlatformInfo] {
+        if let cached = platformsCache[stopId],
+           Date().timeIntervalSince(cached.timestamp) < platformsCacheTTL {
+            DebugLog.log("🚏 [Platforms] Cache hit for \(stopId): \(cached.platforms.count) platforms")
+            return cached.platforms
+        }
+
+        let platforms = await fetchPlatforms(stopId: stopId)
+        DebugLog.log("🚏 [Platforms] Fetched for enrichment \(stopId): \(platforms.count) platforms")
+        platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
+        return platforms
+    }
+
+    private func normalizeLineCodeForPlatformMatch(_ value: String) -> String {
+        var s = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if s.hasPrefix("LÍNEA ") { s = String(s.dropFirst("LÍNEA ".count)) }
+        if s.hasPrefix("LINEA ") { s = String(s.dropFirst("LINEA ".count)) }
+        s = s.replacingOccurrences(of: " ", with: "")
+        return s
+    }
+
+    private func normalizePlatformCode(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        let lower = trimmed.lowercased()
+        let prefixes = ["vía", "via", "andén", "anden", "plataforma", "platform"]
+        var result = trimmed
+        for p in prefixes {
+            if lower.hasPrefix(p) {
+                result = trimmed.dropFirst(p.count).trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+        }
+
+        // If it's like "1-3" or "1/2", keep as-is; if it's empty, fall back.
+        return result.isEmpty ? trimmed : result
     }
 
     /// Map offline departures to Arrival model
@@ -1203,6 +1432,13 @@ class DataService {
             return exact
         }
 
+        // Match by route IDs (if API returns full route_id instead of line name)
+        if let byRoute = lines.first(where: { line in
+            line.routeIds.contains { $0.lowercased().trimmingCharacters(in: .whitespaces) == lowerId }
+        }) {
+            return byRoute
+        }
+
         // For Metro: API returns "1", "2", etc. but line names are "L1", "L2"
         // Check if it's a plain number (Metro line)
         if let _ = Int(lowerId) {
@@ -1228,10 +1464,106 @@ class DataService {
                 return cercanias
             }
         }
+        
+        // Final fallback: Match by exact short name (e.g. "T1" matches line with name "T1" even if ID is "TRAM_SEVILLA_60")
+        if let byShortName = lines.first(where: { $0.name.lowercased() == lowerId }) {
+            return byShortName
+        }
 
-        // Debug: log only when not found
-        DebugLog.log("❌ [getLine] NOT FOUND '\(id)'. Available: \(lines.map { $0.name }.sorted().joined(separator: ", "))")
+        // Debug: log only when we actually have lines loaded (otherwise it spams during cold start).
+        if !lines.isEmpty {
+            DebugLog.log("❌ [getLine] NOT FOUND '\(id)'. Available: \(lines.map { $0.name }.sorted().joined(separator: ", "))")
+        }
         return nil
+    }
+
+    /// Build UI stop entries per transport type (no hardcoded logic).
+    func makeStopDisplays(for stop: Stop) -> [StopDisplay] {
+        let lineIds = stop.connectionLineIds
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var grouped: [TransportType: Set<String>] = [:]
+        for lineId in lineIds {
+            if let line = getLine(by: lineId) {
+                grouped[line.type, default: []].insert(lineId)
+            } else if let inferred = inferTransportType(from: lineId) {
+                grouped[inferred, default: []].insert(lineId)
+            }
+        }
+
+        if grouped.isEmpty {
+            return [StopDisplay(stop: stop, transportType: stop.transportType, allowedLineIds: [])]
+        }
+
+        return grouped
+            .map { StopDisplay(stop: stop, transportType: $0.key, allowedLineIds: Array($0.value)) }
+            .sorted(by: { $0.transportType.rawValue < $1.transportType.rawValue })
+    }
+
+    private func inferTransportType(from lineId: String) -> TransportType? {
+        let trimmed = lineId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let upper = trimmed.uppercased()
+
+        if upper.hasPrefix("ML") {
+            return .metroLigero
+        }
+        if upper.hasPrefix("L"), upper.count > 1 {
+            return .metro
+        }
+        // Handle plain numbers as Metro (e.g., "1", "6", "10")
+        if Int(upper) != nil {
+            return .metro
+        }
+        if upper.hasPrefix("T"), upper.count > 1 {
+            return .tram
+        }
+        if upper.hasPrefix("C"), upper.count > 1 {
+            return .cercanias
+        }
+        if upper.hasPrefix("FGC") {
+            return .fgc
+        }
+        return nil
+    }
+
+    /// Filter arrivals to match a StopDisplay's transport type and line IDs
+    func filterArrivals(_ arrivals: [Arrival], for display: StopDisplay?) -> [Arrival] {
+        guard let display = display else { return arrivals }
+
+        let allowed = display.normalizedLineIds
+        if !allowed.isEmpty {
+            return arrivals.filter { arrival in
+                // Match by short name from API (e.g., "C1", "L1", "T1")
+                if allowed.contains(arrival.lineName.lowercased()) {
+                    return true
+                }
+                // Match by lineId if it's already a short name
+                if allowed.contains(arrival.lineId.lowercased()) {
+                    return true
+                }
+                // Match by full route_id -> line name
+                if let routeId = arrival.routeId, let line = getLine(by: routeId) {
+                    return allowed.contains(line.name.lowercased())
+                }
+                // Match by lineId -> line name
+                if let line = getLine(by: arrival.lineId) {
+                    return allowed.contains(line.name.lowercased())
+                }
+                return false
+            }
+        }
+
+        return arrivals.filter { arrival in
+            if let line = getLine(by: arrival.lineId) {
+                return line.type == display.transportType
+            }
+            if let routeId = arrival.routeId, let line = getLine(by: routeId) {
+                return line.type == display.transportType
+            }
+            return display.stop.transportType == display.transportType
+        }
     }
 
     /// Get line color from cache or loaded lines
@@ -1258,6 +1590,20 @@ class DataService {
 
         // 3. Not found anywhere
         return nil
+    }
+
+    /// Build RENFE-prefixed fallback stop IDs for platform/correspondence lookups.
+    private func fallbackRenfeStopId(for stopId: String) -> String? {
+        let trimmed = stopId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.hasPrefix("RENFE_") {
+            let withoutPrefix = String(trimmed.dropFirst("RENFE_".count))
+            return withoutPrefix.isEmpty ? nil : withoutPrefix
+        }
+        // Only add RENFE_ for numeric stop IDs (RENFE station codes).
+        // This avoids incorrect fallbacks like "RENFE_L1-21" for Metro/Tram IDs.
+        guard trimmed.allSatisfy({ $0.isNumber }) else { return nil }
+        return "RENFE_\(trimmed)"
     }
 
     /// Search stops by name (filtered to current province/network)
@@ -1313,44 +1659,6 @@ class DataService {
 
     /// Get provinces that belong to the same transport network region
     private func getRelatedProvinces(for province: String) -> Set<String> {
-        // Define transport network regions (provinces that share transport networks)
-        // Note: Andalucía provinces are separated to avoid showing distant stations
-        let networkRegions: [[String]] = [
-            // Cataluña (Rodalies, FGC, TMB)
-            ["Barcelona", "Tarragona", "Lleida", "Girona"],
-            // Madrid (Cercanías Madrid, Metro Madrid)
-            ["Madrid"],
-            // País Vasco (Euskotren, Metro Bilbao, Cercanías Bilbao)
-            ["Vizcaya", "Guipúzcoa", "Álava", "Bizkaia", "Gipuzkoa", "Araba"],
-            // Valencia (Metrovalencia, Cercanías Valencia)
-            ["Valencia", "Alicante", "Castellón", "Castelló"],
-            // Andalucía - Separated by province to avoid distant stations
-            ["Sevilla"],
-            ["Málaga"],
-            ["Cádiz"],
-            ["Granada"],
-            // Asturias
-            ["Asturias"],
-            // Galicia
-            ["A Coruña", "Pontevedra", "Lugo", "Ourense"],
-            // Murcia
-            ["Murcia"],
-            // Zaragoza
-            ["Zaragoza"],
-            // Cantabria
-            ["Cantabria"],
-            // Mallorca
-            ["Illes Balears", "Islas Baleares", "Mallorca"],
-        ]
-
-        // Find which region this province belongs to
-        for region in networkRegions {
-            if region.contains(province) {
-                return Set(region)
-            }
-        }
-
-        // If not found in any region, just return the province itself
         return Set([province])
     }
 
@@ -1372,8 +1680,25 @@ class DataService {
         do {
             // Use direct endpoint instead of fetching all + filtering
             let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
-            DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
-            return alerts
+            if !alerts.isEmpty {
+                DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
+                return alerts
+            }
+
+            // Fallback: fetch active alerts and filter locally (handles RENFE_ prefixed IDs)
+            let allAlerts = try await gtfsRealtimeService.fetchAlerts()
+            let stopIds = alertStopIdVariants(for: stopId)
+            let filtered = allAlerts.filter { alert in
+                let entities = alert.informedEntities ?? []
+                return entities.contains { entity in
+                    if let entityStopId = entity.stopId, stopIds.contains(entityStopId) {
+                        return true
+                    }
+                    return false
+                }
+            }
+            DebugLog.log("✅ [DataService] Fetched \(filtered.count) alerts for stop \(stopId) (fallback)")
+            return filtered
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch alerts for stop \(stopId): \(error)")
             return []
@@ -1381,14 +1706,83 @@ class DataService {
     }
 
     /// Fetch alerts for a specific route
-    func fetchAlertsForRoute(routeId: String) async -> [AlertResponse] {
+    func fetchAlertsForRoute(routeId: String, routeShortName: String? = nil) async -> [AlertResponse] {
         do {
             let alerts = try await gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
-            return alerts
+            if !alerts.isEmpty {
+                return alerts
+            }
+
+            // Fallback: fetch active alerts and filter locally (handles RENFE_ prefixed IDs)
+            let allAlerts = try await gtfsRealtimeService.fetchAlerts()
+            let routeIds = alertRouteIdVariants(for: routeId)
+            let routePrefixes = alertRoutePrefixes(for: [routeId])
+            let normalizedShortName = normalizeForMatching(routeShortName ?? "")
+            let filtered = allAlerts.filter { alert in
+                let entities = alert.informedEntities ?? []
+                return entities.contains { entity in
+                    if let entityRouteId = entity.routeId, routeIds.contains(entityRouteId) {
+                        return true
+                    }
+                    if !normalizedShortName.isEmpty,
+                       let entityShort = entity.routeShortName,
+                       normalizeForMatching(entityShort) == normalizedShortName {
+                        // If we can infer a RENFE-style prefix, require it to match to avoid cross-city collisions.
+                        if let entityRouteId = entity.routeId,
+                           let entityPrefix = alertRoutePrefix(from: entityRouteId),
+                           !routePrefixes.isEmpty {
+                            return routePrefixes.contains(entityPrefix)
+                        }
+                        return routePrefixes.isEmpty
+                    }
+                    return false
+                }
+            }
+            return filtered
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch alerts for route \(routeId): \(error)")
             return []
         }
+    }
+
+    private func alertStopIdVariants(for stopId: String) -> Set<String> {
+        let trimmed = stopId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        var ids: Set<String> = [trimmed]
+        if trimmed.hasPrefix("RENFE_") {
+            let raw = String(trimmed.dropFirst("RENFE_".count))
+            if !raw.isEmpty { ids.insert(raw) }
+        } else {
+            ids.insert("RENFE_\(trimmed)")
+        }
+        return ids
+    }
+
+    private func alertRouteIdVariants(for routeId: String) -> Set<String> {
+        let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        var ids: Set<String> = [trimmed]
+        if trimmed.hasPrefix("RENFE_") {
+            let raw = String(trimmed.dropFirst("RENFE_".count))
+            if !raw.isEmpty { ids.insert(raw) }
+        } else {
+            ids.insert("RENFE_\(trimmed)")
+        }
+        return ids
+    }
+
+    private func alertRoutePrefixes(for routeIds: [String]) -> Set<String> {
+        Set(routeIds.compactMap { alertRoutePrefix(from: $0) })
+    }
+
+    private func alertRoutePrefix(from routeId: String) -> String? {
+        let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return nil }
+        let normalized = trimmed.hasPrefix("RENFE_") ? String(trimmed.dropFirst("RENFE_".count)) : trimmed
+        guard let tIndex = normalized.firstIndex(of: "T") else { return nil }
+        let prefix = String(normalized[...tIndex])
+        let digits = prefix.dropLast()
+        return digits.allSatisfy({ $0.isNumber }) ? prefix : nil
     }
 
     /// Fetch alerts for a line using the route-specific endpoint
@@ -1396,7 +1790,31 @@ class DataService {
         guard let routeId = line.routeIds.first else {
             return []
         }
-        return await fetchAlertsForRoute(routeId: routeId)
+        let alerts = await fetchAlertsForRoute(routeId: routeId, routeShortName: line.name)
+        if !alerts.isEmpty {
+            return alerts
+        }
+
+        // Extra fallback: use route short name + inferred RENFE prefix from line route IDs
+        let allAlerts = (try? await gtfsRealtimeService.fetchAlerts()) ?? []
+        let prefixes = alertRoutePrefixes(for: line.routeIds)
+        let normalizedShortName = normalizeForMatching(line.name)
+        guard !normalizedShortName.isEmpty else { return [] }
+
+        let filtered = allAlerts.filter { alert in
+            let entities = alert.informedEntities ?? []
+            return entities.contains { entity in
+                guard let entityShort = entity.routeShortName,
+                      normalizeForMatching(entityShort) == normalizedShortName else { return false }
+                if let entityRouteId = entity.routeId,
+                   let entityPrefix = alertRoutePrefix(from: entityRouteId),
+                   !prefixes.isEmpty {
+                    return prefixes.contains(entityPrefix)
+                }
+                return prefixes.isEmpty
+            }
+        }
+        return filtered
     }
 
     // MARK: - Platforms & Correspondences
@@ -1406,8 +1824,26 @@ class DataService {
     func fetchPlatforms(stopId: String) async -> [PlatformInfo] {
         do {
             let response = try await gtfsRealtimeService.fetchPlatforms(stopId: stopId)
-            DebugLog.log("🚏 [DataService] Fetched \(response.platforms.count) platforms for \(stopId)")
-            return response.platforms
+            if !response.platforms.isEmpty {
+                DebugLog.log("🚏 [DataService] Fetched \(response.platforms.count) platforms for \(stopId)")
+                return response.platforms
+            }
+            
+            // Fallback: If empty and ID is numeric, try prefixes (Legacy & Future support)
+            if stopId.allSatisfy({ $0.isNumber }) {
+                // Try all standardized prefixes in order of probability
+                let prefixes = ["RENFE_C_", "RENFE_CERCANIAS_", "RENFE_F_", "RENFE_P_"]
+                for prefix in prefixes {
+                    let altId = "\(prefix)\(stopId)"
+                    let fallbackRes = try await gtfsRealtimeService.fetchPlatforms(stopId: altId)
+                    if !fallbackRes.platforms.isEmpty {
+                        DebugLog.log("🚏 [DataService] Fetched \(fallbackRes.platforms.count) platforms for \(altId) (fallback)")
+                        return fallbackRes.platforms
+                    }
+                }
+            }
+            
+            return []
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch platforms for \(stopId): \(error)")
             return []
@@ -1423,10 +1859,38 @@ class DataService {
         // Don't check NetworkMonitor here - let the request fail naturally if offline
         do {
             let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId, includeShape: includeShape)
-            DebugLog.log("🚶 [DataService] Fetched \(response.correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
-            return response.correspondences
+            let correspondences = response.correspondences ?? []
+            if correspondences.isEmpty {
+                if let fallbackId = fallbackRenfeStopId(for: stopId) {
+                    let fallback = try await gtfsRealtimeService.fetchCorrespondences(stopId: fallbackId, includeShape: includeShape)
+                    let fallbackCorrespondences = fallback.correspondences ?? []
+                    DebugLog.log("🚶 [DataService] Fetched \(fallbackCorrespondences.count) correspondences for \(fallbackId) (fallback)")
+                    return fallbackCorrespondences
+                }
+            }
+            DebugLog.log("🚶 [DataService] Fetched \(correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
+            return correspondences
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch correspondences for \(stopId): \(error)")
+            return []
+        }
+    }
+
+    /// Fetch transport mode connections for a station (e.g., metro/tram lines)
+    func fetchTransportModes(stopId: String) async -> [TransportModeInfo] {
+        do {
+            let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId)
+            let modes = response.transportModes ?? []
+            if modes.isEmpty, let fallbackId = fallbackRenfeStopId(for: stopId) {
+                let fallback = try await gtfsRealtimeService.fetchCorrespondences(stopId: fallbackId)
+                let fallbackModes = fallback.transportModes ?? []
+                DebugLog.log("🔗 [DataService] Fetched \(fallbackModes.count) transport modes for \(fallbackId) (fallback)")
+                return fallbackModes
+            }
+            DebugLog.log("🔗 [DataService] Fetched \(modes.count) transport modes for \(stopId)")
+            return modes
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch transport modes for \(stopId): \(error)")
             return []
         }
     }
@@ -1504,7 +1968,7 @@ class DataService {
             let response = try await gtfsRealtimeService.fetchRouteShape(
                 routeId: routeId,
                 maxGap: maxGap,
-                includeStops: true
+                includeStops: true // API 500 fixed
             )
             let sortedShape = response.shape.sorted { $0.sequence < $1.sequence }
 
@@ -1520,6 +1984,24 @@ class DataService {
                 DebugLog.log("🗺️ [DataService] Fetched shape with \(sortedShape.count) points and \(stops.count) stop coordinates for \(routeId)")
             } else {
                 DebugLog.log("🗺️ [DataService] Fetched shape with \(sortedShape.count) points (no stop coords) for \(routeId)")
+            }
+
+            // Fallback: if API returns an empty shape, build a basic polyline from route stops.
+            // This keeps maps usable even when GTFS shapes are missing server-side.
+            if sortedShape.isEmpty {
+                DebugLog.log("🗺️ [DataService] ⚠️ Shape empty for \(routeId). Building fallback polyline from route stops...")
+                let routeStops = try await gtfsRealtimeService.fetchRouteStops(routeId: routeId)
+                let fallbackPoints: [ShapePoint] = routeStops.enumerated().map { idx, stop in
+                    ShapePoint(lat: stop.lat, lon: stop.lon, sequence: idx)
+                }
+                var fallbackStopCoords: [String: CLLocationCoordinate2D] = [:]
+                for stop in routeStops {
+                    fallbackStopCoords[stop.id] = CLLocationCoordinate2D(latitude: stop.lat, longitude: stop.lon)
+                }
+
+                let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
+                shapeCacheQueue.sync { shapeCache[cacheKey] = fallbackPoints }
+                return ShapeWithStops(shapePoints: fallbackPoints, stopCoordinates: fallbackStopCoords)
             }
 
             // Also cache the shape points for the regular fetchRouteShape function
@@ -1550,11 +2032,22 @@ class DataService {
         DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId)")
 
         do {
+            // NOTE: Using compact=false for main app to get full shapes
+            // Widgets use a different path via GTFSRealtimeService with compact=true
             let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId)
 
             guard response.success else {
                 DebugLog.log("⚠️ [DataService] Route plan failed: \(response.message ?? "unknown error")")
                 return nil
+            }
+            
+            // Log response size/type for debugging
+            if let count = response.journeys?.count {
+                DebugLog.log("🗺️ [DataService] API returned \(count) journey options")
+            } else if response.journey != nil {
+                DebugLog.log("🗺️ [DataService] API returned single journey")
+            } else {
+                DebugLog.log("⚠️ [DataService] API returned success but NO journeys")
             }
 
             let apiJourneys = response.allJourneys
@@ -1671,6 +2164,7 @@ class DataService {
                 intermediateStops: intermediateStops,
                 durationMinutes: apiSegment.durationMinutes,
                 coordinates: coordinates,
+                suggestedHeading: apiSegment.suggestedHeading,
                 departureTime: departureTime,
                 arrivalTime: arrivalTime
             )
@@ -1781,6 +2275,7 @@ class DataService {
                             intermediateStops: segment.intermediateStops,
                             durationMinutes: segment.durationMinutes,
                             coordinates: segmentCoords,
+                            suggestedHeading: segment.suggestedHeading,
                             departureTime: segment.departureTime,
                             arrivalTime: segment.arrivalTime
                         )
@@ -1798,7 +2293,7 @@ class DataService {
                     // Match by stop ID or by name (some stops have different IDs across systems)
                     let matchingCorrespondence = correspondences.first { corr in
                         corr.toStopId == segment.destination.id ||
-                        corr.toStopName.lowercased() == segment.destination.name.lowercased()
+                        (corr.toStopName?.lowercased() ?? "") == segment.destination.name.lowercased()
                     }
 
                     if let correspondence = matchingCorrespondence,
@@ -1822,6 +2317,7 @@ class DataService {
                             intermediateStops: segment.intermediateStops,
                             durationMinutes: segment.durationMinutes,
                             coordinates: walkingCoords,
+                            suggestedHeading: segment.suggestedHeading,
                             departureTime: segment.departureTime,
                             arrivalTime: segment.arrivalTime
                         )
@@ -1903,6 +2399,42 @@ class DataService {
         let dLat = c1.latitude - c2.latitude
         let dLon = c1.longitude - c2.longitude
         return dLat * dLat + dLon * dLon
+    }
+
+    // MARK: - Network Lines Conversion
+
+    /// Convert nested LineResponse (from /networks/{id}/lines) to flat RouteResponse
+    private func convertNetworkLinesToRouteResponses(_ lines: [LineResponse], networkId: String) -> [RouteResponse] {
+        var routes: [RouteResponse] = []
+        
+        for line in lines {
+            for route in line.routes {
+                // Determine agency ID if available, otherwise guess based on line code
+                let agencyId = route.agencyId ?? guessAgencyId(lineCode: line.lineCode)
+                
+                routes.append(RouteResponse(
+                    id: route.id,
+                    shortName: line.lineCode,
+                    longName: route.longName,
+                    routeType: 0, // Default to tram/rail (doesn't matter much for display)
+                    color: route.color ?? line.color,
+                    textColor: line.textColor,
+                    agencyId: agencyId,
+                    networkId: networkId,
+                    description: nil,
+                    isCircular: false // Assume false for list view
+                ))
+            }
+        }
+        return routes
+    }
+    
+    private func guessAgencyId(lineCode: String) -> String {
+        // Fallback heuristics based on typical naming conventions in Spain
+        if lineCode.hasPrefix("C") { return "RENFE_CERCANIAS" }
+        if lineCode.hasPrefix("L") { return "METRO_SEVILLA" } // Generic guess
+        if lineCode.hasPrefix("T") { return "TRAM" }
+        return "UNKNOWN"
     }
 
 }

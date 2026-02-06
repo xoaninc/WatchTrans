@@ -1,9 +1,9 @@
 //
-//  RenfeServerModels.swift
-//  WatchTrans Watch App
+//  WatchTransModels.swift
+//  WatchTrans iOS
 //
 //  Created by Claude on 15/1/26.
-//  Codable models for RenfeServer API responses (api.watchtrans.app)
+//  Codable models for WatchTrans API responses (api.watchtrans.app)
 //
 
 import Foundation
@@ -34,6 +34,11 @@ struct DepartureResponse: Codable, Identifiable {
     // Frequency-based departures (Metro)
     let frequencyBased: Bool?
     let headwaySecs: Int?
+
+    // Occupancy data (GTFS-RT standard)
+    let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
+    let occupancyPercentage: Int?   // 0-100 percentage
+    let occupancyPerCar: [Int]?     // Per-car occupancy percentages
 
     var id: String { tripId }
 
@@ -72,6 +77,9 @@ struct DepartureResponse: Codable, Identifiable {
         case trainPosition = "train_position"
         case frequencyBased = "frequency_based"
         case headwaySecs = "headway_secs"
+        case occupancyStatus = "occupancy_status"
+        case occupancyPercentage = "occupancy_percentage"
+        case occupancyPerCar = "occupancy_per_car"
     }
 }
 
@@ -122,6 +130,7 @@ struct NetworkResponse: Codable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
+        // Be tolerant to API evolution: if a field disappears temporarily, don't fail the whole decode.
         code = (try? container.decode(String.self, forKey: .code)) ?? ""
         name = (try? container.decode(String.self, forKey: .name)) ?? ""
         region = (try? container.decode(String.self, forKey: .region)) ?? ""
@@ -133,6 +142,39 @@ struct NetworkResponse: Codable, Identifiable {
         nucleoIdRenfe = try? container.decodeIfPresent(Int.self, forKey: .nucleoIdRenfe)
         routeCount = try? container.decodeIfPresent(Int.self, forKey: .routeCount)
         transportType = try? container.decodeIfPresent(String.self, forKey: .transportType)
+    }
+}
+
+// MARK: - Line Response
+
+/// Response from GET /api/gtfs/networks/{code}/lines
+struct LineResponse: Codable {
+    let lineCode: String
+    let color: String
+    let textColor: String
+    let sortOrder: Int?
+    let routeCount: Int?
+    let routes: [LineRouteInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case lineCode = "line_code"
+        case color, routes
+        case textColor = "text_color"
+        case sortOrder = "sort_order"
+        case routeCount = "route_count"
+    }
+}
+
+struct LineRouteInfo: Codable {
+    let id: String
+    let longName: String
+    let color: String?
+    let agencyId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, color
+        case longName = "long_name"
+        case agencyId = "agency_id"
     }
 }
 
@@ -173,7 +215,7 @@ struct StopResponse: Codable, Identifiable {
     let lon: Double
     let sequence: Int?
     let code: String?
-    let locationType: Int
+    let locationType: Int?
     let parentStationId: String?
     let zoneId: String?
 
@@ -551,6 +593,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let distanceM: Int          // Distance in meters
     let walkTimeS: Int          // Walk time in seconds
     let source: String          // "manual", "proximity", etc.
+    let walkingShape: [ShapePoint]?  // Walking route coordinates (only with include_shape=true)
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -561,6 +604,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
         case distanceM = "distance_m"
         case walkTimeS = "walk_time_s"
         case source
+        case walkingShape = "walking_shape"
     }
 
     /// Walk time formatted as "X min"
@@ -591,15 +635,18 @@ struct CorrespondenceInfo: Codable, Identifiable {
 
 /// Response from GET /api/gtfs/routes/{route_id}/shape
 /// Contains the polyline coordinates for drawing the route on a map
+/// Use ?include_stops=true to get stop coordinates projected onto the shape
 struct RouteShapeResponse: Codable {
     let routeId: String
     let routeShortName: String?
     let shape: [ShapePoint]
+    let stops: [ShapeStop]?  // Only present with ?include_stops=true
 
     enum CodingKeys: String, CodingKey {
         case routeId = "route_id"
         case routeShortName = "route_short_name"
         case shape
+        case stops
     }
 }
 
@@ -612,6 +659,159 @@ struct ShapePoint: Codable {
     enum CodingKeys: String, CodingKey {
         case lat, lon, sequence
     }
+}
+
+/// Stop info with projected coordinates onto the shape
+struct ShapeStop: Codable {
+    let stopId: String
+    let name: String
+    let sequence: Int
+    let onShape: Coordinate      // Coordinates projected onto the line shape (for map markers)
+    let platform: Coordinate?    // Real platform coordinates (for navigation)
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case name
+        case sequence
+        case onShape = "on_shape"
+        case platform
+    }
+}
+
+/// Simple coordinate pair
+struct Coordinate: Codable {
+    let lat: Double
+    let lon: Double
+}
+
+// MARK: - Route Planner Response
+
+/// Response from GET /api/gtfs/route-planner
+/// Contains complete journeys (Pareto-optimal alternatives) with segments, times, and normalized coordinates
+/// API v2 returns journeys[] (plural), alerts[], departure/arrival timestamps
+struct RoutePlanResponse: Codable {
+    let success: Bool
+    let message: String?
+    let journeys: [RoutePlanJourney]?  // Array of Pareto-optimal alternatives (best first)
+    let alerts: [RouteAlert]?          // Service alerts affecting this route
+
+    // Backwards compatibility: also accept singular journey
+    let journey: RoutePlanJourney?
+
+    /// Get all journeys (handles both old and new API format)
+    var allJourneys: [RoutePlanJourney] {
+        if let journeys = journeys, !journeys.isEmpty {
+            return journeys
+        }
+        if let journey = journey {
+            return [journey]
+        }
+        return []
+    }
+
+    /// Best journey (first in array = fastest/optimal)
+    var bestJourney: RoutePlanJourney? {
+        allJourneys.first
+    }
+}
+
+/// Service alert affecting a route
+struct RouteAlert: Codable {
+    let lineId: String?
+    let message: String
+    let severity: String  // "info", "warning", "error"
+
+    enum CodingKeys: String, CodingKey {
+        case lineId = "line_id"
+        case message, severity
+    }
+}
+
+/// Complete journey from origin to destination (API v2 format)
+struct RoutePlanJourney: Codable {
+    let durationMinutes: Int
+    let walkingMinutes: Int
+    let transfers: Int
+    let segments: [RoutePlanSegment]
+    let departure: String?  // ISO8601 timestamp "2026-01-28T08:32:00"
+    let arrival: String?    // ISO8601 timestamp "2026-01-28T09:07:00"
+
+    enum CodingKeys: String, CodingKey {
+        case segments, departure, arrival, transfers
+        case durationMinutes = "duration_minutes"
+        case walkingMinutes = "walking_minutes"
+    }
+
+    // Computed properties for compatibility
+    var totalDurationMinutes: Int { durationMinutes }
+    var totalWalkingMinutes: Int { walkingMinutes }
+    var totalTransitMinutes: Int { durationMinutes - walkingMinutes }
+    var transferCount: Int { transfers }
+
+    /// Origin is first segment's origin
+    var origin: RoutePlanStop? { segments.first?.origin }
+
+    /// Destination is last segment's destination
+    var destination: RoutePlanStop? { segments.last?.destination }
+
+    /// Parsed departure time
+    var departureDate: Date? {
+        guard let departure = departure else { return nil }
+        return ISO8601DateFormatter().date(from: departure)
+    }
+
+    /// Parsed arrival time
+    var arrivalDate: Date? {
+        guard let arrival = arrival else { return nil }
+        return ISO8601DateFormatter().date(from: arrival)
+    }
+}
+
+/// A stop in the route plan
+struct RoutePlanStop: Codable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+}
+
+/// A segment of the journey (transit or walking) - API v2 format
+struct RoutePlanSegment: Codable {
+    let type: String                    // "transit" or "walking"
+    let mode: String?                   // "metro", "cercanias", "walking", etc.
+    let lineId: String?
+    let lineName: String?
+    let lineColor: String?
+    let headsign: String?
+    let origin: RoutePlanStop
+    let destination: RoutePlanStop
+    let intermediateStops: [RoutePlanStop]?
+    let durationMinutes: Int
+    let distanceMeters: Int?
+    let coordinates: [RoutePlanCoordinate]
+    let suggestedHeading: Double?       // API v2: camera heading 0-360 degrees (0=north)
+    let departure: String?              // API v2: segment departure time
+    let arrival: String?                // API v2: segment arrival time
+
+    enum CodingKeys: String, CodingKey {
+        case type, mode, origin, destination, coordinates, headsign, departure, arrival
+        case lineId = "line_id"
+        case lineName = "line_name"
+        case lineColor = "line_color"
+        case intermediateStops = "intermediate_stops"
+        case durationMinutes = "duration_minutes"
+        case distanceMeters = "distance_meters"
+        case suggestedHeading = "suggested_heading"
+    }
+
+    // Compatibility alias
+    var transportMode: String { mode ?? type }
+}
+
+/// A coordinate in the route plan segment
+struct RoutePlanCoordinate: Codable {
+    let lat: Double
+    let lon: Double
 }
 
 // MARK: - Station Accesses Response
@@ -672,7 +872,7 @@ struct StationAccess: Codable, Identifiable {
         return "\(open) - \(close)"
     }
 
-    /// Check if currently open
+    /// Check if currently open (simplified - doesn't handle overnight)
     var isCurrentlyOpen: Bool {
         guard let open = openingTime, let close = closingTime else { return true }
 
@@ -692,70 +892,11 @@ struct StationAccess: Codable, Identifiable {
         guard let openTime = calendar.date(from: openComponents),
               let closeTime = calendar.date(from: closeComponents) else { return true }
 
+        // Handle overnight hours (e.g., 06:00 - 01:30)
         if closeTime < openTime {
             return nowTime >= openTime || nowTime <= closeTime
         }
 
         return nowTime >= openTime && nowTime <= closeTime
     }
-}
-
-/// Complete journey from origin to destination
-struct RoutePlanJourney: Codable {
-    let origin: RoutePlanStop
-    let destination: RoutePlanStop
-    let totalDurationMinutes: Int
-    let totalWalkingMinutes: Int
-    let totalTransitMinutes: Int
-    let transferCount: Int
-    let segments: [RoutePlanSegment]
-
-    enum CodingKeys: String, CodingKey {
-        case origin, destination, segments
-        case totalDurationMinutes = "total_duration_minutes"
-        case totalWalkingMinutes = "total_walking_minutes"
-        case totalTransitMinutes = "total_transit_minutes"
-        case transferCount = "transfer_count"
-    }
-}
-
-/// A stop in the route plan
-struct RoutePlanStop: Codable {
-    let id: String
-    let name: String
-    let lat: Double
-    let lon: Double
-}
-
-/// A segment of the journey (transit or walking)
-struct RoutePlanSegment: Codable {
-    let type: String                    // "transit" or "walking"
-    let transportMode: String           // "metro", "cercanias", "walking", etc.
-    let lineId: String?
-    let lineName: String?
-    let lineColor: String?
-    let headsign: String?
-    let origin: RoutePlanStop
-    let destination: RoutePlanStop
-    let intermediateStops: [RoutePlanStop]?
-    let durationMinutes: Int
-    let distanceMeters: Int?
-    let coordinates: [RoutePlanCoordinate]
-
-    enum CodingKeys: String, CodingKey {
-        case type, origin, destination, coordinates, headsign
-        case transportMode = "transport_mode"
-        case lineId = "line_id"
-        case lineName = "line_name"
-        case lineColor = "line_color"
-        case intermediateStops = "intermediate_stops"
-        case durationMinutes = "duration_minutes"
-        case distanceMeters = "distance_meters"
-    }
-}
-
-/// A coordinate in the route plan segment
-struct RoutePlanCoordinate: Codable {
-    let lat: Double
-    let lon: Double
 }

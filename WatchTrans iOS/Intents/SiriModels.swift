@@ -14,12 +14,18 @@ import AppIntents
 /// Helper to fetch route data outside of MainActor context
 /// This avoids Swift 6 concurrency warnings with Decodable
 enum SiriAPIHelper {
-    private static let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Use centralized configuration
+    private static var apiBaseURL: String { APIConfiguration.baseURL }
 
     static func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
-        let urlString = "\(apiBaseURL)/route-planner?from=\(fromId)&to=\(toId)&compact=true"
+        var components = URLComponents(string: "\(apiBaseURL)/route-planner")
+        components?.queryItems = [
+            URLQueryItem(name: "from", value: fromId),
+            URLQueryItem(name: "to", value: toId),
+            URLQueryItem(name: "compact", value: "true")
+        ]
 
-        guard let url = URL(string: urlString) else {
+        guard let url = components?.url else {
             throw PlanRouteError.invalidURL
         }
 
@@ -71,7 +77,7 @@ struct SiriSegment: Codable, Sendable {
     let routeName: String?
     let routeColor: String?
     let fromStopName: String
-    let toStopName: String
+    let toStopName: String?
     let durationMinutes: Int
 
     enum CodingKeys: String, CodingKey {
