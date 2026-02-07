@@ -8,7 +8,7 @@
 import Foundation
 import CoreLocation
 
-struct Stop: Identifiable, Equatable {
+struct Stop: Identifiable, Equatable, Hashable {
     let id: String
     let name: String          // "Sol", "Atocha"
     let latitude: Double
