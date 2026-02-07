@@ -21,3 +21,10 @@
 **Status:** ⚠️ Missing `cor_metro`, `cor_cercanias`, etc. fields for some new stations (e.g. Sevilla).
 **Impact:** The "Line Detail" view does not show connection badges for stops because the static stop data lacks this information, even if the dynamic `/stops/{id}/correspondences` endpoint has it.
 **Recommendation:** Update the route stops endpoint to populate correspondence fields from the same source as the correspondences endpoint.
+
+## Generic Connection Data ("true" vs Line Numbers)
+
+**Endpoint:** `/routes/{id}/stops` and `/stops/by-coordinates`
+**Status:** ⚠️ For new networks (Sevilla, Bilbao), the `cor_` fields (e.g. `cor_tranvia`) return the string `"true"` instead of a list of lines (e.g. `"T1"`).
+**Impact:** The app displays generic badges like "TRAM" or "Metro" instead of specific lines like "T1" or "L1".
+**Recommendation:** Backend should return the comma-separated list of connecting lines (e.g. "T1") instead of a boolean string.
