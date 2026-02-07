@@ -1907,17 +1907,50 @@ class DataService {
         // Don't check NetworkMonitor here - let the request fail naturally if offline
         do {
             let response = try await gtfsRealtimeService.fetchCorrespondences(stopId: stopId, includeShape: includeShape)
-            let correspondences = response.correspondences ?? []
-            if correspondences.isEmpty {
+            var rawCorrespondences = response.correspondences ?? []
+            if rawCorrespondences.isEmpty {
                 if let fallbackId = fallbackRenfeStopId(for: stopId) {
                     let fallback = try await gtfsRealtimeService.fetchCorrespondences(stopId: fallbackId, includeShape: includeShape)
-                    let fallbackCorrespondences = fallback.correspondences ?? []
-                    DebugLog.log("🚶 [DataService] Fetched \(fallbackCorrespondences.count) correspondences for \(fallbackId) (fallback)")
-                    return fallbackCorrespondences
+                    rawCorrespondences = fallback.correspondences ?? []
+                    DebugLog.log("🚶 [DataService] Fetched \(rawCorrespondences.count) correspondences for \(fallbackId) (fallback)")
                 }
             }
-            DebugLog.log("🚶 [DataService] Fetched \(correspondences.count) correspondences for \(stopId)\(includeShape ? " (with shapes)" : "")")
-            return correspondences
+            
+            // DEDUPLICATION & NAME RESOLUTION
+            // Group multiple stops of the same target station into a single correspondence entry (the closest one)
+            var uniqueCorrespondences: [String: CorrespondenceInfo] = [:]
+            
+            for var corr in rawCorrespondences {
+                // 1. Try to resolve missing name from global cache
+                if corr.toStopName == nil || corr.toStopName!.isEmpty {
+                    if let cached = self.getStop(by: corr.toStopId) {
+                        corr = corr.withResolvedName(cached.name)
+                    }
+                }
+                
+                // 2. Create a key for grouping: Target Name + Target Lines
+                // This ensures that different platforms/entrances of the same station are grouped.
+                let nameKey = corr.toStopName ?? corr.toStopId
+                let linesKey = corr.toLines ?? ""
+                let key = "\(nameKey)|\(linesKey)"
+                
+                // 3. Keep only the closest entry for this station
+                if let existing = uniqueCorrespondences[key] {
+                    if (corr.distanceM ?? Int.max) < (existing.distanceM ?? Int.max) {
+                        uniqueCorrespondences[key] = corr
+                    }
+                } else {
+                    uniqueCorrespondences[key] = corr
+                }
+            }
+            
+            // Convert back to array and sort by distance
+            let result = Array(uniqueCorrespondences.values).sorted {
+                ($0.distanceM ?? Int.max) < ($1.distanceM ?? Int.max)
+            }
+            
+            DebugLog.log("🚶 [DataService] Optimized correspondences: \(rawCorrespondences.count) -> \(result.count) unique hubs for \(stopId)")
+            return result
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to fetch correspondences for \(stopId): \(error)")
             return []
