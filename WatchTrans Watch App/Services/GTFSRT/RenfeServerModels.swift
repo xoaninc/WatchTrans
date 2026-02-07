@@ -550,7 +550,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let toTransportTypes: [String]?  // ["metro", "cercanias", "tranvia"]
     let distanceM: Int          // Distance in meters
     let walkTimeS: Int          // Walk time in seconds
-    let source: String          // "manual", "proximity", etc.
+    let source: String?          // "manual", "proximity", etc.
 
     enum CodingKeys: String, CodingKey {
         case id
