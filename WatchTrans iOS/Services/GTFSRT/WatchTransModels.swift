@@ -615,6 +615,21 @@ struct CorrespondenceInfo: Codable, Identifiable {
         return toStopId
     }
 
+    /// Create a copy with a resolved name
+    func withResolvedName(_ name: String) -> CorrespondenceInfo {
+        CorrespondenceInfo(
+            id: self.id,
+            toStopId: self.toStopId,
+            toStopName: name,
+            toLines: self.toLines,
+            toTransportTypes: self.toTransportTypes,
+            distanceM: self.distanceM,
+            walkTimeS: self.walkTimeS,
+            source: self.source,
+            walkingShape: self.walkingShape
+        )
+    }
+
     /// Walk time formatted as "X min"
     var walkTimeFormatted: String {
         guard let walkTimeS = walkTimeS else { return "" }
@@ -868,13 +883,13 @@ struct StationAccess: Codable, Identifiable {
 
     /// Full address string
     var address: String {
-        if let street = street {
+        if let street = street, !street.isEmpty {
             if let number = streetNumber, !number.isEmpty {
                 return "\(street), \(number)"
             }
             return street
         }
-        return name
+        return name.isEmpty ? "Acceso a la estación" : name
     }
 
     /// Opening hours string
