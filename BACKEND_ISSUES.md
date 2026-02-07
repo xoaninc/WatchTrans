@@ -14,3 +14,10 @@
 **Line:** L1
 **Status:** ⚠️ Shapes OK, but real-time departures are empty.
 **Impact:** Users can see the line on the map but cannot see train times.
+
+## Route Stops - Missing Correspondences
+
+**Endpoint:** `GET /routes/{id}/stops`
+**Status:** ⚠️ Missing `cor_metro`, `cor_cercanias`, etc. fields for some new stations (e.g. Sevilla).
+**Impact:** The "Line Detail" view does not show connection badges for stops because the static stop data lacks this information, even if the dynamic `/stops/{id}/correspondences` endpoint has it.
+**Recommendation:** Update the route stops endpoint to populate correspondence fields from the same source as the correspondences endpoint.
