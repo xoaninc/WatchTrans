@@ -1016,6 +1016,25 @@ class DataService {
                 } else if response.corMetro != nil || response.corCercanias != nil || response.corTranvia != nil || response.corMl != nil {
                     DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), cerc=\(response.corCercanias ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
                 }
+                
+                // ENRICHMENT: If API response lacks connection info, try to find it in our global stops cache
+                var metro = response.corMetro
+                var ml = response.corMl
+                var cerc = response.corCercanias
+                var tram = response.corTranvia
+                
+                if (metro?.isEmpty ?? true) && (ml?.isEmpty ?? true) && (cerc?.isEmpty ?? true) && (tram?.isEmpty ?? true) {
+                    if let cached = self.getStop(by: response.id) {
+                        metro = cached.corMetro
+                        ml = cached.corMl
+                        cerc = cached.corCercanias
+                        tram = cached.corTranvia
+                        if metro != nil || ml != nil || cerc != nil || tram != nil {
+                            DebugLog.log("🔗 [DataService] ✅ Enriched connections for '\(response.name)' from cache")
+                        }
+                    }
+                }
+                
                 return Stop(
                     id: response.id,
                     name: response.name,
@@ -1028,10 +1047,10 @@ class DataService {
                     hasBusConnection: response.corBus != nil && response.corBus != "0",
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     isHub: response.isHub ?? false,
-                    corMetro: response.corMetro,
-                    corMl: response.corMl,
-                    corCercanias: response.corCercanias,
-                    corTranvia: response.corTranvia
+                    corMetro: metro,
+                    corMl: ml,
+                    corCercanias: cerc,
+                    corTranvia: tram
                 )
             }
         } catch {
@@ -1416,9 +1435,27 @@ class DataService {
         arrivalCache.removeAll()
     }
 
-    // Get stop by ID
+    // Get stop by ID (robust matching)
     func getStop(by id: String) -> Stop? {
-        return stops.first { $0.id == id }
+        let lowerId = id.lowercased().trimmingCharacters(in: .whitespaces)
+        
+        // 1. Exact match
+        if let exact = stops.first(where: { $0.id.lowercased() == lowerId }) {
+            return exact
+        }
+        
+        // 2. Try with common prefixes if ID is numeric
+        if lowerId.allSatisfy({ $0.isNumber }) {
+            let prefixes = ["renfe_c_", "renfe_cercanias_", "metro_", "fgc_"]
+            for prefix in prefixes {
+                let altId = "\(prefix)\(lowerId)"
+                if let match = stops.first(where: { $0.id.lowercased() == altId }) {
+                    return match
+                }
+            }
+        }
+        
+        return nil
     }
 
     // Get line by ID or name (case-insensitive)
