@@ -1928,13 +1928,28 @@ class DataService {
                     }
                 }
                 
-                // 2. Create a key for grouping: Target Name + Target Lines
-                // This ensures that different platforms/entrances of the same station are grouped.
-                let nameKey = corr.toStopName ?? corr.toStopId
-                let linesKey = corr.toLines ?? ""
-                let key = "\(nameKey)|\(linesKey)"
+                // 2. Filter out "junk" entries (no name AND no lines)
+                // These are usually internal nodes or platform definitions without useful info
+                if (corr.toStopName == nil || corr.toStopName!.isEmpty) && 
+                   (corr.toLines == nil || corr.toLines!.isEmpty) {
+                    continue
+                }
                 
-                // 3. Keep only the closest entry for this station
+                // 3. Create a key for grouping
+                // If name is available, group by Name.
+                // If not, group by Lines (e.g. all "T1" stops group together).
+                // We IGNORE toStopId for grouping because the API returns unique IDs for platforms of the same station.
+                let namePart = corr.toStopName ?? ""
+                let linesPart = corr.toLines ?? ""
+                
+                let key: String
+                if !namePart.isEmpty {
+                    key = namePart // Group by station name (e.g. "San Bernardo")
+                } else {
+                    key = "LINES:\(linesPart)" // Group by line list (e.g. "T1")
+                }
+                
+                // 4. Keep only the closest entry for this group
                 if let existing = uniqueCorrespondences[key] {
                     if (corr.distanceM ?? Int.max) < (existing.distanceM ?? Int.max) {
                         uniqueCorrespondences[key] = corr
