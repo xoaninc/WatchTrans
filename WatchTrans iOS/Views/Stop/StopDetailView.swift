@@ -874,9 +874,11 @@ struct NearbyStationsSectionView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
 
-                        Text(correspondence.toLines)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let lines = correspondence.toLines {
+                            Text(lines)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     Spacer()

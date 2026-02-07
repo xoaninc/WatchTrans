@@ -546,7 +546,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let id: Int
     let toStopId: String
     let toStopName: String?
-    let toLines: String         // "L3, L5, C5"
+    let toLines: String?         // "L3, L5, C5"
     let toTransportTypes: [String]?  // ["metro", "cercanias", "tranvia"]
     let distanceM: Int          // Distance in meters
     let walkTimeS: Int          // Walk time in seconds
@@ -583,7 +583,8 @@ struct CorrespondenceInfo: Codable, Identifiable {
 
     /// Parse lines string into array
     var linesList: [String] {
-        toLines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let toLines = toLines else { return [] }
+        return toLines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 }
 
