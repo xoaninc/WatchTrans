@@ -501,9 +501,14 @@ struct LineStopRowView: View {
     private let defaultMlColor = "#3A7DDA"
     private let defaultCercaniasColor = "#75B2E0"
     private let defaultTranviaColor = "#E4002B"
+    private let defaultFunicularColor = "#000000"
 
     /// Format line name: "c4a" → "C4a", "l10b" → "L10b", "ml1" → "ML1"
-    private func formatLineName(_ name: String) -> String {
+    private func formatLineName(_ name: String, type: String) -> String {
+        if name.lowercased() == "true" {
+            return type
+        }
+        
         let lowercased = name.lowercased()
 
         // Handle ML prefix specially (2 chars)
@@ -529,7 +534,7 @@ struct LineStopRowView: View {
             .filter { !$0.isEmpty }
     }
 
-    /// All connection badges: Cercanías → Metro → Metro Ligero → Tranvía
+    /// All connection badges: Cercanías → Metro → Metro Ligero → Tranvía → Funicular
     /// Returns (name, color, isMetroLigero) for each badge
     private var connectionBadges: [(name: String, color: Color, isMetroLigero: Bool)] {
         var badges: [(String, Color, Bool)] = []
@@ -537,25 +542,30 @@ struct LineStopRowView: View {
         // Cercanías connections
         for line in parseLines(stop.corCercanias) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
-            badges.append((line, color, false))
+            badges.append((formatLineName(line, type: "Cercanías"), color, false))
         }
 
         // Metro connections
         for line in parseLines(stop.corMetro) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMetroColor) ?? .red
-            badges.append((line, color, false))
+            badges.append((formatLineName(line, type: "Metro"), color, false))
         }
 
         // Metro Ligero connections
         for line in parseLines(stop.corMl) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
-            badges.append((line, color, true))  // isMetroLigero = true
+            badges.append((formatLineName(line, type: "ML"), color, true))  // isMetroLigero = true
         }
 
         // Tranvía connections
         for line in parseLines(stop.corTranvia) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red
-            badges.append((line, color, false))
+            badges.append((formatLineName(line, type: "TRAM"), color, false))
+        }
+        
+        // Funicular connections
+        for line in parseLines(stop.corFunicular) {
+            badges.append((formatLineName(line, type: "Funicular"), Color(hex: defaultFunicularColor) ?? .black, false))
         }
 
         return badges

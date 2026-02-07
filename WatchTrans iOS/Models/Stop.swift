@@ -28,12 +28,15 @@ struct Stop: Identifiable, Equatable {
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
     let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
+    let corBus: String?        // Bus connections
+    let corFunicular: String?  // Funicular connections
 
     init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String] = [],
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
-         corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil, corTranvia: String? = nil) {
+         corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil, corTranvia: String? = nil,
+         corBus: String? = nil, corFunicular: String? = nil) {
         self.id = id
         self.name = name
         self.latitude = latitude
@@ -49,6 +52,8 @@ struct Stop: Identifiable, Equatable {
         self.corMl = corMl
         self.corCercanias = corCercanias
         self.corTranvia = corTranvia
+        self.corBus = corBus
+        self.corFunicular = corFunicular
     }
 
     // Computed property for CLLocation
@@ -66,9 +71,21 @@ struct Stop: Identifiable, Equatable {
             return .tram
         } else if id.hasPrefix("FGC") {
             return .fgc
-        } else {
-            return .cercanias
         }
+
+        // If the stop ID doesn't encode the mode (e.g., "L1-21" in Sevilla),
+        // infer a reasonable default from the lines that serve this stop.
+        // This is data-driven and avoids city-specific rules.
+        let upperLines = connectionLineIds.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+        if upperLines.contains(where: { $0.hasPrefix("ML") }) { return .metroLigero }
+        if upperLines.contains(where: { $0.hasPrefix("L") }) { return .metro }
+        // Handle plain numbers as Metro
+        if upperLines.contains(where: { Int($0) != nil }) { return .metro }
+        if upperLines.contains(where: { $0.hasPrefix("T") }) { return .tram }
+        if upperLines.contains(where: { $0.hasPrefix("FGC") }) { return .fgc }
+        if upperLines.contains(where: { $0.hasPrefix("C") }) { return .cercanias }
+
+        return .cercanias
     }
 
     // Calculate distance from current location
@@ -118,7 +135,7 @@ struct Stop: Identifiable, Equatable {
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Has correspondence if any other lines exist
-        return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty
+        return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty || (corFunicular != nil && !corFunicular!.isEmpty) || (corBus != nil && !corBus!.isEmpty)
     }
 
     /// Normalize line name for comparison (handles "L1" vs "1" vs "Línea 1" etc.)
@@ -151,7 +168,7 @@ extension Stop: Codable {
         case id, name, latitude, longitude, connectionLineIds
         case province, accesibilidad
         case hasParking, hasBusConnection, hasMetroConnection, isHub
-        case corMetro, corMl, corCercanias, corTranvia
+        case corMetro, corMl, corCercanias, corTranvia, corBus, corFunicular
     }
 
     init(from decoder: Decoder) throws {
@@ -171,5 +188,7 @@ extension Stop: Codable {
         corMl = try container.decodeIfPresent(String.self, forKey: .corMl)
         corCercanias = try container.decodeIfPresent(String.self, forKey: .corCercanias)
         corTranvia = try container.decodeIfPresent(String.self, forKey: .corTranvia)
+        corBus = try container.decodeIfPresent(String.self, forKey: .corBus)
+        corFunicular = try container.decodeIfPresent(String.self, forKey: .corFunicular)
     }
 }

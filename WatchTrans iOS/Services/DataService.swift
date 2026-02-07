@@ -489,7 +489,9 @@ class DataService {
                         corMetro: response.corMetro,
                         corMl: response.corMl,
                         corCercanias: response.corCercanias,
-                        corTranvia: response.corTranvia
+                        corTranvia: response.corTranvia,
+                        corBus: response.corBus,
+                        corFunicular: response.corFunicular
                     )
                 }
                 DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops")
@@ -597,7 +599,8 @@ class DataService {
                     accesibilidad: s.accesibilidad, hasParking: s.hasParking,
                     hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
                     isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
-                    corCercanias: s.corCercanias, corTranvia: s.corTranvia
+                    corCercanias: s.corCercanias, corTranvia: s.corTranvia,
+                    corBus: s.corBus, corFunicular: s.corFunicular
                 )
             }
             
@@ -1022,14 +1025,18 @@ class DataService {
                 var ml = response.corMl
                 var cerc = response.corCercanias
                 var tram = response.corTranvia
+                var bus = response.corBus
+                var funicular = response.corFunicular
                 
-                if (metro?.isEmpty ?? true) && (ml?.isEmpty ?? true) && (cerc?.isEmpty ?? true) && (tram?.isEmpty ?? true) {
+                if (metro?.isEmpty ?? true) && (ml?.isEmpty ?? true) && (cerc?.isEmpty ?? true) && (tram?.isEmpty ?? true) && (bus?.isEmpty ?? true) && (funicular?.isEmpty ?? true) {
                     if let cached = self.getStop(by: response.id) {
                         metro = cached.corMetro
                         ml = cached.corMl
                         cerc = cached.corCercanias
                         tram = cached.corTranvia
-                        if metro != nil || ml != nil || cerc != nil || tram != nil {
+                        bus = cached.corBus
+                        funicular = cached.corFunicular
+                        if metro != nil || ml != nil || cerc != nil || tram != nil || bus != nil || funicular != nil {
                             DebugLog.log("🔗 [DataService] ✅ Enriched connections for '\(response.name)' from cache")
                         }
                     }
@@ -1050,7 +1057,9 @@ class DataService {
                     corMetro: metro,
                     corMl: ml,
                     corCercanias: cerc,
-                    corTranvia: tram
+                    corTranvia: tram,
+                    corBus: bus,
+                    corFunicular: funicular
                 )
             }
         } catch {
@@ -1668,7 +1677,9 @@ class DataService {
                     corMetro: response.corMetro,
                     corMl: response.corMl,
                     corCercanias: response.corCercanias,
-                    corTranvia: response.corTranvia
+                    corTranvia: response.corTranvia,
+                    corBus: response.corBus,
+                    corFunicular: response.corFunicular
                 )
             }
 

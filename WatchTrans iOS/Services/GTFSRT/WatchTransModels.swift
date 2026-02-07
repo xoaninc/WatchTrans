@@ -224,11 +224,12 @@ struct StopResponse: Codable, Identifiable {
     let lineas: String?  // Comma-separated line names: "C1,C10,C2,C3"
     let parkingBicis: String?
     let accesibilidad: String?
-    let corBus: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
     let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
+    let corBus: String?        // Bus connections
+    let corFunicular: String?  // Funicular connections
     let isHub: Bool?           // true if station has 2+ different transport types
 
     enum CodingKeys: String, CodingKey {
@@ -242,6 +243,7 @@ struct StopResponse: Codable, Identifiable {
         case corMl = "cor_ml"
         case corCercanias = "cor_cercanias"
         case corTranvia = "cor_tranvia"
+        case corFunicular = "cor_funicular"
         case isHub = "is_hub"
     }
 
