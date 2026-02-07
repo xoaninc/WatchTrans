@@ -25,6 +25,6 @@
 ## Generic Connection Data ("true" vs Line Numbers)
 
 **Endpoint:** `/routes/{id}/stops` and `/stops/by-coordinates`
-**Status:** ⚠️ For new networks (Sevilla, Bilbao), the `cor_` fields (e.g. `cor_tranvia`) return the string `"true"` instead of a list of lines (e.g. `"T1"`).
-**Impact:** The app displays generic badges like "TRAM" or "Metro" instead of specific lines like "T1" or "L1".
-**Recommendation:** Backend should return the comma-separated list of connecting lines (e.g. "T1") instead of a boolean string.
+**Status:** ✅ FIXED (2026-02-07)
+**Impact:** The API now returns specific line numbers (e.g. "L1, L3") instead of generic "true" values.
+**Result:** The app correctly displays specific line badges.
