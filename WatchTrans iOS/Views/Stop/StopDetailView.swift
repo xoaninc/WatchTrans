@@ -132,7 +132,12 @@ struct StopDetailView: View {
 
                     // Nearby stations (correspondences)
                     if !correspondences.isEmpty {
-                        NearbyStationsSectionView(correspondences: correspondences)
+                        NearbyStationsSectionView(
+                            correspondences: correspondences,
+                            dataService: dataService,
+                            locationService: locationService,
+                            favoritesManager: favoritesManager
+                        )
                     }
 
                     // Navigate to nearest access
@@ -637,7 +642,7 @@ struct ConnectionsSectionView: View {
 
     @State private var linesLoaded = false
 
-    /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía
+    /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía → Funicular
     private var allBadges: [(name: String, colorHex: String)] {
         var badges: [(String, String)] = []
 
@@ -646,7 +651,7 @@ struct ConnectionsSectionView: View {
             for mode in transportModes {
                 for line in parseLines(mode.lines) {
                     let color = dataService.getLineColor(by: line) ?? ""
-                    badges.append((line, color))
+                    badges.append((formatBadgeName(line, type: mode.transportType.capitalized), color))
                 }
             }
             return badges
@@ -655,28 +660,40 @@ struct ConnectionsSectionView: View {
         // 1. Cercanías
         for line in parseLines(stop.corCercanias) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((line, color))
+            badges.append((formatBadgeName(line, type: "Cercanías"), color))
         }
 
         // 2. Metro
         for line in parseLines(stop.corMetro) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((line, color))
+            badges.append((formatBadgeName(line, type: "Metro"), color))
         }
 
         // 3. Metro Ligero
         for line in parseLines(stop.corMl) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((line, color))
+            badges.append((formatBadgeName(line, type: "ML"), color))
         }
 
         // 4. Tranvía
         for line in parseLines(stop.corTranvia) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((line, color))
+            badges.append((formatBadgeName(line, type: "TRAM"), color))
+        }
+        
+        // 5. Funicular
+        for line in parseLines(stop.corFunicular) {
+            badges.append((formatBadgeName(line, type: "Funicular"), "#000000"))
         }
 
         return badges
+    }
+
+    private func formatBadgeName(_ name: String, type: String) -> String {
+        if name.lowercased() == "true" {
+            return type
+        }
+        return name
     }
 
     var body: some View {
@@ -856,6 +873,9 @@ struct FlowLayout: Layout {
 
 struct NearbyStationsSectionView: View {
     let correspondences: [CorrespondenceInfo]
+    let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -868,47 +888,76 @@ struct NearbyStationsSectionView: View {
             }
 
             ForEach(correspondences, id: \.identifiableId) { correspondence in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(correspondence.toStopName ?? "Estación cercana")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-
-                        if let lines = correspondence.toLines {
-                            Text(lines)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                // Try to find the stop in local cache to enable navigation
+                if let targetStop = dataService.getStop(by: correspondence.toStopId) {
+                    NavigationLink(destination: StopDetailView(
+                        stop: targetStop,
+                        dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager
+                    )) {
+                        CorrespondenceRow(correspondence: correspondence)
                     }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.caption2)
-                            Text("\(max(1, (correspondence.walkTimeS ?? 0) / 60)) min")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-
-                        if let distance = correspondence.distanceM {
-                            Text("\(distance) m")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    .buttonStyle(.plain)
+                } else {
+                    // Stop not in memory (e.g. different transport mode not loaded yet)
+                    // Show as non-clickable info row
+                    CorrespondenceRow(correspondence: correspondence)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
             }
         }
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+}
+
+struct CorrespondenceRow: View {
+    let correspondence: CorrespondenceInfo
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(correspondence.toStopName ?? "Estación cercana")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .multilineTextAlignment(.leading)
+
+                if let lines = correspondence.toLines {
+                    Text(lines)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("\(max(1, (correspondence.walkTimeS ?? 0) / 60)) min")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+
+                if let distance = correspondence.distanceM {
+                    Text("\(distance) m")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.leading, 4)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
 }
 
