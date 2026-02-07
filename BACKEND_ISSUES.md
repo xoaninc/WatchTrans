@@ -26,5 +26,10 @@ The following networks are currently **Static Only** (No real-time departures):
 **Status:** ⚠️ API returns empty departures array.
 **Impact:** Users cannot see waiting times for Metro Sevilla.
 
+### Sevilla C4 Route Shape
+**Status:** ⚠️ Incorrect route path.
+**Impact:** The map line for C4 Sevilla appears incorrect (likely straight lines or outdated GTFS data).
+**Recommendation:** Update GTFS shapes for Renfe Sevilla C4.
+
 ---
 *Note: All correspondence (500 error) and generic connection ("true") issues were FIXED on 2026-02-07.*
