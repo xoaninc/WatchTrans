@@ -1861,11 +1861,29 @@ class DataService {
     private func alertRoutePrefix(from routeId: String) -> String? {
         let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !trimmed.isEmpty else { return nil }
-        let normalized = trimmed.hasPrefix("RENFE_") ? String(trimmed.dropFirst("RENFE_".count)) : trimmed
-        guard let tIndex = normalized.firstIndex(of: "T") else { return nil }
-        let prefix = String(normalized[...tIndex])
-        let digits = prefix.dropLast()
-        return digits.allSatisfy({ $0.isNumber }) ? prefix : nil
+        
+        // Handle "RENFE_C_30T..." -> extract "30T"
+        if trimmed.contains("_C_") {
+            let parts = trimmed.components(separatedBy: "_C_")
+            if parts.count > 1 {
+                let suffix = parts[1]
+                if let tIndex = suffix.firstIndex(of: "T") {
+                    return String(suffix[...tIndex]) // "30T"
+                }
+            }
+        }
+        
+        // Handle "RENFE_30T..." -> extract "30T"
+        let normalized = trimmed.replacingOccurrences(of: "RENFE_", with: "")
+        if let tIndex = normalized.firstIndex(of: "T") {
+            let prefix = String(normalized[...tIndex])
+            // Ensure prefix starts with digits (e.g. "30T")
+            if let first = prefix.first, first.isNumber {
+                return prefix
+            }
+        }
+        
+        return nil
     }
 
     /// Fetch alerts for a line using the route-specific endpoint
