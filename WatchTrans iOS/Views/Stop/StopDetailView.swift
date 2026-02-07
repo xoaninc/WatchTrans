@@ -876,6 +876,9 @@ struct NearbyStationsSectionView: View {
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
+    
+    @State private var selectedStop: Stop?
+    @State private var loadingStopId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -888,28 +891,42 @@ struct NearbyStationsSectionView: View {
             }
 
             ForEach(correspondences, id: \.identifiableId) { correspondence in
-                // Try to find the stop in local cache to enable navigation
-                if let targetStop = dataService.getStop(by: correspondence.toStopId) {
-                    NavigationLink(destination: StopDetailView(
-                        stop: targetStop,
-                        dataService: dataService,
-                        locationService: locationService,
-                        favoritesManager: favoritesManager
-                    )) {
-                        CorrespondenceRow(correspondence: correspondence)
+                Button {
+                    Task {
+                        loadingStopId = correspondence.toStopId
+                        // Try to get from cache or fetch from API
+                        if let stop = await dataService.fetchStopDetails(stopId: correspondence.toStopId) {
+                            selectedStop = stop
+                        }
+                        loadingStopId = nil
                     }
-                    .buttonStyle(.plain)
-                } else {
-                    // Stop not in memory (e.g. different transport mode not loaded yet)
-                    // Show as non-clickable info row
-                    CorrespondenceRow(correspondence: correspondence)
+                } label: {
+                    ZStack {
+                        CorrespondenceRow(correspondence: correspondence)
+                        
+                        if loadingStopId == correspondence.toStopId {
+                            ProgressView()
+                                .padding()
+                                .background(.regularMaterial)
+                                .cornerRadius(8)
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .navigationDestination(item: $selectedStop) { stop in
+            StopDetailView(
+                stop: stop,
+                dataService: dataService,
+                locationService: locationService,
+                favoritesManager: favoritesManager
+            )
+        }
     }
 }
 

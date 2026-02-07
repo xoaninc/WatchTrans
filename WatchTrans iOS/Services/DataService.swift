@@ -535,6 +535,41 @@ class DataService {
         }
     }
 
+    /// Fetch details for a specific stop ID (e.g. for navigation from correspondences)
+    func fetchStopDetails(stopId: String) async -> Stop? {
+        // Check cache first
+        if let cached = getStop(by: stopId) {
+            return cached
+        }
+        
+        do {
+            let response = try await gtfsRealtimeService.fetchStop(stopId: stopId)
+            let stop = Stop(
+                id: response.id,
+                name: response.name,
+                latitude: response.lat,
+                longitude: response.lon,
+                connectionLineIds: response.lineIds,
+                province: response.province,
+                accesibilidad: response.accesibilidad,
+                hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
+                hasBusConnection: response.corBus != nil && response.corBus != "0",
+                hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
+                isHub: response.isHub ?? false,
+                corMetro: response.corMetro,
+                corMl: response.corMl,
+                corCercanias: response.corCercanias,
+                corTranvia: response.corTranvia,
+                corBus: response.corBus,
+                corFunicular: response.corFunicular
+            )
+            return stop
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch stop details for \(stopId): \(error)")
+            return nil
+        }
+    }
+
     /// Set location context from loaded stops (without loading routes)
     private func setLocationContextFromStops() async {
         // 1. Try to find province in loaded stops
