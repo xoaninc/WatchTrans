@@ -867,7 +867,7 @@ struct NearbyStationsSectionView: View {
                     .fontWeight(.semibold)
             }
 
-            ForEach(correspondences, id: \.id) { correspondence in
+            ForEach(correspondences, id: \.identifiableId) { correspondence in
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(correspondence.toStopName ?? "Estación cercana")
@@ -887,14 +887,16 @@ struct NearbyStationsSectionView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .font(.caption2)
-                            Text("\(max(1, correspondence.walkTimeS / 60)) min")
+                            Text("\(max(1, (correspondence.walkTimeS ?? 0) / 60)) min")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
 
-                        Text("\(correspondence.distanceM) m")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let distance = correspondence.distanceM {
+                            Text("\(distance) m")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(.vertical, 8)

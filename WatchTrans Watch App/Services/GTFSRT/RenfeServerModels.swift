@@ -543,13 +543,13 @@ struct TransportModeInfo: Codable, Identifiable {
 
 /// Information about a walking connection to another station
 struct CorrespondenceInfo: Codable, Identifiable {
-    let id: Int
+    let id: Int?
     let toStopId: String
     let toStopName: String?
     let toLines: String?         // "L3, L5, C5"
     let toTransportTypes: [String]?  // ["metro", "cercanias", "tranvia"]
-    let distanceM: Int          // Distance in meters
-    let walkTimeS: Int          // Walk time in seconds
+    let distanceM: Int?          // Distance in meters
+    let walkTimeS: Int?          // Walk time in seconds
     let source: String?          // "manual", "proximity", etc.
 
     enum CodingKeys: String, CodingKey {
@@ -563,8 +563,15 @@ struct CorrespondenceInfo: Codable, Identifiable {
         case source
     }
 
+    /// Stable identifier for UI
+    var identifiableId: String {
+        if let id = id { return String(id) }
+        return toStopId
+    }
+
     /// Walk time formatted as "X min"
     var walkTimeFormatted: String {
+        guard let walkTimeS = walkTimeS else { return "" }
         let minutes = walkTimeS / 60
         if minutes < 1 {
             return "<1 min"
@@ -574,6 +581,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
 
     /// Distance formatted as "Xm" or "X.Xkm"
     var distanceFormatted: String {
+        guard let distanceM = distanceM else { return "" }
         if distanceM < 1000 {
             return "\(distanceM)m"
         }
