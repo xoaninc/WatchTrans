@@ -1,30 +1,30 @@
-# Backend Issues
+# Backend Data Coverage & Issues
 
-## Santa Justa (Sevilla) - 500 Internal Server Error
+## Real-time Data Availability
+The following networks currently support real-time arrivals/delays in the app:
+- ✅ **Renfe Cercanías** (All nucleos)
+- ✅ **TMB Metro Barcelona**
+- ✅ **Metro Bilbao**
+- ✅ **FGC** (Ferrocarrils de la Generalitat de Catalunya)
+- ✅ **Euskotren**
 
-**Endpoint:** `GET /api/gtfs/stops/RENFE_C_51003/correspondences`
-**Status:** ❌ 500 Internal Server Error
-**Impact:** The "Correspondences" (Transfers) section does not appear for Santa Justa station in the app.
-**Hypothesis:** Likely caused by a recursion loop or null pointer exception on the server when calculating connections for this major hub, possibly related to the recent integration of Metro Sevilla L1.
+The following networks are currently **Static Only** (No real-time departures):
+- ⚠️ **Metro Sevilla** (Shapes/Lines only)
+- ⚠️ **Metro Madrid** (Shapes/Lines only)
+- ⚠️ **Metro Granada** (Shapes/Lines only)
+- ⚠️ **Tram Barcelona** (Shapes/Lines only)
 
-**Workaround:** The app catches the error and hides the section to prevent a crash.
+## Unresolved Backend Limitations
 
-## Metro Sevilla - Empty Departures
+### Metro Madrid Route Planner
+**Endpoint:** `GET /api/gtfs/route-planner`
+**Status:** ❌ PENDIENTE
+**Issue:** The RAPTOR engine does not return routes between Metro Madrid stations.
+**Example:** Sol -> Gran Vía returns "No route found".
 
-**Line:** L1
-**Status:** ⚠️ Shapes OK, but real-time departures are empty.
-**Impact:** Users can see the line on the map but cannot see train times.
+### Metro Sevilla Departures
+**Status:** ⚠️ API returns empty departures array.
+**Impact:** Users cannot see waiting times for Metro Sevilla.
 
-## Route Stops - Missing Correspondences
-
-**Endpoint:** `GET /routes/{id}/stops`
-**Status:** ⚠️ Missing `cor_metro`, `cor_cercanias`, etc. fields for some new stations (e.g. Sevilla).
-**Impact:** The "Line Detail" view does not show connection badges for stops because the static stop data lacks this information, even if the dynamic `/stops/{id}/correspondences` endpoint has it.
-**Recommendation:** Update the route stops endpoint to populate correspondence fields from the same source as the correspondences endpoint.
-
-## Generic Connection Data ("true" vs Line Numbers)
-
-**Endpoint:** `/routes/{id}/stops` and `/stops/by-coordinates`
-**Status:** ✅ FIXED (2026-02-07)
-**Impact:** The API now returns specific line numbers (e.g. "L1, L3") instead of generic "true" values.
-**Result:** The app correctly displays specific line badges.
+---
+*Note: All correspondence (500 error) and generic connection ("true") issues were FIXED on 2026-02-07.*
