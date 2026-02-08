@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Pulse
 
 class NetworkService {
     private let session: URLSession
@@ -20,7 +21,8 @@ class NetworkService {
         configuration.timeoutIntervalForRequest = APIConfiguration.requestTimeout
         configuration.timeoutIntervalForResource = APIConfiguration.resourceTimeout
         configuration.waitsForConnectivity = true
-        self.session = URLSession(configuration: configuration)
+        // Pulse Integration: Use URLSessionProxyDelegate to log requests
+        self.session = URLSession(configuration: configuration, delegate: URLSessionProxyDelegate(), delegateQueue: nil)
     }
 
     /// Fetch and decode JSON data from a URL with automatic retry
@@ -35,10 +37,10 @@ class NetworkService {
         } catch let error as NetworkError {
             // Don't retry for certain errors
             switch error {
-            case .decodingError, .badResponse:
-                // These won't be fixed by retrying
+            case .decodingError, .badResponse, .timeout:
+                // These won't be fixed by retrying (fail fast on timeout)
                 throw error
-            case .noConnection, .timeout, .serverError, .unknown:
+            case .noConnection, .serverError, .unknown:
                 // These might be temporary - retry
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))  // Exponential backoff: 1s, 2s, 4s
@@ -54,6 +56,7 @@ class NetworkService {
     /// Perform the actual fetch request
     private func performFetch<T: Decodable>(_ url: URL) async throws -> T {
         do {
+            DebugLog.log("🌐 [NetworkService] GET \(url.lastPathComponent)")
             let (data, response) = try await session.data(from: url)
 
             // Validate HTTP response
@@ -61,6 +64,7 @@ class NetworkService {
                 throw NetworkError.badResponse
             }
 
+            DebugLog.log("🌐 [NetworkService] GET \(url.lastPathComponent) -> \(httpResponse.statusCode)")
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -75,18 +79,23 @@ class NetworkService {
             }
 
         } catch let error as NetworkError {
+            DebugLog.log("🌐 [NetworkService] GET failed: \(error)")
             throw error
         } catch let error as URLError {
             // Map URLError to NetworkError
             switch error.code {
             case .notConnectedToInternet, .networkConnectionLost:
+                DebugLog.log("🌐 [NetworkService] GET no connection: \(error)")
                 throw NetworkError.noConnection
             case .timedOut:
+                DebugLog.log("🌐 [NetworkService] GET timeout: \(error)")
                 throw NetworkError.timeout
             default:
+                DebugLog.log("🌐 [NetworkService] GET url error: \(error)")
                 throw NetworkError.unknown(error)
             }
         } catch {
+            DebugLog.log("🌐 [NetworkService] GET unknown error: \(error)")
             throw NetworkError.unknown(error)
         }
     }
@@ -94,6 +103,11 @@ class NetworkService {
     /// Fetch raw data from a URL with automatic retry (for non-JSON responses)
     func fetchData(_ url: URL) async throws -> Data {
         return try await fetchDataWithRetry(url, attempt: 1)
+    }
+
+    /// POST raw data to a URL with automatic retry (for admin actions)
+    func postData(_ url: URL, body: Data? = nil, headers: [String: String] = [:]) async throws -> Data {
+        return try await postDataWithRetry(url, body: body, headers: headers, attempt: 1)
     }
 
     /// Internal fetchData with retry logic
@@ -119,12 +133,14 @@ class NetworkService {
     /// Perform the actual data fetch
     private func performFetchData(_ url: URL) async throws -> Data {
         do {
+            DebugLog.log("🌐 [NetworkService] GET(data) \(url.lastPathComponent)")
             let (data, response) = try await session.data(from: url)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NetworkError.badResponse
             }
 
+            DebugLog.log("🌐 [NetworkService] GET(data) \(url.lastPathComponent) -> \(httpResponse.statusCode)")
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -132,17 +148,86 @@ class NetworkService {
             return data
 
         } catch let error as NetworkError {
+            DebugLog.log("🌐 [NetworkService] GET(data) failed: \(error)")
             throw error
         } catch let error as URLError {
             switch error.code {
             case .notConnectedToInternet, .networkConnectionLost:
+                DebugLog.log("🌐 [NetworkService] GET(data) no connection: \(error)")
                 throw NetworkError.noConnection
             case .timedOut:
+                DebugLog.log("🌐 [NetworkService] GET(data) timeout: \(error)")
                 throw NetworkError.timeout
             default:
+                DebugLog.log("🌐 [NetworkService] GET(data) url error: \(error)")
                 throw NetworkError.unknown(error)
             }
         } catch {
+            DebugLog.log("🌐 [NetworkService] GET(data) unknown error: \(error)")
+            throw NetworkError.unknown(error)
+        }
+    }
+
+    /// Internal postData with retry logic
+    private func postDataWithRetry(_ url: URL, body: Data?, headers: [String: String], attempt: Int) async throws -> Data {
+        do {
+            return try await performPostData(url, body: body, headers: headers)
+        } catch let error as NetworkError {
+            switch error {
+            case .badResponse:
+                throw error
+            case .noConnection, .timeout, .serverError, .decodingError, .unknown:
+                if attempt < maxRetries {
+                    let delay = baseDelay * pow(2.0, Double(attempt - 1))
+                    DebugLog.log("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for POST: \(url.lastPathComponent)")
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    return try await postDataWithRetry(url, body: body, headers: headers, attempt: attempt + 1)
+                }
+                throw error
+            }
+        }
+    }
+
+    /// Perform the actual POST request
+    private func performPostData(_ url: URL, body: Data?, headers: [String: String]) async throws -> Data {
+        do {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = body
+            headers.forEach { key, value in
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+
+            DebugLog.log("🌐 [NetworkService] POST \(url.lastPathComponent)")
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.badResponse
+            }
+
+            DebugLog.log("🌐 [NetworkService] POST \(url.lastPathComponent) -> \(httpResponse.statusCode)")
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            return data
+        } catch let error as NetworkError {
+            DebugLog.log("🌐 [NetworkService] POST failed: \(error)")
+            throw error
+        } catch let error as URLError {
+            switch error.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                DebugLog.log("🌐 [NetworkService] POST no connection: \(error)")
+                throw NetworkError.noConnection
+            case .timedOut:
+                DebugLog.log("🌐 [NetworkService] POST timeout: \(error)")
+                throw NetworkError.timeout
+            default:
+                DebugLog.log("🌐 [NetworkService] POST url error: \(error)")
+                throw NetworkError.unknown(error)
+            }
+        } catch {
+            DebugLog.log("🌐 [NetworkService] POST unknown error: \(error)")
             throw NetworkError.unknown(error)
         }
     }
