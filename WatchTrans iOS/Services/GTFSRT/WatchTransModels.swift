@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Departure Response
 
@@ -339,6 +340,7 @@ struct AlertResponse: Codable, Identifiable {
     let activePeriodEnd: String?
     let isActive: Bool?
     let informedEntities: [InformedEntity]?
+    let severity: String? // "info", "warning", "error"
     let timestamp: String?
     let updatedAt: String?
 
@@ -346,7 +348,7 @@ struct AlertResponse: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case alertId = "alert_id"
-        case cause, effect, url, timestamp
+        case cause, effect, url, timestamp, severity
         case headerText = "header_text"
         case descriptionText = "description_text"
         case activePeriodStart = "active_period_start"
@@ -354,6 +356,16 @@ struct AlertResponse: Codable, Identifiable {
         case isActive = "is_active"
         case informedEntities = "informed_entities"
         case updatedAt = "updated_at"
+    }
+
+    /// Map severity string to SwiftUI color
+    var severityColor: Color {
+        switch severity?.lowercased() {
+        case "error", "critical": return .red
+        case "warning": return .orange
+        case "info", "success": return .blue
+        default: return .orange // Default to warning style
+        }
     }
 }
 
