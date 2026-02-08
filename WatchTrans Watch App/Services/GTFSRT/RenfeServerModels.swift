@@ -487,6 +487,7 @@ struct PlatformInfo: Codable, Identifiable {
     let color: String?
     let description: String?
     let operatorId: String?
+    let platformEstimated: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -495,6 +496,7 @@ struct PlatformInfo: Codable, Identifiable {
         case platformCode = "platform_code"
         case lat, lon, source, color, description
         case operatorId = "operator_id"
+        case platformEstimated = "platform_estimated"
     }
 
     /// Stable identifier for UI lists (API may return duplicated id values)

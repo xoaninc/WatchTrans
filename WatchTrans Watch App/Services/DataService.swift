@@ -1319,9 +1319,10 @@ class DataService {
             let normalizedCode = normalizePlatformCode(rawCode)
             guard !normalizedCode.isEmpty else { continue }
 
-            let source = (platform.source ?? "").lowercased()
-            let isRealtime = source.contains("rt") || source.contains("realtime")
-            let estimated = !isRealtime
+            // Use explicit field from API (default to estimated if missing)
+            // platform_estimated: false -> Realtime
+            // platform_estimated: true -> Historical
+            let estimated = platform.platformEstimated ?? true
 
             for line in platform.linesList {
                 let key = normalizeLineCodeForPlatformMatch(line)
