@@ -214,7 +214,7 @@ struct StopResponse: Codable, Identifiable {
 }
 
 /// Structured connection data
-struct StopCorrespondences: Codable {
+struct StopCorrespondences: Codable, Hashable {
     let metro: [String]?
     let cercanias: [String]?
     let ml: [String]?
