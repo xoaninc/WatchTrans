@@ -75,7 +75,7 @@ class GTFSRealtimeMapper {
                 scheduledTime: scheduledTime,
                 expectedTime: expectedTime,
                 platform: departure.platform,
-                platformEstimated: departure.platformEstimated ?? false,
+                platformEstimated: departure.platformEstimated ?? true,
                 trainCurrentStop: departure.trainPosition?.currentStopName,
                 trainProgressPercent: departure.trainPosition?.progressPercent,
                 trainLatitude: departure.trainPosition?.latitude,
@@ -86,7 +86,10 @@ class GTFSRealtimeMapper {
                 routeColor: departure.routeColor,
                 routeId: departure.routeId,
                 frequencyBased: departure.frequencyBased ?? false,
-                headwayMinutes: departure.headwayMinutes
+                headwayMinutes: departure.headwayMinutes,
+                isOfflineData: false,
+                occupancyStatus: departure.occupancyStatus,
+                occupancyPercentage: departure.occupancyPercentage
             )
 
             arrivals.append(arrival)

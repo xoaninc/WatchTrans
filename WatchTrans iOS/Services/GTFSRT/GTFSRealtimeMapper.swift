@@ -75,7 +75,7 @@ class GTFSRealtimeMapper {
                 scheduledTime: scheduledTime,
                 expectedTime: expectedTime,
                 platform: departure.platform,
-                platformEstimated: departure.platformEstimated ?? false,
+                platformEstimated: departure.platformEstimated ?? true,
                 trainCurrentStop: departure.trainPosition?.currentStopName,
                 trainProgressPercent: departure.trainPosition?.progressPercent,
                 trainLatitude: departure.trainPosition?.latitude,
