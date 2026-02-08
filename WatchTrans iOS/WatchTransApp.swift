@@ -41,6 +41,7 @@ struct WatchTransApp: App {
         // Experimental.URLSessionProxy.shared.isEnabled = true
         
         // 2. Sentry (Error Tracking)
+        /*
         SentrySDK.start { options in
             // TODO: REPLACE WITH YOUR REAL SENTRY DSN
             options.dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
@@ -48,6 +49,7 @@ struct WatchTransApp: App {
             options.tracesSampleRate = 1.0
             options.enableAppHangTracking = true
         }
+        */
         
         // ------------------------------------
 
