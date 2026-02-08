@@ -26,10 +26,26 @@ The following networks are currently **Static Only** (No real-time departures):
 **Status:** ⚠️ API returns empty departures array.
 **Impact:** Users cannot see waiting times for Metro Sevilla.
 
+### Renfe Cercanías Real-time Timeouts
+**Status:** ❌ TIMEOUT (-1001)
+**Impact:** Real-time departures for Renfe stations (Atocha, San Bernardo, etc.) fail to load or take >15 seconds.
+**Hypothesis:** The API server is struggling to fetch real-time data from Renfe's upstream provider, causing the entire request to hang.
+
 ### Sevilla C4 Route Shape
-**Status:** ⚠️ Incorrect route path.
-**Impact:** The map line for C4 Sevilla appears incorrect (likely straight lines or outdated GTFS data).
-**Recommendation:** Update GTFS shapes for Renfe Sevilla C4.
+**Status:** ✅ FIXED (2026-02-07)
+**Root Cause:** 
+1. **Data Quality Issue:** 1 trip was misclassified as C4 (should be C1) going to Utrera
+2. **Shape Issue:** Original shape only covered 5-stop pattern, not the 6-stop circular route
+
+**Solution Applied:**
+- ✅ Reclassified mismatched trip from C4 → C1 (now 0 C4 trips to Utrera)
+- ✅ Created new circular shape (`RENFE_C_30_C4_CIRCULAR`) with 76 points
+- ✅ Updated 218 circular trips to use correct shape
+- ✅ Verified C4 stops no longer include Utrera
+
+**Current State:**
+- C4 now shows only 5 correct stops: Santa Justa, Palacio Congresos, Padre Pío-Palmete, Virgen Rocío, San Bernardo
+- Two shapes coexist: RENFE_C_30_C4 (494 short trips) and RENFE_C_30_C4_CIRCULAR (218 circular trips)
 
 ---
 *Note: All correspondence (500 error) and generic connection ("true") issues were FIXED on 2026-02-07.*
