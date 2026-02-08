@@ -10,5 +10,9 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>WatchTrans necesita tu ubicacion para mostrar las estaciones mas cercanas.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>juan.WatchTrans.refreshDepartures</string>
+	</array>
 </dict>
 </plist>
