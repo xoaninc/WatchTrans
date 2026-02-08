@@ -298,70 +298,70 @@ struct WrappingHStack: View {
 
 // MARK: - All Connection Badges (Combined Wrapping View)
 
-/// View showing all connection badges (Metro, ML, Cercanías, Tranvía) in a wrapping layout
+/// View showing all connection badges (Metro, ML, Cercanías, Tranvía, Funicular) in a wrapping layout
 struct AllConnectionBadges: View {
-    let corMetro: String?
-    let corMl: String?
-    let corCercanias: String?
-    let corTranvia: String?
+    let stop: Stop
     let dataService: DataService
-    var excludeLineName: String? = nil  // Filter out current line to avoid duplicates
-    var excludeLineIds: [String] = []   // Filter out lines already shown in connectionLineIds
+    var excludeLineName: String? = nil
+    var excludeLineIds: [String] = []
 
-    // Default colors for when line not found
+    // Default colors
     private let defaultMetroColor = "#ED1C24"
     private let defaultMlColor = "#3A7DDA"
     private let defaultCercaniasColor = "#75B2E0"
     private let defaultTranviaColor = "#E4002B"
+    private let defaultFunicularColor = "#000000"
 
-    /// All badges as (name, color) tuples - ordered by transport type:
-    /// Cercanías → Metro → Metro Ligero → Tranvía
+    /// All badges ordered by transport type
     private var allBadges: [(name: String, color: String)] {
         var badges: [(String, String)] = []
         let excludeLower = excludeLineName?.lowercased()
-
-        // Normalize excludeLineIds for comparison
         let excludeIdsNormalized = Set(excludeLineIds.map { normalizeLineName($0) })
 
-        // DEBUG: Log filtering
-        if let exclude = excludeLineName {
-            DebugLog.log("🏷️ [Filter] excludeLineName='\(exclude)', excludeIds=\(excludeLineIds), cor_metro=\(corMetro ?? "nil"), cor_cerc=\(corCercanias ?? "nil")")
-        }
-
-        // 1. Cercanías lines first
-        for line in parseLines(corCercanias) {
+        // 1. Cercanías
+        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corCercanias)
+        for line in cercaniasLines {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultCercaniasColor
-                badges.append((line, color))
+                badges.append((formatBadgeName(line, type: "Cercanías"), color))
             }
         }
 
-        // 2. Metro lines
-        for line in parseLines(corMetro) {
+        // 2. Metro
+        let metroLines = stop.correspondences?.metro ?? parseLines(stop.corMetro)
+        for line in metroLines {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultMetroColor
-                badges.append((line, color))
+                badges.append((formatBadgeName(line, type: "Metro"), color))
             }
         }
 
-        // 3. Metro Ligero lines
-        for line in parseLines(corMl) {
+        // 3. Metro Ligero
+        let mlLines = stop.correspondences?.ml ?? parseLines(stop.corMl)
+        for line in mlLines {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultMlColor
-                badges.append((line, color))
+                badges.append((formatBadgeName(line, type: "ML"), color))
             }
         }
 
-        // 4. Tranvía lines last
-        for line in parseLines(corTranvia) {
+        // 4. Tranvía
+        let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
+        for line in tramLines {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultTranviaColor
-                badges.append((line, color))
+                badges.append((formatBadgeName(line, type: "TRAM"), color))
             }
+        }
+        
+        // 5. Funicular
+        let funicularLines = stop.correspondences?.funicular ?? parseLines(stop.corFunicular)
+        for line in funicularLines {
+            badges.append((formatBadgeName(line, type: "Funicular"), defaultFunicularColor))
         }
 
         return badges
@@ -370,9 +370,6 @@ struct AllConnectionBadges: View {
     var body: some View {
         let badges = allBadges
         if !badges.isEmpty {
-            // DEBUG: Log badges being displayed
-            let _ = DebugLog.log("🏷️ [AllConnectionBadges] Displaying \(badges.count) badges: \(badges.map { $0.name }.joined(separator: ", "))")
-
             // Split into rows of max 5 badges each
             let rows = badges.chunked(into: 5)
 
@@ -396,15 +393,22 @@ struct AllConnectionBadges: View {
         }
     }
 
-    /// Parse comma-separated line names: "L1, L10" -> ["L1", "L10"]
+    /// Parse comma-separated line names
     private func parseLines(_ value: String?) -> [String] {
         guard let value = value, !value.isEmpty else { return [] }
         return value.split(separator: ",")
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
     }
+    
+    private func formatBadgeName(_ name: String, type: String) -> String {
+        if name.lowercased() == "true" {
+            return type
+        }
+        return name
+    }
 
-    /// Normalize line name for comparison: "L7" -> "7", "l7" -> "7", "7" -> "7"
+    /// Normalize line name for comparison
     private func normalizeLineName(_ name: String) -> String {
         var normalized = name.lowercased().trimmingCharacters(in: .whitespaces)
         for prefix in ["ml", "l", "c", "r", "t"] {
@@ -612,14 +616,11 @@ struct StopRow: View {
                             WrappingHStack(otherLineConnections, dataService: dataService)
                         }
 
-                        // All other connection badges (Metro, ML, Cercanías, Tranvía) combined
+                        // All other connection badges (Metro, ML, Cercanías, Tranvía, Funicular) combined
                         // Exclude current line AND lines already shown in WrappingHStack
-                        if hasMetroConnections || hasCercaniasConnections || hasTranviaConnections {
+                        if hasMetroConnections || hasCercaniasConnections || hasTranviaConnections || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) || stop.correspondences != nil {
                             AllConnectionBadges(
-                                corMetro: stop.corMetro,
-                                corMl: stop.corMl,
-                                corCercanias: stop.corCercanias,
-                                corTranvia: stop.corTranvia,
+                                stop: stop,
                                 dataService: dataService,
                                 excludeLineName: currentLineName,
                                 excludeLineIds: otherLineConnections  // Don't duplicate badges from WrappingHStack
@@ -698,7 +699,8 @@ struct AlertsListView: View {
                 type: .cercanias,
                 colorHex: "#75B6E0",
                 nucleo: "madrid",
-                routeIds: ["RENFE_C1_34"]
+                routeIds: ["RENFE_C1_34"],
+                isCircular: false
             ),
             dataService: DataService(),
             locationService: LocationService()

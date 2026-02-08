@@ -511,7 +511,8 @@ class DataService {
                         corCercanias: response.corCercanias,
                         corTranvia: response.corTranvia,
                         corBus: response.corBus,
-                        corFunicular: response.corFunicular
+                        corFunicular: response.corFunicular,
+                        correspondences: response.correspondences
                     )
                 }
                 DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops")
@@ -1114,7 +1115,8 @@ class DataService {
                     corCercanias: cerc,
                     corTranvia: tram,
                     corBus: bus,
-                    corFunicular: funicular
+                    corFunicular: funicular,
+                    correspondences: response.correspondences
                 )
             }
         } catch {

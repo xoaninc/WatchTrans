@@ -230,10 +230,11 @@ struct StopResponse: Codable, Identifiable {
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
     let corFunicular: String?  // Funicular connections
+    let correspondences: StopCorrespondences? // NEW: Structured correspondences (JSONB)
     let isHub: Bool?           // true if station has 2+ different transport types
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, sequence, code, province, accesibilidad, lineas
+        case id, name, lat, lon, sequence, code, province, accesibilidad, lineas, correspondences
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
@@ -252,6 +253,16 @@ struct StopResponse: Codable, Identifiable {
         guard let lineas = lineas, !lineas.isEmpty else { return [] }
         return lineas.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
     }
+}
+
+/// Structured connection data (from JSONB field)
+struct StopCorrespondences: Codable {
+    let metro: [String]?
+    let cercanias: [String]?
+    let ml: [String]?
+    let tranvia: [String]?
+    let bus: [String]?
+    let funicular: [String]?
 }
 
 // MARK: - Trip Detail Response

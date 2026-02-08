@@ -646,43 +646,37 @@ struct ConnectionsSectionView: View {
     private var allBadges: [(name: String, colorHex: String)] {
         var badges: [(String, String)] = []
 
-        // Prefer transport modes from the correspondences endpoint if available
-        if !transportModes.isEmpty {
-            for mode in transportModes {
-                for line in parseLines(mode.lines) {
-                    let color = dataService.getLineColor(by: line) ?? ""
-                    badges.append((formatBadgeName(line, type: mode.transportType.capitalized), color))
-                }
-            }
-            return badges
-        }
-
         // 1. Cercanías
-        for line in parseLines(stop.corCercanias) {
+        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corCercanias)
+        for line in cercaniasLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "Cercanías"), color))
         }
 
         // 2. Metro
-        for line in parseLines(stop.corMetro) {
+        let metroLines = stop.correspondences?.metro ?? parseLines(stop.corMetro)
+        for line in metroLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "Metro"), color))
         }
 
         // 3. Metro Ligero
-        for line in parseLines(stop.corMl) {
+        let mlLines = stop.correspondences?.ml ?? parseLines(stop.corMl)
+        for line in mlLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "ML"), color))
         }
 
         // 4. Tranvía
-        for line in parseLines(stop.corTranvia) {
+        let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
+        for line in tramLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "TRAM"), color))
         }
         
         // 5. Funicular
-        for line in parseLines(stop.corFunicular) {
+        let funicularLines = stop.correspondences?.funicular ?? parseLines(stop.corFunicular)
+        for line in funicularLines {
             badges.append((formatBadgeName(line, type: "Funicular"), "#000000"))
         }
 

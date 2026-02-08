@@ -30,13 +30,15 @@ struct Stop: Identifiable, Equatable, Hashable {
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
     let corFunicular: String?  // Funicular connections
+    let correspondences: StopCorrespondences?
 
     init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String] = [],
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
          corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil, corTranvia: String? = nil,
-         corBus: String? = nil, corFunicular: String? = nil) {
+         corBus: String? = nil, corFunicular: String? = nil,
+         correspondences: StopCorrespondences? = nil) {
         self.id = id
         self.name = name
         self.latitude = latitude
@@ -54,6 +56,7 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.corTranvia = corTranvia
         self.corBus = corBus
         self.corFunicular = corFunicular
+        self.correspondences = correspondences
     }
 
     // Computed property for CLLocation
@@ -135,7 +138,7 @@ struct Stop: Identifiable, Equatable, Hashable {
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Has correspondence if any other lines exist
-        return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty || (corFunicular != nil && !corFunicular!.isEmpty) || (corBus != nil && !corBus!.isEmpty)
+        return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty || (corFunicular != nil && !corFunicular!.isEmpty) || (corBus != nil && !corBus!.isEmpty) || correspondences != nil
     }
 
     /// Normalize line name for comparison (handles "L1" vs "1" vs "Línea 1" etc.)
@@ -168,7 +171,7 @@ extension Stop: Codable {
         case id, name, latitude, longitude, connectionLineIds
         case province, accesibilidad
         case hasParking, hasBusConnection, hasMetroConnection, isHub
-        case corMetro, corMl, corCercanias, corTranvia, corBus, corFunicular
+        case corMetro, corMl, corCercanias, corTranvia, corBus, corFunicular, correspondences
     }
 
     init(from decoder: Decoder) throws {
@@ -190,5 +193,6 @@ extension Stop: Codable {
         corTranvia = try container.decodeIfPresent(String.self, forKey: .corTranvia)
         corBus = try container.decodeIfPresent(String.self, forKey: .corBus)
         corFunicular = try container.decodeIfPresent(String.self, forKey: .corFunicular)
+        correspondences = try container.decodeIfPresent(StopCorrespondences.self, forKey: .correspondences)
     }
 }
