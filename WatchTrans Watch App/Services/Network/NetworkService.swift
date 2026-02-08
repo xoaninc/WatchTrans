@@ -37,10 +37,10 @@ class NetworkService {
         } catch let error as NetworkError {
             // Don't retry for certain errors
             switch error {
-            case .decodingError, .badResponse, .timeout:
-                // These won't be fixed by retrying (fail fast on timeout)
+            case .decodingError, .badResponse, .timeout, .unknown:
+                // These won't be fixed by retrying (fail fast)
                 throw error
-            case .noConnection, .serverError, .unknown:
+            case .noConnection, .serverError:
                 // These might be temporary - retry
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))  // Exponential backoff: 1s, 2s, 4s
