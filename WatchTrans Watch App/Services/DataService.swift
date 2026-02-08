@@ -105,6 +105,10 @@ class DataService {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("platforms_cache.json")
     }
+    private static var shapeCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("shape_cache.json")
+    }
 
     /// Cache metadata
     private struct CacheMetadata: Codable {
@@ -225,6 +229,13 @@ class DataService {
             self.platformsCache = validCache
             DebugLog.log("📦 [Cache] Loaded platforms cache for \(validCache.count) stations (filtered \(cached.count - validCache.count) empty)")
         }
+        
+        // Load shape cache
+        if let data = try? Data(contentsOf: Self.shapeCacheURL),
+           let cached = try? JSONDecoder().decode([String: [ShapePoint]].self, from: data) {
+            self.shapeCache = cached
+            DebugLog.log("📦 [Cache] Loaded shapes for \(shapeCache.count) routes")
+        }
     }
 
     /// Save stops to persistent cache
@@ -309,6 +320,15 @@ class DataService {
     private func savePlatformsCache() {
         if let data = try? JSONEncoder().encode(platformsCache) {
             try? data.write(to: Self.platformsCacheURL)
+        }
+    }
+    
+    /// Save shape cache to disk
+    private func saveShapeCache() {
+        shapeCacheQueue.sync {
+            if let data = try? JSONEncoder().encode(shapeCache) {
+                try? data.write(to: Self.shapeCacheURL)
+            }
         }
     }
 
@@ -2117,6 +2137,11 @@ class DataService {
 
             // Store in cache (thread-safe)
             shapeCacheQueue.sync { shapeCache[cacheKey] = sorted }
+            
+            // Save to disk (background)
+            Task(priority: .background) {
+                saveShapeCache()
+            }
 
             // Debug: Show first 5 and last 2 coordinates to verify shape data
             if sorted.count >= 5 {
@@ -2183,12 +2208,14 @@ class DataService {
 
                 let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
                 shapeCacheQueue.sync { shapeCache[cacheKey] = fallbackPoints }
+                Task(priority: .background) { saveShapeCache() }
                 return ShapeWithStops(shapePoints: fallbackPoints, stopCoordinates: fallbackStopCoords)
             }
 
             // Also cache the shape points for the regular fetchRouteShape function
             let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
             shapeCacheQueue.sync { shapeCache[cacheKey] = sortedShape }
+            Task(priority: .background) { saveShapeCache() }
 
             return ShapeWithStops(shapePoints: sortedShape, stopCoordinates: stopCoords)
         } catch {
