@@ -1377,11 +1377,15 @@ class DataService {
 
         let platforms = await fetchPlatforms(stopId: stopId)
         DebugLog.log("🚏 [Platforms] Fetched for enrichment \(stopId): \(platforms.count) platforms")
-        platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
         
-        // Save to disk (background)
-        Task(priority: .background) {
-            savePlatformsCache()
+        // Only cache valid data to prevent persisting API outages
+        if !platforms.isEmpty {
+            platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
+            
+            // Save to disk (background)
+            Task(priority: .background) {
+                savePlatformsCache()
+            }
         }
         
         return platforms
