@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import PulseUI
 
 struct SettingsView: View {
     let dataService: DataService
+// ... (rest of imports and properties)
+
 
     @AppStorage("showDelayNotifications") private var showDelayNotifications = true
     @AppStorage("autoRefreshEnabled") private var autoRefreshEnabled = true
@@ -164,6 +167,57 @@ struct SettingsView: View {
                     Text("Preferencias")
                 }
 
+                // Sincronización section
+                Section {
+                    HStack {
+                        Image(systemName: "icloud.fill")
+                            .foregroundStyle(.blue)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Favoritos en iCloud")
+                                .font(.body)
+                            
+                            if let lastSync = iCloudSyncService.shared.lastSyncTimestamp {
+                                Text("Última vez: \(lastSync.formatted(date: .abbreviated, time: .shortened))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("No sincronizado")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Button {
+                            iCloudSyncService.shared.syncOnLaunch()
+                            // Force Haptic
+                            let impact = UIImpactFeedbackGenerator(style: .light)
+                            impact.impactOccurred()
+                        } label: {
+                            Image(systemName: "arrow.clockwise.icloud")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    
+                    if !iCloudSyncService.shared.isAvailable {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.orange)
+                            Text("Inicia sesión en iCloud para sincronizar")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Sincronización")
+                } footer: {
+                    Text("Tus favoritos se sincronizan automáticamente entre tu iPhone, Apple Watch y otros dispositivos.")
+                }
+
                 // Transport type filter
                 if !availableTransportTypes.isEmpty {
                     Section {
@@ -301,6 +355,15 @@ struct SettingsView: View {
                 // Developer section (hidden until activated)
                 if developerModeEnabled {
                     Section {
+                        NavigationLink {
+                            ConsoleView()
+                        } label: {
+                            HStack {
+                                Image(systemName: "network")
+                                Text("Consola de Red (Pulse)")
+                            }
+                        }
+
                         if AdminService.hasToken() {
                             // Token configured - show reload button
                             Button {

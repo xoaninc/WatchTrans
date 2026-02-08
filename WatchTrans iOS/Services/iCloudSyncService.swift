@@ -7,24 +7,17 @@
 //
 
 import Foundation
+import Observation
 
 /// Service to sync favorites and hub stops across user's devices via iCloud
-///
-/// Architecture:
-/// ```
-/// iCloud (NSUbiquitousKeyValueStore) ←→ SharedStorage ←→ Widget/Siri
-/// ```
-///
-/// Limits: 1MB total, 1KB per key
-///
-/// SETUP REQUIRED IN XCODE:
-/// 1. Select WatchTrans iOS target → Signing & Capabilities → + Capability → iCloud
-/// 2. Check "Key-value storage"
-///
+@Observable
 class iCloudSyncService {
     static let shared = iCloudSyncService()
 
     private let iCloudStore = NSUbiquitousKeyValueStore.default
+    
+    // Observable status
+    var lastSyncTimestamp: Date? = nil
 
     // Keys for iCloud storage (keep in sync with SharedStorage)
     private enum Keys {
@@ -35,6 +28,11 @@ class iCloudSyncService {
 
     private init() {
         setupNotifications()
+        // Load initial timestamp
+        let ts = iCloudStore.double(forKey: Keys.lastSyncTimestamp)
+        if ts > 0 {
+            lastSyncTimestamp = Date(timeIntervalSince1970: ts)
+        }
     }
 
     // MARK: - Setup
@@ -59,6 +57,7 @@ class iCloudSyncService {
         if iCloudStore.synchronize() {
             DebugLog.log("☁️ [iCloudSync] Initial sync triggered")
             pullFromiCloud()
+            lastSyncTimestamp = Date()
         }
     }
 
@@ -87,6 +86,9 @@ class iCloudSyncService {
         }
 
         DebugLog.log("☁️ [iCloudSync] Received external change: \(reasonString)")
+        
+        // Update local timestamp
+        lastSyncTimestamp = Date()
 
         // Get changed keys
         if let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] {
@@ -165,6 +167,9 @@ class iCloudSyncService {
             iCloudStore.set(data, forKey: Keys.favorites)
             iCloudStore.set(Date().timeIntervalSince1970, forKey: Keys.lastSyncTimestamp)
             iCloudStore.synchronize()
+            
+            // Update local timestamp
+            lastSyncTimestamp = Date()
 
             DebugLog.log("☁️ [iCloudSync] Pushed \(favorites.count) favorites to iCloud (\(data.count) bytes)")
         } catch {
@@ -229,9 +234,8 @@ class iCloudSyncService {
         return FileManager.default.ubiquityIdentityToken != nil
     }
 
-    /// Get last sync timestamp
+    /// Get last sync date
     var lastSyncDate: Date? {
-        let timestamp = iCloudStore.double(forKey: Keys.lastSyncTimestamp)
-        return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
+        lastSyncTimestamp
     }
 }
