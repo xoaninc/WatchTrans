@@ -31,10 +31,22 @@ The following networks are currently **Static Only** (No real-time departures):
 **Issue:** The RAPTOR engine does not return routes between Metro Madrid stations.
 **Example:** Sol -> Gran Vía returns "No route found".
 
-### Sevilla C4 Route Shape
-**Status:** ⚠️ Incorrect route path.
-**Impact:** The map line for C4 Sevilla appears incorrect (likely straight lines or outdated GTFS data).
-**Recommendation:** Update GTFS shapes for Renfe Sevilla C4.
+### Duplicate Trips due to Calendar Overlaps
+
+
+
+**Endpoint:** `GET /api/gtfs/stops/{stop_id}/departures`
+
+**Status:** ⚠️ Backend issue detected.
+
+**Issue:** For certain lines/regions (e.g., Metro Sevilla L1), the API returns multiple trip entries for the same departure time and destination, differing only by their `trip_id` (likely due to overlapping active calendars like `INV1-2025` and `INV1-2026`).
+
+**Impact:** The app displays duplicate departure entries for the same train.
+
+**Recommendation:** Backend should de-duplicate these entries on the server-side before sending the response, ensuring only unique, relevant trips are returned.
+
+
 
 ---
+
 *Note: All core functionality for Andalusia Metros is now 100% verified.*
