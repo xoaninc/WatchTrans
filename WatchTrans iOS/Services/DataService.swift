@@ -220,8 +220,10 @@ class DataService {
         // Load platforms cache
         if let data = try? Data(contentsOf: Self.platformsCacheURL),
            let cached = try? JSONDecoder().decode([String: PlatformsCacheEntry].self, from: data) {
-            self.platformsCache = cached
-            DebugLog.log("📦 [Cache] Loaded platforms cache for \(platformsCache.count) stations")
+            // Filter out empty entries to recover from API outages
+            let validCache = cached.filter { !$0.value.platforms.isEmpty }
+            self.platformsCache = validCache
+            DebugLog.log("📦 [Cache] Loaded platforms cache for \(validCache.count) stations (filtered \(cached.count - validCache.count) empty)")
         }
     }
 
