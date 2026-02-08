@@ -116,9 +116,10 @@ class NetworkService {
             return try await performFetchData(url)
         } catch let error as NetworkError {
             switch error {
-            case .badResponse:
+            case .decodingError, .badResponse, .timeout, .unknown:
+                // Fail fast
                 throw error
-            case .noConnection, .timeout, .serverError, .decodingError, .unknown:
+            case .noConnection, .serverError:
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))
                     DebugLog.log("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for: \(url.lastPathComponent)")
@@ -174,9 +175,10 @@ class NetworkService {
             return try await performPostData(url, body: body, headers: headers)
         } catch let error as NetworkError {
             switch error {
-            case .badResponse:
+            case .decodingError, .badResponse, .timeout, .unknown:
+                // Fail fast
                 throw error
-            case .noConnection, .timeout, .serverError, .decodingError, .unknown:
+            case .noConnection, .serverError:
                 if attempt < maxRetries {
                     let delay = baseDelay * pow(2.0, Double(attempt - 1))
                     DebugLog.log("🔄 [NetworkService] Retry \(attempt)/\(maxRetries) after \(delay)s for POST: \(url.lastPathComponent)")
