@@ -101,6 +101,10 @@ class DataService {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("line_colors_cache.json")
     }
+    private static var platformsCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("platforms_cache.json")
+    }
 
     /// Cache metadata
     private struct CacheMetadata: Codable {
@@ -131,13 +135,13 @@ class DataService {
     /// In-memory cache of line colors: lineName -> colorHex (e.g., "C1" -> "#75B2E0")
     private var lineColorsCache: [String: String] = [:]
 
-    private struct PlatformsCacheEntry {
+    private struct PlatformsCacheEntry: Codable {
         let platforms: [PlatformInfo]
         let timestamp: Date
     }
 
     private var platformsCache: [String: PlatformsCacheEntry] = [:]
-    private let platformsCacheTTL: TimeInterval = 120
+    private let platformsCacheTTL: TimeInterval = 24 * 60 * 60 // 24 hours (persisted)
 
     /// Get filtered lines based on user's transport type preferences
     var filteredLines: [Line] {
@@ -211,6 +215,13 @@ class DataService {
             } else {
                 DebugLog.log("📦 [Cache] Line colors cache invalid (age: \(Int(age/3600))h, version: \(cacheVersion))")
             }
+        }
+        
+        // Load platforms cache
+        if let data = try? Data(contentsOf: Self.platformsCacheURL),
+           let cached = try? JSONDecoder().decode([String: PlatformsCacheEntry].self, from: data) {
+            self.platformsCache = cached
+            DebugLog.log("📦 [Cache] Loaded platforms cache for \(platformsCache.count) stations")
         }
     }
 
@@ -289,6 +300,13 @@ class DataService {
         guard let location = currentLocation else { return }
         if let data = try? JSONEncoder().encode(location) {
             try? data.write(to: Self.locationCacheURL)
+        }
+    }
+    
+    /// Save platforms cache to disk
+    private func savePlatformsCache() {
+        if let data = try? JSONEncoder().encode(platformsCache) {
+            try? data.write(to: Self.platformsCacheURL)
         }
     }
 
@@ -1360,6 +1378,12 @@ class DataService {
         let platforms = await fetchPlatforms(stopId: stopId)
         DebugLog.log("🚏 [Platforms] Fetched for enrichment \(stopId): \(platforms.count) platforms")
         platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
+        
+        // Save to disk (background)
+        Task(priority: .background) {
+            savePlatformsCache()
+        }
+        
         return platforms
     }
 

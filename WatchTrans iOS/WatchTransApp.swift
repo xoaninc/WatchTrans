@@ -8,6 +8,8 @@
 import SwiftUI
 import SwiftData
 import BackgroundTasks
+import Sentry
+import Pulse
 
 // MARK: - App Delegate for Background Tasks
 
@@ -32,6 +34,23 @@ struct WatchTransApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // --- 3rd Party Integrations Setup ---
+        
+        // 1. Pulse (Network Logging)
+        // Enable automatic URLSession proxying for any session that doesn't use the delegate explicitly
+        // Experimental.URLSessionProxy.shared.isEnabled = true
+        
+        // 2. Sentry (Error Tracking)
+        SentrySDK.start { options in
+            // TODO: REPLACE WITH YOUR REAL SENTRY DSN
+            options.dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
+            options.debug = false // Disabled for production/performance
+            options.tracesSampleRate = 1.0
+            options.enableAppHangTracking = true
+        }
+        
+        // ------------------------------------
+
         // Initialize iCloud sync on app launch
         iCloudSyncService.shared.syncOnLaunch()
     }
