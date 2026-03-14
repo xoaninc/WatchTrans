@@ -24,3 +24,14 @@ Extraído a componente genérico `EquipmentStatusSection.swift` que funciona con
 - Nombre completo del equipo: "Ascensor — Calle", "Escalera mecanica — Anden sentido Ciudad Expo" (antes solo "Ascensor" truncado)
 - Circulo verde/rojo a la derecha de cada equipo indicando estado operativo (antes usaba flechas up/down que indicaban la dirección de la escalera mecánica, dato del campo `direction` del API — no aportaba nada útil al usuario)
 - Equipos fuera de servicio aparecen primero, los operativos en un disclosure group
+
+## Líneas no cargadas hasta entrar en sección Líneas (afecta Mapa y correspondencias)
+
+Las líneas (`DataService.lines`) se cargan lazy cuando el usuario entra en la sección de Líneas. Pero otras partes de la app dependen de estos datos:
+
+- **Mapa**: Muestra que hay líneas pero faltan algunas porque los datos no están cargados. Si vuelves a entrar sigue igual. Si primero vas a Líneas y luego al Mapa, aparecen todas.
+- **Correspondencias**: Los badges de conexiones en las paradas (L1, C5, etc.) no salen correctos hasta que navegas primero a la sección de Líneas, porque `getLine(by:)` devuelve nil si las líneas no están cargadas.
+
+**Causa raíz:** La carga de líneas está atada a la navegación a la sección de Líneas en vez de hacerse al inicio de la app (o al detectar la ubicación del usuario).
+
+**Fix:** Forzar la carga de líneas en `DataService` al arrancar la app o al detectar la provincia, antes de que el usuario navegue a ninguna sección. Las líneas se cachean 24h, así que no hay impacto de red.
