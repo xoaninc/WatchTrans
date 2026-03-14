@@ -23,6 +23,7 @@ struct StopDetailView: View {
     @State private var correspondences: [CorrespondenceInfo] = []
     @State private var transportModes: [TransportModeInfo] = []
     @State private var accesses: [StationAccess] = []
+    @State private var stationInterior: StationInteriorResponse?
     @State private var isLoading = true
     @State private var hasLoadedOnce = false
     @State private var refreshTimer: Timer?
@@ -178,6 +179,26 @@ struct StopDetailView: View {
                             accesses: accesses,
                             userLocation: locationService.currentLocation
                         )
+                    }
+
+                    // Station levels
+                    if let levels = stationInterior?.levels, !levels.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Plantas")
+                                .font(.headline)
+                            ForEach(levels.sorted(by: { ($0.index ?? 0) > ($1.index ?? 0) })) { level in
+                                HStack(spacing: 8) {
+                                    Text(level.index == 0 ? "PB" : (level.index ?? 0) > 0 ? "+\(Int(level.index!))" : "\(Int(level.index!))")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .frame(width: 30)
+                                    Text(level.name ?? "")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
                     }
 
                     // Departures section
@@ -366,6 +387,9 @@ struct StopDetailView: View {
         if !accesses.isEmpty {
             updateMapToIncludeAccesses()
         }
+
+        // Fetch station interior (levels + pathways for stations that support it)
+        stationInterior = try? await dataService.gtfsRealtimeService.fetchStationInterior(stopId: stop.id)
 
         // Fetch station occupancy for TMB Metro stops
         if stop.id.hasPrefix("TMB_METRO_") {

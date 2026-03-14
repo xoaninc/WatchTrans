@@ -1034,6 +1034,99 @@ struct AccessesResponse: Codable {
     }
 }
 
+// MARK: - Station Interior Response
+
+/// Response from GET /api/gtfs/stops/{stop_id}/station-interior
+/// Comprehensive interior data: pathways, accesses, vestibules, levels
+struct StationInteriorResponse: Codable {
+    let stationId: String
+    let stationName: String?
+    let source: String?
+    let pathways: [InteriorPathway]?
+    let levels: [StationLevel]?
+    let accesses: [InteriorAccess]?
+    let vestibules: [StationVestibule]?
+
+    enum CodingKeys: String, CodingKey {
+        case stationId = "station_id"
+        case stationName = "station_name"
+        case source, pathways, levels, accesses, vestibules
+    }
+}
+
+struct InteriorPathway: Codable, Identifiable {
+    let id: String?
+    let fromStopId: String?
+    let fromStopName: String?
+    let toStopId: String?
+    let toStopName: String?
+    let pathwayMode: Int?
+    let pathwayModeName: String?
+    let isBidirectional: Bool?
+    let length: Double?
+    let traversalTime: Int?
+    let stairCount: Int?
+    let minWidth: Double?
+    let signpostedAs: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fromStopId = "from_stop_id"
+        case fromStopName = "from_stop_name"
+        case toStopId = "to_stop_id"
+        case toStopName = "to_stop_name"
+        case pathwayMode = "pathway_mode"
+        case pathwayModeName = "pathway_mode_name"
+        case isBidirectional = "is_bidirectional"
+        case length
+        case traversalTime = "traversal_time"
+        case stairCount = "stair_count"
+        case minWidth = "min_width"
+        case signpostedAs = "signposted_as"
+    }
+}
+
+struct StationLevel: Codable, Identifiable {
+    let id: String?
+    let index: Double?
+    let name: String?
+}
+
+struct InteriorAccess: Codable, Identifiable {
+    let name: String?
+    let lat: Double?
+    let lon: Double?
+    let street: String?
+    let wheelchair: Bool?
+    let level: Int?
+    let openingTime: String?
+    let closingTime: String?
+
+    var id: String { name ?? UUID().uuidString }
+
+    enum CodingKeys: String, CodingKey {
+        case name, lat, lon, street, wheelchair, level
+        case openingTime = "opening_time"
+        case closingTime = "closing_time"
+    }
+}
+
+struct StationVestibule: Codable, Identifiable {
+    let name: String?
+    let lat: Double?
+    let lon: Double?
+    let level: Int?
+    let turnstileType: String?
+    let wheelchair: Bool?
+
+    var id: String { name ?? UUID().uuidString }
+
+    enum CodingKeys: String, CodingKey {
+        case name, lat, lon, level, wheelchair
+        case turnstileType = "turnstile_type"
+    }
+}
+
 /// A physical entrance/access point to a station
 struct StationAccess: Codable, Identifiable {
     let id: Int

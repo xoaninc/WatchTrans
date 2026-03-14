@@ -572,6 +572,17 @@ class GTFSRealtimeService {
         return response
     }
 
+    /// Fetch station interior: pathways, accesses, vestibules, levels
+    func fetchStationInterior(stopId: String) async throws -> StationInteriorResponse {
+        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/station-interior") else {
+            throw NetworkError.badResponse
+        }
+
+        let response: StationInteriorResponse = try await networkService.fetch(url)
+        DebugLog.log("🏛️ [RT] Interior for \(stopId): \(response.pathways?.count ?? 0) pathways, \(response.accesses?.count ?? 0) accesses, \(response.levels?.count ?? 0) levels")
+        return response
+    }
+
     /// Fetch walking correspondences from a station
     /// Returns nearby stations connected by walking passages
     /// - Parameters:
