@@ -22,6 +22,19 @@ struct LineDetailView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
+    /// Filter line alerts to find those that affect a specific stop
+    func alertsForStop(_ stop: Stop) -> [AlertResponse] {
+        alerts.filter { alert in
+            let entities = alert.informedEntities ?? []
+            return entities.contains { entity in
+                guard let entityStopId = entity.stopId else { return false }
+                return entityStopId == stop.id
+                    || entityStopId == "RENFE_\(stop.id)"
+                    || "RENFE_\(entityStopId)" == stop.id
+            }
+        }
+    }
+
     /// All line types can potentially have operating hours from API
     var shouldShowOperatingHours: Bool {
         true  // Try to fetch for all lines - API returns empty if not available
@@ -176,7 +189,8 @@ struct LineDetailView: View {
                                 currentLineId: line.id,
                                 currentLineName: line.name,
                                 dataService: dataService,
-                                locationService: locationService
+                                locationService: locationService,
+                                stopAlerts: alertsForStop(stop)
                             )
                         }
                     }
@@ -493,6 +507,7 @@ struct StopRow: View {
     let currentLineName: String  // To filter out current line from cor_* badges
     let dataService: DataService
     let locationService: LocationService
+    var stopAlerts: [AlertResponse] = []
 
     // Filter connections to exclude current line, sorted numerically
     // Compare normalized names (strip L/C/ML prefixes for comparison)
@@ -624,9 +639,29 @@ struct StopRow: View {
                                 excludeLineIds: otherLineConnections  // Don't duplicate badges from WrappingHStack
                             )
                         }
+
+                        // Stop-level alerts
+                        if !stopAlerts.isEmpty {
+                            HStack(spacing: 3) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(stopAlerts.contains { $0.isSuspension } ? .red : .orange)
+                                Text(stopAlerts.first?.aiSummary ?? stopAlerts.first?.headerText ?? "Aviso")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(stopAlerts.contains { $0.isSuspension } ? .red : .orange)
+                                    .lineLimit(1)
+                            }
+                        }
                     }
 
                     Spacer()
+
+                    // Alert indicator
+                    if !stopAlerts.isEmpty {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(stopAlerts.contains { $0.isSuspension } ? .red : .orange)
+                    }
 
                     // Tap to view departures indicator
                     Image(systemName: "chevron.right")

@@ -2107,13 +2107,14 @@ class DataService {
                     if !normalizedShortName.isEmpty,
                        let entityShort = entity.routeShortName,
                        normalizeForMatching(entityShort) == normalizedShortName {
-                        // If we can infer a RENFE-style prefix, require it to match to avoid cross-city collisions.
+                        // Require RENFE-style prefix match to avoid cross-city collisions
                         if let entityRouteId = entity.routeId,
                            let entityPrefix = alertRoutePrefix(from: entityRouteId),
                            !routePrefixes.isEmpty {
                             return routePrefixes.contains(entityPrefix)
                         }
-                        return routePrefixes.isEmpty
+                        // When we can't disambiguate by prefix, don't match
+                        return false
                     }
                     return false
                 }
@@ -2196,12 +2197,18 @@ class DataService {
         // Extra fallback: use route short name + inferred RENFE prefix from line route IDs
         let allAlerts = (try? await gtfsRealtimeService.fetchAlerts()) ?? []
         let prefixes = alertRoutePrefixes(for: line.routeIds)
+        let lineRouteIds = Set(line.routeIds.flatMap { alertRouteIdVariants(for: $0) })
         let normalizedShortName = normalizeForMatching(line.name)
         guard !normalizedShortName.isEmpty else { return [] }
 
         let filtered = allAlerts.filter { alert in
             let entities = alert.informedEntities ?? []
             return entities.contains { entity in
+                // First: exact route_id match always wins
+                if let entityRouteId = entity.routeId, lineRouteIds.contains(entityRouteId) {
+                    return true
+                }
+                // Short name match requires prefix disambiguation to avoid cross-city collisions
                 guard let entityShort = entity.routeShortName,
                       normalizeForMatching(entityShort) == normalizedShortName else { return false }
                 if let entityRouteId = entity.routeId,
@@ -2209,7 +2216,8 @@ class DataService {
                    !prefixes.isEmpty {
                     return prefixes.contains(entityPrefix)
                 }
-                return prefixes.isEmpty
+                // When we can't disambiguate by prefix, don't match — avoids T1 Cádiz in T1 Sevilla
+                return false
             }
         }
         return filtered

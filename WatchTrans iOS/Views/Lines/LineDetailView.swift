@@ -28,9 +28,29 @@ struct LineDetailView: View {
         Color(hex: line.colorHex) ?? .blue
     }
     
-    /// Check if line has any full suspension alerts
+    /// Check if line has any full suspension alerts that affect the entire route.
+    /// If a suspension alert also has stop-level entities, it only affects a section, not the whole line.
     var isLineSuspended: Bool {
-        alerts.contains { $0.isFullSuspension }
+        alerts.contains { alert in
+            guard alert.isFullSuspension else { return false }
+            // If the alert has stop-level entities, it's a partial suspension (specific stops only)
+            let entities = alert.informedEntities ?? []
+            let hasStopEntities = entities.contains { $0.stopId != nil }
+            return !hasStopEntities
+        }
+    }
+
+    /// Filter line alerts to find those that affect a specific stop
+    func alertsForStop(_ stop: Stop) -> [AlertResponse] {
+        alerts.filter { alert in
+            let entities = alert.informedEntities ?? []
+            return entities.contains { entity in
+                guard let entityStopId = entity.stopId else { return false }
+                return entityStopId == stop.id
+                    || entityStopId == "RENFE_\(stop.id)"
+                    || "RENFE_\(entityStopId)" == stop.id
+            }
+        }
     }
 
     /// Special descriptions for specific lines (hardcoded)
@@ -164,7 +184,8 @@ struct LineDetailView: View {
                                     isFirst: index == 0,
                                     isLast: index == stops.count - 1,
                                     isCircular: line.isCircular,
-                                    dataService: dataService
+                                    dataService: dataService,
+                                    stopAlerts: alertsForStop(stop)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -506,6 +527,7 @@ struct LineStopRowView: View {
     let isLast: Bool
     let isCircular: Bool  // For circular lines (L6, L12)
     let dataService: DataService
+    var stopAlerts: [AlertResponse] = []
 
     // Default colors for connection badges
     private let defaultMetroColor = "#ED1C24"
@@ -671,9 +693,30 @@ struct LineStopRowView: View {
                     }
                 }
 
+                // Stop-level alerts (e.g., elevator out of service, partial suspension)
+                if !stopAlerts.isEmpty {
+                    ForEach(stopAlerts.prefix(2)) { alert in
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(alert.severityColor)
+                            Text(alert.aiSummary ?? alert.headerText ?? "Aviso")
+                                .font(.caption2)
+                                .foregroundStyle(alert.severityColor)
+                                .lineLimit(1)
+                        }
+                    }
+                }
             }
 
             Spacer()
+
+            // Alert indicator icon
+            if !stopAlerts.isEmpty {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(stopAlerts.contains { $0.isSuspension } ? .red : .orange)
+            }
 
             Image(systemName: "chevron.right")
                 .font(.caption)
