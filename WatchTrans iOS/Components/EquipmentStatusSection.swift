@@ -72,11 +72,19 @@ private struct EquipmentRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Device icon (color matches status)
-            Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
-                .font(.subheadline)
-                .foregroundStyle(device.isBroken ? .red : .green)
-                .frame(width: 20)
+            // Device icon (color matches status, escalator shows direction arrow)
+            HStack(spacing: 2) {
+                Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
+                    .font(.subheadline)
+                    .foregroundStyle(device.isBroken ? .red : .green)
+                if device.isEscalator, let dir = device.direction, dir == "up" || dir == "down" {
+                    Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(device.isBroken ? .red : .green)
+                }
+            }
+            .frame(width: 30)
 
             // Full name
             Text(fullName)
