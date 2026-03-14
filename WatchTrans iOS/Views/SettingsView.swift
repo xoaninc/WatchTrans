@@ -44,6 +44,21 @@ struct SettingsView: View {
         return Array(types).sorted { $0.rawValue < $1.rawValue }
     }
 
+    /// Networks grouped by transport type with real names from loaded lines
+    private var availableNetworks: [(type: TransportType, nucleo: String, lineCount: Int)] {
+        var seen = Set<String>()
+        var result: [(TransportType, String, Int)] = []
+        for line in dataService.lines {
+            let key = "\(line.type.rawValue)-\(line.nucleo.lowercased())"
+            if !seen.contains(key) {
+                seen.insert(key)
+                let count = dataService.lines.filter { $0.type == line.type && $0.nucleo.lowercased() == line.nucleo.lowercased() }.count
+                result.append((line.type, line.nucleo, count))
+            }
+        }
+        return result.sorted { $0.0.rawValue < $1.0.rawValue }
+    }
+
     // MARK: - Dynamic Credits
 
     struct CreditItem: Identifiable {
@@ -219,31 +234,41 @@ struct SettingsView: View {
                 }
 
                 // Transport type filter
-                if !availableTransportTypes.isEmpty {
+                if !availableNetworks.isEmpty {
                     Section {
-                        ForEach(availableTransportTypes, id: \.self) { type in
+                        ForEach(availableNetworks, id: \.type) { network in
                             Toggle(isOn: Binding(
-                                get: { enabledTypes.contains(type) },
+                                get: { enabledTypes.contains(network.type) },
                                 set: { isEnabled in
                                     if isEnabled {
-                                        enabledTypes.insert(type)
+                                        enabledTypes.insert(network.type)
                                     } else {
-                                        enabledTypes.remove(type)
+                                        enabledTypes.remove(network.type)
                                     }
                                     saveEnabledTypes()
                                 }
                             )) {
-                                HStack {
-                                    Image(systemName: iconForTransportType(type))
-                                        .foregroundStyle(colorForTransportType(type))
-                                    Text(type.rawValue)
+                                HStack(spacing: 10) {
+                                    LogoImageView(
+                                        type: network.type,
+                                        nucleo: network.nucleo,
+                                        height: 22
+                                    )
+                                    .frame(width: 28)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(networkDisplayName(type: network.type, nucleo: network.nucleo))
+                                            .font(.body)
+                                        Text("\(network.lineCount) línea\(network.lineCount == 1 ? "" : "s")")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
                     } header: {
-                        Text("Tipos de Transporte")
+                        Text("Redes de transporte")
                     } footer: {
-                        Text("Filtra las lineas que se muestran. Sin seleccion = todas.")
+                        Text("Filtra las redes que se muestran. Sin selección = todas.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -455,22 +480,17 @@ struct SettingsView: View {
 
     // MARK: - Transport Type Helpers
 
-    private func iconForTransportType(_ type: TransportType) -> String {
+    /// Display name for a network based on type + nucleo (no hardcoding)
+    private func networkDisplayName(type: TransportType, nucleo: String) -> String {
+        let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
         switch type {
-        case .metro:
-            return "tram.tunnel.fill"
-        case .metroLigero:
-            return "tram.fill"
-        case .cercanias:
-            return "tram.fill"
-        case .tram:
-            return "tram"
-        case .fgc:
-            return "tram.fill"
-        case .euskotren:
-            return "tram.fill"
-        case .bus:
-            return "bus.fill"
+        case .metro: return "Metro de \(capitalized)"
+        case .metroLigero: return "Metro Ligero de \(capitalized)"
+        case .cercanias: return "Cercanías \(capitalized)"
+        case .tram: return "Tranvía de \(capitalized)"
+        case .fgc: return "FGC"
+        case .euskotren: return "Euskotren"
+        case .bus: return "Bus \(capitalized)"
         }
     }
 
