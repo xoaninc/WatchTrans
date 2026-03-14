@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-struct Line: Identifiable, Codable {
+struct Line: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let name: String          // "C3", "L1", "ML1"
     let longName: String      // "Chamartín - Aeropuerto T4"
@@ -17,6 +17,10 @@ struct Line: Identifiable, Codable {
     let nucleo: String        // Province/network name: "madrid", "sevilla", "barcelona", etc.
     let routeIds: [String]    // Actual API route IDs (e.g., ["RENFE_C1_34"])
     let isCircular: Bool      // true for circular lines (L6, L12 MetroSur)
+    var suspensionAlert: String? // Suspension message if service is suspended
+    let serviceStatus: String?  // "active", "suspended", "partial" etc.
+    let suspendedSince: String? // ISO date string when service was suspended
+    let isAlternativeService: Bool? // true if running an alternative/replacement service
 
     // Computed property for SwiftUI Color (uses Color+Hex extension)
     var color: Color {

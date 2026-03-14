@@ -19,9 +19,12 @@ enum SiriAPIHelper {
 
     static func fetchRoute(fromId: String, toId: String) async throws -> SiriJourney {
         var components = URLComponents(string: "\(apiBaseURL)/route-planner")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
         components?.queryItems = [
             URLQueryItem(name: "from", value: fromId),
             URLQueryItem(name: "to", value: toId),
+            URLQueryItem(name: "departure_time", value: formatter.string(from: Date())),
             URLQueryItem(name: "compact", value: "true")
         ]
 

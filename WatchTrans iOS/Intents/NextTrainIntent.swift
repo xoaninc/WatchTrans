@@ -32,8 +32,8 @@ struct NextTrainIntent: AppIntent {
     /// Phrases that trigger this shortcut
     static var openAppWhenRun: Bool = false
 
-    // Base URL for API (local constant to avoid MainActor issues)
-    private static let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Use centralized configuration
+    private static var apiBaseURL: String { APIConfiguration.baseURL }
 
     func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         // Fetch departures from API
@@ -67,9 +67,12 @@ struct NextTrainIntent: AppIntent {
     // MARK: - API Call
 
     private func fetchDepartures(stopId: String, limit: Int) async throws -> [SiriDeparture] {
-        let urlString = "\(Self.apiBaseURL)/stops/\(stopId)/departures?limit=\(limit)"
+        var components = URLComponents(string: "\(Self.apiBaseURL)/stops/\(stopId)/departures")
+        components?.queryItems = [
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
 
-        guard let url = URL(string: urlString) else {
+        guard let url = components?.url else {
             throw IntentError.invalidURL
         }
 

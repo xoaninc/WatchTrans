@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Juan Macias Gomez on 14/1/26.
-//  Updated on 16/1/26 to use RedCercanías API (api.watchtrans.app)
+//  Updated on 16/1/26 to use WatchTrans API (api.watch-trans.app)
 //
 
 import Foundation
@@ -120,9 +120,9 @@ class GTFSRealtimeService {
             throw NetworkError.badResponse
         }
 
-        DebugLog.log("📅 [RenfeServer] Calling: \(url.absoluteString)")
+        DebugLog.log("📅 [API] Calling: \(url.absoluteString)")
         let hours: RouteOperatingHoursResponse = try await networkService.fetch(url)
-        DebugLog.log("📅 [RenfeServer] Operating hours for \(hours.routeShortName):")
+        DebugLog.log("📅 [API] Operating hours for \(hours.routeShortName):")
         if let wd = hours.weekday {
             DebugLog.log("   📅 weekday: \(wd.firstDeparture) - \(wd.lastDeparture) (\(wd.totalTrips) trips)")
         }
@@ -226,8 +226,18 @@ class GTFSRealtimeService {
         return routes
     }
 
-    /// Fetch province info by coordinates (raw payload)
-    func fetchProvinceByCoordinates(latitude: Double, longitude: Double, includeNetworks: Bool = true) async throws -> Data {
+    /// Fetch province info by coordinates with optional routes
+    /// - Parameters:
+    ///   - latitude: User latitude
+    ///   - longitude: User longitude
+    ///   - includeNetworks: Include network list in response
+    ///   - includeRoutes: Include ALL routes from detected networks (NEW)
+    func fetchProvinceByCoordinates(
+        latitude: Double,
+        longitude: Double,
+        includeNetworks: Bool = true,
+        includeRoutes: Bool = false
+    ) async throws -> Data {
         guard var components = URLComponents(string: "\(baseURL)/province-by-coordinates") else {
             throw NetworkError.badResponse
         }
@@ -237,6 +247,9 @@ class GTFSRealtimeService {
         ]
         if includeNetworks {
             components.queryItems?.append(URLQueryItem(name: "include_networks", value: "true"))
+        }
+        if includeRoutes {
+            components.queryItems?.append(URLQueryItem(name: "include_routes", value: "true"))
         }
 
         guard let url = components.url else {
@@ -260,7 +273,10 @@ class GTFSRealtimeService {
 
     /// Fetch all routes for a specific province (e.g. "Sevilla")
     func fetchProvinceRoutes(provinceName: String) async throws -> [RouteResponse] {
-        guard let url = URL(string: "\(baseURL)/province/\(provinceName)/routes") else {
+        // Updated for Week 3 API changes: /api/gtfs/province/{province}/routes
+        // Handles URL encoding for province names with spaces or special chars
+        guard let encodedProvince = provinceName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "\(baseURL)/province/\(encodedProvince)/routes") else {
             throw NetworkError.badResponse
         }
 
@@ -283,6 +299,39 @@ class GTFSRealtimeService {
         return lines
     }
 
+    // MARK: - GPS & Nearby (Week 3 New Features)
+
+    /// Fetch stops near coordinates sorted by distance (PostGIS)
+    /// - Parameters:
+    ///   - latitude: User latitude
+    ///   - longitude: User longitude
+    ///   - limit: Max number of stops (default 20)
+    func fetchNearbyStops(latitude: Double, longitude: Double, limit: Int = 20) async throws -> [StopResponse] {
+        guard let url = URL(string: "\(baseURL)/stops/by-coordinates?lat=\(latitude)&lon=\(longitude)&limit=\(limit)") else {
+            throw NetworkError.badResponse
+        }
+
+        DebugLog.log("📍 [RT] Fetching nearby stops (GPS): \(latitude),\(longitude)")
+        let stops: [StopResponse] = try await networkService.fetch(url)
+        DebugLog.log("📍 [RT] ✅ Got \(stops.count) nearby stops")
+        return stops
+    }
+
+    /// Fetch ALL routes near coordinates (same province) sorted by distance
+    /// - Parameters:
+    ///   - latitude: User latitude
+    ///   - longitude: User longitude
+    func fetchNearbyRoutes(latitude: Double, longitude: Double) async throws -> [RouteResponse] {
+        guard let url = URL(string: "\(baseURL)/coordinates/routes?lat=\(latitude)&lon=\(longitude)") else {
+            throw NetworkError.badResponse
+        }
+
+        DebugLog.log("📍 [RT] Fetching nearby routes (GPS): \(latitude),\(longitude)")
+        let routes: [RouteResponse] = try await networkService.fetch(url)
+        DebugLog.log("📍 [RT] ✅ Got \(routes.count) nearby routes")
+        return routes
+    }
+
     // MARK: - Alerts
 
     /// Fetch all active alerts from new GTFS-RT server
@@ -293,7 +342,6 @@ class GTFSRealtimeService {
 
         DebugLog.log("⚠️ [RT] Fetching alerts from NEW server: \(url.absoluteString)")
         
-        // TODO: Adapt response format if different from old server
         let rawData = try await networkService.fetchData(url)
         let decoder = JSONDecoder()
         let alerts = try decoder.decode([AlertResponse].self, from: rawData)
@@ -377,7 +425,6 @@ class GTFSRealtimeService {
         
         DebugLog.log("⚠️ [RT] Fetching alerts for stop: \(stopId)")
         
-        // TODO: Adapt response format if different from old server
         let rawData = try await networkService.fetchData(url)
         let decoder = JSONDecoder()
         let alerts = try decoder.decode([AlertResponse].self, from: rawData)
@@ -438,13 +485,19 @@ class GTFSRealtimeService {
     }
     
     /// Map network ID to operator ID for new GTFS-RT API
+    /// Map network code to operator ID for vehicles API
+    /// UPDATED: Now uses generic mapping based on prefixes to avoid hardcoding cities
     private func mapNetworkToOperator(networkId: String) -> String {
-        let network = networkId.lowercased()
-        if network.contains("fgc") { return "fgc" }
-        if network.contains("tmb") { return "tmb" }
-        if network.contains("bilbao") || network.contains("bilbo") { return "bilbao" }
-        if network.contains("euskotren") { return "euskotren" }
-        return "fgc"  // default
+        // Generic cleanup: "10T" -> "renfe", "METRO_SEVILLA" -> "metro_sevilla"
+        let lower = networkId.lowercased()
+        
+        // Renfe Cercanías codes usually end in 't' (10T, 30T...)
+        if lower.hasSuffix("t") && lower.dropLast().allSatisfy({ $0.isNumber }) {
+            return "renfe"
+        }
+        
+        // For others, use the ID as is (e.g., "TUSSAM", "METRO_SEVILLA", "FGC")
+        return lower
     }
 
     // MARK: - Platforms & Correspondences
@@ -458,6 +511,64 @@ class GTFSRealtimeService {
 
         let response: PlatformsResponse = try await networkService.fetch(url)
         DebugLog.log("🚏 [RT] Fetched \(response.platforms.count) platforms for \(stopId)")
+        return response
+    }
+
+    /// Fetch predicted platforms for a stop based on 30-day historical data
+    func fetchPlatformPredictions(stopId: String, minConfidence: Double = 0.5) async throws -> [PlatformPredictionResponse] {
+        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/platforms/predictions") else {
+            throw NetworkError.badResponse
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "stop_id", value: stopId),
+            URLQueryItem(name: "min_confidence", value: String(minConfidence))
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.badResponse
+        }
+
+        let predictions: [PlatformPredictionResponse] = try await networkService.fetch(url)
+        DebugLog.log("🔮 [RT] Fetched \(predictions.count) platform predictions for \(stopId)")
+        return predictions
+    }
+
+    /// Fetch station-level occupancy for TMB Metro stops
+    func fetchStationOccupancy(stopIds: [String]) async throws -> [StationOccupancyResponse] {
+        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/station-occupancy") else {
+            throw NetworkError.badResponse
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "stop_ids", value: stopIds.joined(separator: ","))
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.badResponse
+        }
+
+        let response: [StationOccupancyResponse] = try await networkService.fetch(url)
+        DebugLog.log("🏢 [RT] Fetched \(response.count) station occupancy records")
+        return response
+    }
+
+    /// Fetch all RT data for a stop in one call (departures + alerts)
+    func fetchStopRealtime(stopId: String, limit: Int = 20) async throws -> StopRealtimeResponse {
+        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/stops/\(stopId)/realtime") else {
+            throw NetworkError.badResponse
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.badResponse
+        }
+
+        let response: StopRealtimeResponse = try await networkService.fetch(url)
+        DebugLog.log("⚡ [RT] Fetched realtime for \(stopId): \(response.upcomingArrivals?.count ?? 0) arrivals, \(response.alerts?.count ?? 0) alerts")
         return response
     }
 
@@ -528,9 +639,14 @@ class GTFSRealtimeService {
             throw NetworkError.badResponse
         }
         
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        let departureTime = formatter.string(from: Date())
+
         components.queryItems = [
             URLQueryItem(name: "from", value: fromStopId),
-            URLQueryItem(name: "to", value: toStopId)
+            URLQueryItem(name: "to", value: toStopId),
+            URLQueryItem(name: "departure_time", value: departureTime)
         ]
         if compact {
             components.queryItems?.append(URLQueryItem(name: "compact", value: "true"))
@@ -539,10 +655,11 @@ class GTFSRealtimeService {
         guard let url = components.url else {
             throw NetworkError.badResponse
         }
-        
+
         DebugLog.log("🗺️ [RT] ▶️ ROUTE PLAN REQUEST")
         DebugLog.log("🗺️ [RT]   From: \(fromStopId)")
         DebugLog.log("🗺️ [RT]   To: \(toStopId)")
+        DebugLog.log("🗺️ [RT]   Departure: \(departureTime)")
         DebugLog.log("🗺️ [RT]   Compact Mode: \(compact) (Size optimization)")
         DebugLog.log("🗺️ [RT]   URL: \(url.absoluteString)")
 
@@ -593,6 +710,33 @@ class GTFSRealtimeService {
         return response
     }
 
+    /// Fetch route plan for a time range (rRAPTOR)
+    /// Returns multiple journey alternatives across the specified time window
+    func fetchRoutePlanRange(fromStopId: String, toStopId: String, startTime: String, endTime: String, interval: Int = 15) async throws -> RoutePlanResponse {
+        guard var components = URLComponents(string: "\(baseURL)/route-planner/range") else {
+            throw NetworkError.badResponse
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "from", value: fromStopId),
+            URLQueryItem(name: "to", value: toStopId),
+            URLQueryItem(name: "start_time", value: startTime),
+            URLQueryItem(name: "end_time", value: endTime),
+            URLQueryItem(name: "interval", value: String(interval))
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.badResponse
+        }
+
+        DebugLog.log("🗺️ [RT] ▶️ ROUTE PLAN RANGE: \(startTime)-\(endTime)")
+
+        let response: RoutePlanResponse = try await networkService.fetch(url)
+
+        DebugLog.log("🗺️ [RT] ✅ Range search: \(response.allJourneys.count) journeys")
+        return response
+    }
+
     // MARK: - Station Accesses
 
     /// Fetch physical entrances (bocas de metro) for a station
@@ -607,6 +751,52 @@ class GTFSRealtimeService {
 
         let response: AccessesResponse = try await networkService.fetch(url)
         DebugLog.log("🚪 [RT] ✅ Got \(response.accesses.count) accesses for \(response.stopName)")
+        return response
+    }
+    
+    // MARK: - Equipment Status
+
+    /// Fetch elevator/escalator status for a station (Metro Sevilla)
+    func fetchEquipmentStatus(stopId: String) async throws -> [EquipmentStatusResponse] {
+        guard let url = URL(string: "\(APIConfiguration.gtfsRTBaseURL)/equipment-status/\(stopId)") else {
+            throw NetworkError.badResponse
+        }
+
+        let response: [EquipmentStatusResponse] = try await networkService.fetch(url)
+        DebugLog.log("🛗 [RT] Fetched \(response.count) equipment devices for \(stopId)")
+        return response
+    }
+
+    // MARK: - Week 3 Optimizations
+    
+    /// Fetch child stops (platforms) for a parent station
+    /// Used for aggregation when parent station departures are incomplete
+    func fetchChildren(stopId: String) async throws -> [StopResponse] {
+        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/children") else {
+            throw NetworkError.badResponse
+        }
+        
+        DebugLog.log("👨‍👧‍👦 [RT] Fetching children for: \(stopId)")
+        
+        // Define specific response structure for children endpoint
+        struct ChildrenResponse: Decodable {
+            let children: [StopResponse]
+        }
+        
+        let response: ChildrenResponse = try await networkService.fetch(url)
+        DebugLog.log("👨‍👧‍👦 [RT] ✅ Got \(response.children.count) children for \(stopId)")
+        return response.children
+    }
+    
+    /// Fetch FULL stop details in a single request (routes, correspondences, platforms, accesses)
+    func fetchStopFullDetails(stopId: String) async throws -> StopFullDetailResponse {
+        guard let url = URL(string: "\(baseURL)/stops/\(stopId)/full") else {
+            throw NetworkError.badResponse
+        }
+        
+        DebugLog.log("🏢 [RT] Fetching FULL details for stop: \(stopId)")
+        let response: StopFullDetailResponse = try await networkService.fetch(url)
+        DebugLog.log("🏢 [RT] ✅ Got full details for \(response.name) (Hub: \(response.isHub ?? false))")
         return response
     }
 }

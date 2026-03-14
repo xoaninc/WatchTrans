@@ -302,7 +302,7 @@ actor OfflineLineService {
         let province: String?
         let corMetro: String?
         let corMl: String?
-        let corCercanias: String?
+        let corTren: String?
         let corTranvia: String?
     }
 
@@ -350,7 +350,7 @@ actor OfflineLineService {
                     province: stop.province,
                     corMetro: stop.corMetro,
                     corMl: stop.corMl,
-                    corCercanias: stop.corCercanias,
+                    corTren: stop.corTren,
                     corTranvia: stop.corTranvia
                 )
             }
@@ -397,7 +397,7 @@ actor OfflineLineService {
                     isHub: false,
                     corMetro: cached.corMetro,
                     corMl: cached.corMl,
-                    corCercanias: cached.corCercanias,
+                    corTren: cached.corTren,
                     corTranvia: cached.corTranvia
                 )
             }
@@ -411,6 +411,28 @@ actor OfflineLineService {
         }
         guard let itinerary = cachedItineraries[routeId] else { return false }
         return !itinerary.isExpired
+    }
+
+    /// Get start/end stop names for a route (used to build "A - B" line labels)
+    func getRouteEndpoints(for routeId: String) async -> (start: String, end: String)? {
+        if !cacheLoaded {
+            await loadFromDisk()
+        }
+
+        guard let itinerary = cachedItineraries[routeId], !itinerary.isExpired else {
+            return nil
+        }
+
+        guard let first = itinerary.stops.first,
+              let last = itinerary.stops.last else {
+            return nil
+        }
+
+        let start = first.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let end = last.name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !start.isEmpty, !end.isEmpty else { return nil }
+        return (start, end)
     }
 
     // MARK: - Disk Persistence

@@ -558,11 +558,9 @@ struct StopCardView: View {
             isLoadingArrivals = true
         }
 
-        // Actualizar con datos frescos en paralelo
-        async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
-        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
-        arrivals = await arrivalsTask
-        alerts = await alertsTask
+        // Actualizar con datos frescos secuencialmente
+        arrivals = await dataService.fetchArrivals(for: stop.id)
+        alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
         hasLoadedOnce = true
         isLoadingArrivals = false
     }
@@ -578,7 +576,7 @@ struct AlertBannerView: View {
         HStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.caption2)
-                .foregroundStyle(.orange)
+                .foregroundStyle(alert.severityColor)
 
             Text(alertText)
                 .font(.caption2)
@@ -595,7 +593,7 @@ struct AlertBannerView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.orange.opacity(0.15))
+        .background(alert.severityColor.opacity(0.15))
         .cornerRadius(8)
     }
 

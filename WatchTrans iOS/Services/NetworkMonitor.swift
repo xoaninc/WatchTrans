@@ -16,7 +16,7 @@ import Combine
 class NetworkMonitor: ObservableObject {
     static let shared = NetworkMonitor()
 
-    private let monitor = NWPathMonitor()
+    private var monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.watchtrans.networkmonitor")
 
     /// Current connectivity status
@@ -34,6 +34,14 @@ class NetworkMonitor: ObservableObject {
 
     private init() {
         startMonitoring()
+    }
+    
+    /// Force restart monitoring (useful when returning from background)
+    func restart() {
+        monitor.cancel()
+        monitor = NWPathMonitor()
+        startMonitoring()
+        DebugLog.log("🌐 [Network] Monitor restarted manually")
     }
 
     private func startMonitoring() {

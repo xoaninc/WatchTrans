@@ -69,14 +69,15 @@ class NetworkService {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
 
-            // Decode JSON
-            let decoder = JSONDecoder()
-
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                throw NetworkError.decodingError(error)
-            }
+            // Decode JSON in background thread (Optimization Phase 1)
+            return try await Task.detached(priority: .userInitiated) {
+                let decoder = JSONDecoder()
+                do {
+                    return try decoder.decode(T.self, from: data)
+                } catch {
+                    throw NetworkError.decodingError(error)
+                }
+            }.value
 
         } catch let error as NetworkError {
             DebugLog.log("🌐 [NetworkService] GET failed: \(error)")

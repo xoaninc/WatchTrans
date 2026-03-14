@@ -4,7 +4,7 @@
 //
 //  Created by Juan Macias Gomez on 14/1/26.
 //
-//  UPDATED: 2026-01-16 - Now loads ALL data from RenfeServer API (api.watchtrans.app)
+//  UPDATED: 2026-01-16 - Now loads ALL data from WatchTrans API (api.watch-trans.app)
 //  UPDATED: 2026-01-27 - Added API route planner integration
 //  UPDATED: 2026-01-31 - Performance optimization with persistent caching
 //
@@ -126,7 +126,7 @@ class DataService {
     }
 
     private enum CacheVersion {
-        static let stops = 2  // v2: refresh cached stops to include lineas from API
+        static let stops = 3  // v3: refresh for wheelchair_boarding + capitalization fixes
         static let lines = 6  // v6: refresh cached lines (API colors/long names may change)
         static let lineColors = 4  // v4: invalidate old line color cache (API corrections)
     }
@@ -181,9 +181,34 @@ class DataService {
     }
 
     // MARK: - Persistent Cache Methods
+    
+    /// Check if app version changed and clear all caches if needed
+    private func checkAppVersionAndClearCacheIfNeeded() {
+        let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let lastVersion = UserDefaults.standard.string(forKey: "LastAppVersion")
+        
+        if lastVersion != currentVersion {
+            DebugLog.log("🔄 [Cache] App version changed (\(lastVersion ?? "nil") → \(currentVersion)) - clearing all caches")
+            clearAllCaches()
+            UserDefaults.standard.set(currentVersion, forKey: "LastAppVersion")
+        }
+    }
+    
+    /// Clear all persistent caches
+    private func clearAllCaches() {
+        try? FileManager.default.removeItem(at: Self.stopsCacheURL)
+        try? FileManager.default.removeItem(at: Self.linesCacheURL)
+        try? FileManager.default.removeItem(at: Self.lineColorsCacheURL)
+        try? FileManager.default.removeItem(at: Self.platformsCacheURL)
+        try? FileManager.default.removeItem(at: Self.shapeCacheURL)
+        DebugLog.log("🗑️ [Cache] All caches cleared")
+    }
 
     /// Load cached stops, location and line colors from disk on init
     private func loadCachedData() {
+        // Check if app was updated and clear caches if needed
+        checkAppVersionAndClearCacheIfNeeded()
+        
         // Load stops cache
         if let data = try? Data(contentsOf: Self.stopsCacheURL),
            let cached = try? JSONDecoder().decode(StopsCache.self, from: data) {
@@ -196,7 +221,7 @@ class DataService {
                 self.stopsCacheMetadata = cached.metadata
                 DebugLog.log("📦 [Cache] Loaded \(stops.count) stops from cache (age: \(Int(age/60))min)")
             } else {
-                DebugLog.log("📦 [Cache] Stops cache invalid (age: \(Int(age/3600))h, version: \(cacheVersion))")
+                DebugLog.log("📦 [Cache] ⚠️ Stops cache VERSION MISMATCH (found: v\(cacheVersion), need: v\(CacheVersion.stops)) - will reload from API")
             }
         }
 
@@ -528,11 +553,14 @@ class DataService {
                         isHub: response.isHub ?? false,
                         corMetro: response.corMetro,
                         corMl: response.corMl,
-                        corCercanias: response.corCercanias,
+                        corTren: response.corTren,
                         corTranvia: response.corTranvia,
                         corBus: response.corBus,
                         corFunicular: response.corFunicular,
-                        correspondences: response.correspondences
+                        correspondences: response.correspondences,
+                        wheelchairBoarding: response.wheelchairBoarding,
+                        serviceStatus: response.serviceStatus,
+                        suspendedSince: response.suspendedSince
                     )
                 }
                 DebugLog.log("📍 [DataService] ✅ Mapped \(stops.count) stops")
@@ -599,10 +627,13 @@ class DataService {
                 isHub: response.isHub ?? false,
                 corMetro: response.corMetro,
                 corMl: response.corMl,
-                corCercanias: response.corCercanias,
+                corTren: response.corTren,
                 corTranvia: response.corTranvia,
                 corBus: response.corBus,
-                corFunicular: response.corFunicular
+                corFunicular: response.corFunicular,
+                wheelchairBoarding: response.wheelchairBoarding,
+                serviceStatus: response.serviceStatus,
+                suspendedSince: response.suspendedSince
             )
             return stop
         } catch {
@@ -675,8 +706,9 @@ class DataService {
                     accesibilidad: s.accesibilidad, hasParking: s.hasParking,
                     hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
                     isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
-                    corCercanias: s.corCercanias, corTranvia: s.corTranvia,
-                    corBus: s.corBus, corFunicular: s.corFunicular
+                    corTren: s.corTren, corTranvia: s.corTranvia,
+                    corBus: s.corBus, corFunicular: s.corFunicular,
+                    wheelchairBoarding: s.wheelchairBoarding
                 )
             }
             
@@ -740,21 +772,108 @@ class DataService {
                 }
             }
 
-            // Fetch routes by province, which is the correct logic for this app
-            guard let provinceName = currentLocation?.provinceName else {
-                DebugLog.log("⚠️ [DataService] Cannot load lines: province is unknown (currentLocation is nil)")
-                return
+            // NEW: Single API call to get province + ALL routes from ALL networks
+            DebugLog.log("📍 [DataService] Fetching province with routes: (\(latitude), \(longitude))...")
+            let fetchStart = Date()
+            
+            struct ProvinceWithRoutesResponse: Decodable {
+                let provinceName: String
+                let networks: [NetworkInfo]
+                let routes: [RouteResponse]?  // Optional for backwards compatibility
+                
+                enum CodingKeys: String, CodingKey {
+                    case provinceName = "province_name"
+                    case networks
+                    case routes
+                }
+                
+                struct NetworkInfo: Decodable {
+                    let code: String
+                    let name: String
+                }
             }
-            DebugLog.log("📍 [DataService] Fetching all routes for province: \(provinceName)...")
-            let routesStart = Date()
-            let routeResponses = try await gtfsRealtimeService.fetchProvinceRoutes(provinceName: provinceName)
-            let routesTime = Date().timeIntervalSince(routesStart)
-            DebugLog.log("📍 [DataService] ✅ Got \(routeResponses.count) routes in \(String(format: "%.2f", routesTime))s")
+            
+            let provinceData = try await gtfsRealtimeService.fetchProvinceByCoordinates(
+                latitude: latitude,
+                longitude: longitude,
+                includeNetworks: true,
+                includeRoutes: true  // NEW: Get routes in same call
+            )
+            let provinceInfo = try JSONDecoder().decode(ProvinceWithRoutesResponse.self, from: provinceData)
+            DebugLog.log("📍 [DataService] ✅ Province: \(provinceInfo.provinceName), Networks: \(provinceInfo.networks.count)")
+            
+            let allRoutes: [RouteResponse]
+            
+            // If backend returns routes directly, use them (NEW)
+            if let routes = provinceInfo.routes {
+                DebugLog.log("📍 [DataService] ✅ Got \(routes.count) routes from province endpoint")
+                allRoutes = routes
+            } else {
+                // Fallback: Use hybrid approach if endpoint doesn't return routes yet
+                DebugLog.log("📍 [DataService] ⚠️ Routes not in response, using fallback approach...")
+                
+                // Load routes from province
+                let provinceRoutes = try await gtfsRealtimeService.fetchProvinceRoutes(provinceName: provinceInfo.provinceName)
+                DebugLog.log("📍 [DataService] ✅ Got \(provinceRoutes.count) routes from province")
+                
+                var tempRoutes = provinceRoutes
+                
+                // Detect missing networks
+                let provinceNetworkCodes = Set(provinceRoutes.compactMap { route -> String? in
+                    if let match = route.id.range(of: #"_(\d+T)_"#, options: .regularExpression) {
+                        return String(route.id[match]).replacingOccurrences(of: "_", with: "")
+                    }
+                    return nil
+                })
+                
+                let missingNetworks = provinceInfo.networks.filter { !provinceNetworkCodes.contains($0.code) }
+                
+                // Fetch missing networks
+                if !missingNetworks.isEmpty {
+                    DebugLog.log("📍 [DataService] Fetching \(missingNetworks.count) missing networks...")
+                    await withTaskGroup(of: [RouteResponse].self) { group in
+                        for network in missingNetworks {
+                            group.addTask {
+                                do {
+                                    let lines = try await self.gtfsRealtimeService.fetchNetworkLines(networkId: network.code)
+                                    return lines.flatMap { line in
+                                        line.routes.map { route in
+                                            RouteResponse(
+                                                id: route.id,
+                                                shortName: line.lineCode,
+                                                longName: route.longName,
+                                                routeType: 0,
+                                                color: route.color,
+                                                textColor: line.textColor,
+                                                agencyId: route.agencyId ?? "unknown",
+                                                networkId: network.code,
+                                                description: nil,
+                                                isCircular: false
+                                            )
+                                        }
+                                    }
+                                } catch {
+                                    DebugLog.log("⚠️ [DataService] Failed to fetch \(network.code): \(error)")
+                                    return []
+                                }
+                            }
+                        }
+                        
+                        for await routes in group {
+                            tempRoutes.append(contentsOf: routes)
+                        }
+                    }
+                }
+                
+                allRoutes = tempRoutes
+            }
+            
+            let fetchTime = Date().timeIntervalSince(fetchStart)
+            DebugLog.log("📍 [DataService] ✅ Got \(allRoutes.count) total routes in \(String(format: "%.2f", fetchTime))s")
 
             // Process routes
-            // let provinceName is already defined above
             let processStart = Date()
-            await processRoutes(routeResponses, provinceName: provinceName)
+            await processRoutes(allRoutes, provinceName: provinceInfo.provinceName)
             let processTime = Date().timeIntervalSince(processStart)
             DebugLog.log("📍 [DataService] ✅ Processed \(lines.count) lines in \(String(format: "%.2f", processTime))s")
 
@@ -810,6 +929,10 @@ class DataService {
             } else {
                 // Data changed, update lines
                 DebugLog.log("📦 [DataService] Lines changed (\(lines.count) -> \(newLineIds.count)), updating...")
+                guard let provinceName = currentLocation?.provinceName else {
+                    DebugLog.log("⚠️ [DataService] Cannot process routes: province is unknown")
+                    return
+                }
                 await processRoutes(routeResponses, provinceName: provinceName)
                 saveLinesCache(coordinatesHash: coordHash)
                 await updateLocationWithNetworks()
@@ -889,7 +1012,10 @@ class DataService {
                     colorHex: color,
                     nucleo: provinceName,
                     routeIds: [route.id],
-                    isCircular: route.isCircular ?? false
+                    isCircular: route.isCircular ?? false,
+                    serviceStatus: route.serviceStatus,
+                    suspendedSince: route.suspendedSince,
+                    isAlternativeService: route.isAlternativeService
                 )
                 lineDict[lineId] = (
                     line: line,
@@ -901,7 +1027,7 @@ class DataService {
         }
 
         // Create final lines with all collected route IDs
-        lines = lineDict.map { (_, value) in
+        var createdLines = lineDict.map { (_, value) in
             Line(
                 id: value.line.id,
                 name: value.line.name,
@@ -910,16 +1036,55 @@ class DataService {
                 colorHex: value.line.colorHex,
                 nucleo: value.line.nucleo,
                 routeIds: value.routeIds,
-                isCircular: value.isCircular
+                isCircular: value.isCircular,
+                suspensionAlert: nil,  // Will be populated below
+                serviceStatus: value.line.serviceStatus,
+                suspendedSince: value.line.suspendedSince,
+                isAlternativeService: value.line.isAlternativeService
             )
         }
+
+        // Check for suspension alerts for each line
+        await withTaskGroup(of: (Int, String?).self) { group in
+            for (index, line) in createdLines.enumerated() {
+                // Only check first routeId for each line
+                guard let routeId = line.routeIds.first else { continue }
+                
+                group.addTask {
+                    do {
+                        let alerts = try await self.gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
+                        // Find suspension alert by checking fields directly (avoid computed property)
+                        let hasSuspension = alerts.contains { alert in
+                            alert.aiStatus == "FULL_SUSPENSION" || 
+                            alert.aiCategory?.contains("FULL_SUSPENSION") == true ||
+                            (alert.headerText?.lowercased().contains("suspendido") ?? false)
+                        }
+                        return (index, hasSuspension ? "Línea suspendida" : nil)
+                    } catch {
+                        return (index, nil)
+                    }
+                }
+            }
+            
+            for await (index, alertMessage) in group {
+                if let message = alertMessage {
+                    createdLines[index].suspensionAlert = message
+                }
+            }
+        }
+        
+        lines = createdLines
 
         // Debug: Show lines by type
         let byType = Dictionary(grouping: lines, by: { $0.type })
         DebugLog.log("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
         for (type, typeLines) in byType.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
             let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
+            let suspended = typeLines.filter { $0.suspensionAlert != nil }.map { $0.name }
             DebugLog.log("🚃 [ProcessRoutes]   \(type.rawValue): \(typeLines.count) lines (\(names))")
+            if !suspended.isEmpty {
+                DebugLog.log("🚃 [ProcessRoutes]   🚨 Suspended: \(suspended.joined(separator: ", "))")
+            }
         }
     }
 
@@ -1024,7 +1189,10 @@ class DataService {
                         colorHex: line.colorHex,
                         nucleo: line.nucleo,
                         routeIds: line.routeIds,
-                        isCircular: line.isCircular
+                        isCircular: line.isCircular,
+                        serviceStatus: line.serviceStatus,
+                        suspendedSince: line.suspendedSince,
+                        isAlternativeService: line.isAlternativeService
                     )
                     didUpdate = true
                     DebugLog.log("🏷️ [DataService] Improved line name: \(line.name) -> \(derived)")
@@ -1091,15 +1259,15 @@ class DataService {
                     DebugLog.log("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
                     DebugLog.log("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
                     DebugLog.log("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
-                    DebugLog.log("🔗 [BRANCH]   cerc=\(response.corCercanias ?? "nil")")
-                } else if response.corMetro != nil || response.corCercanias != nil || response.corTranvia != nil || response.corMl != nil {
-                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), cerc=\(response.corCercanias ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
+                    DebugLog.log("🔗 [BRANCH]   tren=\(response.corTren ?? "nil")")
+                } else if response.corMetro != nil || response.corTren != nil || response.corTranvia != nil || response.corMl != nil {
+                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), tren=\(response.corTren ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
                 }
                 
                 // ENRICHMENT: If API response lacks connection info, try to find it in our global stops cache
                 var metro = response.corMetro
                 var ml = response.corMl
-                var cerc = response.corCercanias
+                var cerc = response.corTren
                 var tram = response.corTranvia
                 var bus = response.corBus
                 var funicular = response.corFunicular
@@ -1108,7 +1276,7 @@ class DataService {
                     if let cached = self.getStop(by: response.id) {
                         metro = cached.corMetro
                         ml = cached.corMl
-                        cerc = cached.corCercanias
+                        cerc = cached.corTren
                         tram = cached.corTranvia
                         bus = cached.corBus
                         funicular = cached.corFunicular
@@ -1132,11 +1300,14 @@ class DataService {
                     isHub: response.isHub ?? false,
                     corMetro: metro,
                     corMl: ml,
-                    corCercanias: cerc,
+                    corTren: cerc,
                     corTranvia: tram,
                     corBus: bus,
                     corFunicular: funicular,
-                    correspondences: response.correspondences
+                    correspondences: response.correspondences,
+                    wheelchairBoarding: response.wheelchairBoarding,
+                    serviceStatus: response.serviceStatus,
+                    suspendedSince: response.suspendedSince
                 )
             }
         } catch {
@@ -1260,7 +1431,7 @@ class DataService {
         return String(format: "%02d:%02d", hour, min)
     }
 
-    // Fetch arrivals for a specific stop using RenfeServer API
+    // Fetch arrivals for a specific stop using WatchTrans API
     // Falls back to offline cached schedules when there's no network
     func fetchArrivals(for stopId: String) async -> [Arrival] {
         DebugLog.log("🔍 [DataService] Fetching arrivals for stop: \(stopId)")
@@ -1284,9 +1455,9 @@ class DataService {
             }
         }
 
-        // 3. Fetch from RenfeServer API (api.watchtrans.app)
+        // 3. Fetch from WatchTrans API (api.watch-trans.app)
         do {
-            DebugLog.log("📡 [DataService] Cache miss, calling RenfeServer API...")
+            DebugLog.log("📡 [DataService] Cache miss, calling WatchTrans API...")
             var departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
             
             // Fallback: If empty and ID is numeric, try prefixes (Legacy & Future support)
@@ -1310,6 +1481,7 @@ class DataService {
             DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
 
             arrivals = await enrichArrivalsWithPlatforms(arrivals, stopId: stopId)
+            arrivals = await enrichWithPlatformPredictions(arrivals, stopId: stopId)
 
             // 4. Cache results
             cacheArrivals(arrivals, for: stopId)
@@ -1321,7 +1493,7 @@ class DataService {
             return arrivals
         } catch {
             // 6. Handle errors gracefully
-            DebugLog.log("⚠️ [DataService] RenfeServer API Error: \(error)")
+            DebugLog.log("⚠️ [DataService] WatchTrans API Error: \(error)")
 
             // Try offline schedule cache as fallback
             if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
@@ -1415,6 +1587,32 @@ class DataService {
         return platforms
     }
 
+    /// Second-pass enrichment: fill remaining empty platforms using historical predictions
+    private func enrichWithPlatformPredictions(_ arrivals: [Arrival], stopId: String) async -> [Arrival] {
+        guard arrivals.contains(where: { ($0.platform ?? "").isEmpty }) else { return arrivals }
+
+        guard let predictions = try? await gtfsRealtimeService.fetchPlatformPredictions(stopId: stopId) else {
+            return arrivals
+        }
+        guard !predictions.isEmpty else { return arrivals }
+
+        DebugLog.log("🔮 [Platforms] Enriching with \(predictions.count) predictions for \(stopId)")
+
+        return arrivals.map { arrival in
+            guard (arrival.platform ?? "").isEmpty else { return arrival }
+
+            let match = predictions.first { p in
+                let lineMatch = p.routeShortName?.lowercased() == arrival.lineName.lowercased()
+                let headsignMatch = p.headsign == nil ||
+                    arrival.destination.lowercased().contains(p.headsign?.lowercased() ?? "")
+                return lineMatch && headsignMatch
+            }
+
+            guard let match = match else { return arrival }
+            return arrival.withPlatform(match.predictedPlatform, estimated: true)
+        }
+    }
+
     private func normalizeLineCodeForPlatformMatch(_ value: String) -> String {
         var s = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         if s.hasPrefix("LÍNEA ") { s = String(s.dropFirst("LÍNEA ".count)) }
@@ -1464,11 +1662,18 @@ class DataService {
                 delaySeconds: nil,
                 routeColor: dep.routeColor,
                 routeId: dep.routeId,
+                isSuspended: false,  // Offline data doesn't have suspension info
+                wheelchairAccessible: false,  // Offline data doesn't have accessibility info
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: true,  // Mark as offline data
                 occupancyStatus: nil,
-                occupancyPercentage: nil
+                occupancyPercentage: nil,
+                routeTextColor: nil,
+                isSkipped: nil,
+                vehicleLat: nil,
+                vehicleLon: nil,
+                vehicleLabel: nil
             )
         }
     }
@@ -1530,6 +1735,30 @@ class DataService {
         defer { cacheLock.unlock() }
 
         arrivalCache.removeAll()
+    }
+    
+    /// Clear all persistent caches (stops, lines, colors, platforms, shapes)
+    /// Call this from Settings when user wants to force refresh all data
+    func clearAllPersistentCaches() {
+        DebugLog.log("🗑️ [DataService] Clearing all persistent caches...")
+        
+        // Clear file-based caches
+        try? FileManager.default.removeItem(at: Self.stopsCacheURL)
+        try? FileManager.default.removeItem(at: Self.linesCacheURL)
+        try? FileManager.default.removeItem(at: Self.lineColorsCacheURL)
+        try? FileManager.default.removeItem(at: Self.platformsCacheURL)
+        try? FileManager.default.removeItem(at: Self.shapeCacheURL)
+        try? FileManager.default.removeItem(at: Self.locationCacheURL)
+        
+        // Clear in-memory caches
+        cacheLock.lock()
+        arrivalCache.removeAll()
+        platformsCache.removeAll()
+        shapeCache.removeAll()
+        lineColorsCache.removeAll()
+        cacheLock.unlock()
+        
+        DebugLog.log("✅ [DataService] All caches cleared successfully")
     }
 
     // Get stop by ID (robust matching)
@@ -1764,10 +1993,12 @@ class DataService {
                     isHub: response.isHub ?? false,
                     corMetro: response.corMetro,
                     corMl: response.corMl,
-                    corCercanias: response.corCercanias,
+                    corTren: response.corTren,
                     corTranvia: response.corTranvia,
                     corBus: response.corBus,
-                    corFunicular: response.corFunicular
+                    corFunicular: response.corFunicular,
+                    serviceStatus: response.serviceStatus,
+                    suspendedSince: response.suspendedSince
                 )
             }
 
@@ -2265,8 +2496,13 @@ class DataService {
                 return nil
             }
 
-            // Convert all API journeys to Journey models
-            var journeys = apiJourneys.compactMap { convertToJourney(from: $0) }
+            // Convert all API journeys to Journey models (async)
+            var journeys: [Journey] = []
+            for apiJourney in apiJourneys {
+                if let journey = await convertToJourney(from: apiJourney) {
+                    journeys.append(journey)
+                }
+            }
 
             guard !journeys.isEmpty else {
                 DebugLog.log("⚠️ [DataService] Failed to convert any journeys")
@@ -2290,6 +2526,61 @@ class DataService {
         }
     }
 
+    /// Plan journeys across a time range using the range endpoint (rRAPTOR)
+    /// Returns all journey alternatives within the specified time window
+    func planJourneysRange(fromStopId: String, toStopId: String, startTime: String, endTime: String, interval: Int = 15) async -> RoutePlanResult? {
+        DebugLog.log("🗺️ [DataService] Planning range journey: \(fromStopId) → \(toStopId) [\(startTime)-\(endTime)]")
+
+        do {
+            let response = try await gtfsRealtimeService.fetchRoutePlanRange(
+                fromStopId: fromStopId,
+                toStopId: toStopId,
+                startTime: startTime,
+                endTime: endTime,
+                interval: interval
+            )
+
+            guard response.success else {
+                DebugLog.log("⚠️ [DataService] Range route plan failed: \(response.message ?? "unknown error")")
+                return nil
+            }
+
+            let apiJourneys = response.allJourneys
+            guard !apiJourneys.isEmpty else {
+                DebugLog.log("⚠️ [DataService] No journeys returned for range")
+                return nil
+            }
+
+            DebugLog.log("🗺️ [DataService] API returned \(apiJourneys.count) journeys for time range")
+
+            // Convert all API journeys to Journey models (async)
+            var journeys: [Journey] = []
+            for apiJourney in apiJourneys {
+                if let journey = await convertToJourney(from: apiJourney) {
+                    journeys.append(journey)
+                }
+            }
+
+            guard !journeys.isEmpty else {
+                DebugLog.log("⚠️ [DataService] Failed to convert any range journeys")
+                return nil
+            }
+
+            // Enrich transit segments with full shape coordinates
+            journeys = await enrichJourneysWithShapes(journeys, apiJourneys: apiJourneys)
+
+            DebugLog.log("🗺️ [DataService] ✅ Range search found \(journeys.count) route(s)")
+
+            return RoutePlanResult(
+                journeys: journeys,
+                alerts: response.alerts ?? []
+            )
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to plan range journey: \(error)")
+            return nil
+        }
+    }
+
     /// Convenience: Plan journey and return only the best route
     func planJourney(fromStopId: String, toStopId: String) async -> Journey? {
         let result = await planJourneys(fromStopId: fromStopId, toStopId: toStopId)
@@ -2297,7 +2588,7 @@ class DataService {
     }
 
     /// Convert API route plan response to Journey model
-    private func convertToJourney(from apiJourney: RoutePlanJourney) -> Journey? {
+    private func convertToJourney(from apiJourney: RoutePlanJourney) async -> Journey? {
         // API v2: origin/destination are computed from segments
         guard let apiOrigin = apiJourney.origin,
               let apiDestination = apiJourney.destination else {
@@ -2321,8 +2612,9 @@ class DataService {
             longitude: apiDestination.lon
         )
 
-        // Convert segments
-        let segments = apiJourney.segments.map { apiSegment -> JourneySegment in
+        // Convert segments with platform information
+        var segments: [JourneySegment] = []
+        for apiSegment in apiJourney.segments {
             let segmentOrigin = Stop(
                 id: apiSegment.origin.id,
                 name: apiSegment.origin.name,
@@ -2362,8 +2654,30 @@ class DataService {
             dateFormatter.locale = Locale(identifier: "en_US_POSIX")
             let departureTime = apiSegment.departure.flatMap { dateFormatter.date(from: $0) }
             let arrivalTime = apiSegment.arrival.flatMap { dateFormatter.date(from: $0) }
+            
+            // Fetch platform information from departures API for transit segments
+            var platform: String? = nil
+            var platformEstimated: Bool = false
+            
+            if segmentType == .transit, 
+               let lineName = apiSegment.lineName,
+               let departureTime = departureTime {
+                // Fetch arrivals for origin stop
+                let arrivals = await fetchArrivals(for: segmentOrigin.id)
+                
+                // Find matching departure by line name and approximate time (within 2 minutes)
+                let matchingArrival = arrivals.first { arrival in
+                    arrival.lineName == lineName &&
+                    abs(arrival.expectedTime.timeIntervalSince(departureTime)) < 120
+                }
+                
+                if let match = matchingArrival {
+                    platform = match.platform
+                    platformEstimated = match.platformEstimated
+                }
+            }
 
-            return JourneySegment(
+            let segment = JourneySegment(
                 type: segmentType,
                 transportMode: transportMode,
                 lineName: apiSegment.lineName,
@@ -2375,8 +2689,14 @@ class DataService {
                 coordinates: coordinates,
                 suggestedHeading: apiSegment.suggestedHeading,
                 departureTime: departureTime,
-                arrivalTime: arrivalTime
+                arrivalTime: arrivalTime,
+                instructions: apiSegment.instructions,
+                entranceName: apiSegment.entranceName,
+                exitName: apiSegment.exitName,
+                platform: platform,
+                platformEstimated: platformEstimated
             )
+            segments.append(segment)
         }
 
         return Journey(
@@ -2486,7 +2806,12 @@ class DataService {
                             coordinates: segmentCoords,
                             suggestedHeading: segment.suggestedHeading,
                             departureTime: segment.departureTime,
-                            arrivalTime: segment.arrivalTime
+                            arrivalTime: segment.arrivalTime,
+                            instructions: segment.instructions,
+                            entranceName: segment.entranceName,
+                            exitName: segment.exitName,
+                            platform: segment.platform,
+                            platformEstimated: segment.platformEstimated
                         )
                         enrichedSegments.append(enrichedSegment)
                         continue
@@ -2528,7 +2853,12 @@ class DataService {
                             coordinates: walkingCoords,
                             suggestedHeading: segment.suggestedHeading,
                             departureTime: segment.departureTime,
-                            arrivalTime: segment.arrivalTime
+                            arrivalTime: segment.arrivalTime,
+                            instructions: segment.instructions,
+                            entranceName: segment.entranceName,
+                            exitName: segment.exitName,
+                            platform: segment.platform,
+                            platformEstimated: segment.platformEstimated
                         )
                         enrichedSegments.append(enrichedSegment)
                         continue

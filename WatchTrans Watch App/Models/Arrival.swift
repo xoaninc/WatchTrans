@@ -30,9 +30,59 @@ struct Arrival: Identifiable, Codable {
     let routeColor: String?
     let routeId: String?  // Full route ID for API calls (e.g., "RENFE_C3_36")
 
+    // Service status
+    let isSuspended: Bool  // true if line has FULL_SUSPENSION alert
+    let wheelchairAccessible: Bool  // true if trip is wheelchair accessible
+
     // Frequency-based (Metro)
     let frequencyBased: Bool
     let headwayMinutes: Int?
+
+    // Offline mode flag
+    let isOfflineData: Bool
+
+    // Occupancy data (GTFS-RT standard, currently only TMB Metro Barcelona)
+    let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
+    let occupancyPercentage: Int?   // 0-100 percentage
+
+    // Additional fields (API v2)
+    let routeTextColor: String?     // Text color for route badge
+    let isSkipped: Bool?            // true if this stop is skipped by this trip
+    let vehicleLat: Double?         // Direct vehicle latitude (outside train_position)
+    let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
+
+    func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
+        Arrival(
+            id: id,
+            lineId: lineId,
+            lineName: lineName,
+            destination: destination,
+            scheduledTime: scheduledTime,
+            expectedTime: expectedTime,
+            platform: platform,
+            platformEstimated: estimated,
+            trainCurrentStop: trainCurrentStop,
+            trainProgressPercent: trainProgressPercent,
+            trainLatitude: trainLatitude,
+            trainLongitude: trainLongitude,
+            trainStatus: trainStatus,
+            trainEstimated: trainEstimated,
+            delaySeconds: delaySeconds,
+            routeColor: routeColor,
+            routeId: routeId,
+            isSuspended: isSuspended,
+            wheelchairAccessible: wheelchairAccessible,
+            frequencyBased: frequencyBased,
+            headwayMinutes: headwayMinutes,
+            isOfflineData: isOfflineData,
+            occupancyStatus: occupancyStatus,
+            occupancyPercentage: occupancyPercentage,
+            routeTextColor: routeTextColor,
+            isSkipped: isSkipped,
+            vehicleLat: vehicleLat,
+            vehicleLon: vehicleLon
+        )
+    }
 
     // Delay calculation
     var isDelayed: Bool {
@@ -174,6 +224,24 @@ struct Arrival: Identifiable, Codable {
         return lineName.hasPrefix("ML") || lineName.hasPrefix("T")
     }
 
+    // MARK: - Occupancy
+
+    /// Occupancy level for display (green/yellow/red/gray)
+    var occupancyLevel: OccupancyLevel {
+        guard let status = occupancyStatus else { return .unknown }
+        switch status {
+        case 0, 1: return .low        // EMPTY, MANY_SEATS_AVAILABLE
+        case 2, 3: return .medium     // FEW_SEATS_AVAILABLE, STANDING_ROOM_ONLY
+        case 4, 5, 6: return .high    // CRUSHED_STANDING_ROOM_ONLY, FULL, NOT_ACCEPTING_PASSENGERS
+        default: return .unknown      // NO_DATA_AVAILABLE (7), NOT_BOARDABLE (8)
+        }
+    }
+
+    /// Returns true if we have occupancy data to display
+    var hasOccupancyData: Bool {
+        occupancyStatus != nil && occupancyStatus != 7 && occupancyStatus != 8
+    }
+
     /// Check if this is a Cercanías/Rodalies line (C1, C2, R1, R2, etc.)
     /// These are the only lines that show exact times even for > 30 min
     /// Excludes FGC R-lines (R5, R6, R50, R60) which are regional but not Rodalies/Cercanías
@@ -198,5 +266,42 @@ struct Arrival: Identifiable, Codable {
         if lineName.hasPrefix("R") && !lowerLineId.contains("fgc") { return true }
 
         return false
+    }
+}
+
+// MARK: - Occupancy Level
+
+/// Occupancy level for visual display
+enum OccupancyLevel {
+    case low       // Empty or many seats (0-1)
+    case medium    // Few seats or standing (2-3)
+    case high      // Full or crushed (4-6)
+    case unknown   // No data (7-8 or nil)
+
+    var color: String {
+        switch self {
+        case .low: return "green"
+        case .medium: return "yellow"
+        case .high: return "red"
+        case .unknown: return "gray"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .low: return "person"
+        case .medium: return "person.2"
+        case .high: return "person.3"
+        case .unknown: return "questionmark"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .low: return "Poco lleno"
+        case .medium: return "Moderado"
+        case .high: return "Muy lleno"
+        case .unknown: return "Sin datos"
+        }
     }
 }

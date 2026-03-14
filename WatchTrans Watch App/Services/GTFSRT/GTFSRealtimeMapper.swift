@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Juan Macias Gomez on 14/1/26.
-//  Updated on 15/1/26 for RenfeServer API
+//  Updated on 15/1/26 for WatchTrans API
 //
 
 import Foundation
@@ -17,7 +17,7 @@ class GTFSRealtimeMapper {
 
     // MARK: - Map DepartureResponse to Arrival
 
-    /// Map departures from RenfeServer API to Arrival models
+    /// Map departures from WatchTrans API to Arrival models
     /// The API already provides most of the data we need
     func mapToArrivals(departures: [DepartureResponse], stopId: String) -> [Arrival] {
         guard let dataService = dataService else {
@@ -70,7 +70,7 @@ class GTFSRealtimeMapper {
             let arrival = Arrival(
                 id: departure.tripId,
                 lineId: line?.id ?? departure.routeId,
-                lineName: departure.routeShortName,
+                lineName: line?.name ?? departure.routeShortName,  // Use formatted name from Line if available
                 destination: destination,
                 scheduledTime: scheduledTime,
                 expectedTime: expectedTime,
@@ -85,11 +85,17 @@ class GTFSRealtimeMapper {
                 delaySeconds: departure.delaySeconds,
                 routeColor: departure.routeColor,
                 routeId: departure.routeId,
+                isSuspended: departure.isSuspended ?? false,
+                wheelchairAccessible: departure.wheelchairAccessible == "WHEELCHAIR_ACCESSIBLE",
                 frequencyBased: departure.frequencyBased ?? false,
                 headwayMinutes: departure.headwayMinutes,
                 isOfflineData: false,
                 occupancyStatus: departure.occupancyStatus,
-                occupancyPercentage: departure.occupancyPercentage
+                occupancyPercentage: departure.occupancyPercentage,
+                routeTextColor: departure.routeTextColor,
+                isSkipped: departure.isSkipped,
+                vehicleLat: departure.vehicleLat,
+                vehicleLon: departure.vehicleLon
             )
 
             arrivals.append(arrival)

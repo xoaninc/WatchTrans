@@ -77,8 +77,18 @@ struct JourneySegment: Identifiable {
     let intermediateStops: [Stop]   // Stops between origin and destination
     let durationMinutes: Int
     let coordinates: [CLLocationCoordinate2D]  // Shape points or stop coordinates
+    let suggestedHeading: Double?   // Optional: Suggested camera heading for this segment
     let departureTime: Date?        // When this segment departs
     let arrivalTime: Date?          // When this segment arrives
+    
+    // RAPTOR Guidance
+    let instructions: String?       // Specific guidance
+    let entranceName: String?       // Which entrance to use at origin
+    let exitName: String?           // Which exit to use at destination
+    
+    // Platform/Track information
+    let platform: String?           // Platform/track number ("1", "2", "Vía 3", etc.)
+    let platformEstimated: Bool     // true if platform is estimated
 
     /// All stops including origin and destination
     var allStops: [Stop] {
@@ -157,24 +167,24 @@ enum TransportMode: String, CaseIterable {
     /// - Walking: ~4.5 km/h (pedestrian speed)
     var animationSpeed: Double {
         switch self {
-        case .metro: return 2.0        // Fast urban transit
-        case .cercanias: return 2.5    // Faster regional
-        case .metroLigero: return 1.8
-        case .tranvia: return 1.5
-        case .bus: return 1.5
-        case .walking: return 0.3      // Slow for short walks
+        case .metro: return 1.5        // Fast urban transit (reduced from 2.0)
+        case .cercanias: return 1.8    // Faster regional (reduced from 2.5)
+        case .metroLigero: return 1.4
+        case .tranvia: return 1.2
+        case .bus: return 1.2
+        case .walking: return 0.6      // Brisk walk (doubled from 0.3 to fix "stuck" progress bar feeling)
         }
     }
 
     /// Camera altitude for 3D preview (meters)
     var cameraAltitude: Double {
         switch self {
-        case .metro: return 3000       // City overview (was 2000, too close)
-        case .cercanias: return 4500   // Regional view
-        case .metroLigero: return 3000
-        case .tranvia: return 2500     // City view
-        case .bus: return 2500
-        case .walking: return 2000     // Neighborhood view (was 1200, too close)
+        case .metro: return 3600       // City overview (Zoomed out 20%)
+        case .cercanias: return 5400   // Regional view (Zoomed out 20%)
+        case .metroLigero: return 3600 // (Zoomed out 20%)
+        case .tranvia: return 3000     // City view (Zoomed out 20%)
+        case .bus: return 3000         // (Zoomed out 20%)
+        case .walking: return 2000     // Neighborhood view (Unchanged)
         }
     }
 

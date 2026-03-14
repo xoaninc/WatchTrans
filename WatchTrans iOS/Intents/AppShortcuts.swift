@@ -70,8 +70,8 @@ struct StopEntity: AppEntity, Sendable {
 
 /// Provides stop suggestions and search for Siri
 struct StopEntityQuery: EntityQuery, EntityStringQuery {
-    // Base URL for API (local constant to avoid MainActor issues)
-    private static let apiBaseURL = "https://redcercanias.com/api/v1/gtfs"
+    // Use centralized configuration
+    private static var apiBaseURL: String { APIConfiguration.baseURL }
 
     // MARK: - Required methods
 

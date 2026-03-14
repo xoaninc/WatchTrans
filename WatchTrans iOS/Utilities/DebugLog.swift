@@ -7,11 +7,18 @@
 //
 
 import Foundation
+import OSLog
 
 /// Debug logging utility that only prints in DEBUG builds
 /// Usage: DebugLog.log("message") or DebugLog.log("📍 [Service] message")
 /// Note: Methods are nonisolated to allow calling from any actor context
 enum DebugLog {
+    
+    // Pulse automatically captures logs sent to OSLog Logger
+nonisolated static var logger: Logger {
+        Logger(subsystem: "juan.WatchTrans", category: "General")
+    }
+
     /// Set to false to disable all debug logging
     nonisolated(unsafe) static var isEnabled: Bool = {
         #if DEBUG
@@ -25,12 +32,12 @@ enum DebugLog {
     /// nonisolated to allow calling from actors and MainActor contexts
     nonisolated static func log(_ message: String) {
         guard isEnabled else { return }
-        print(message)
+        logger.debug("\(message, privacy: .public)")
     }
 
     /// Log with a specific category prefix
     nonisolated static func log(_ category: String, _ message: String) {
         guard isEnabled else { return }
-        print("[\(category)] \(message)")
+        logger.debug("[\(category, privacy: .public)] \(message, privacy: .public)")
     }
 }

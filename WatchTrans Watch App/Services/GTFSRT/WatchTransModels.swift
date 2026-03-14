@@ -1,9 +1,9 @@
 //
-//  RenfeServerModels.swift
+//  WatchTransModels.swift
 //  WatchTrans Watch App
 //
 //  Created by Claude on 15/1/26.
-//  Codable models for RenfeServer API responses (api.watchtrans.app)
+//  Codable models for WatchTrans API responses (api.watch-trans.app)
 //
 
 import Foundation
@@ -32,9 +32,26 @@ struct DepartureResponse: Codable, Identifiable {
     let isDelayed: Bool
     let trainPosition: TrainPositionResponse?
 
+    // Service status
+    let isSuspended: Bool?         // true if line has FULL_SUSPENSION alert
+    let wheelchairAccessible: String?  // "WHEELCHAIR_ACCESSIBLE", "NOT_WHEELCHAIR_ACCESSIBLE", "NO_VALUE"
+
     // Frequency-based departures (Metro)
     let frequencyBased: Bool?
     let headwaySecs: Int?
+
+    // Occupancy data (GTFS-RT standard)
+    let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
+    let occupancyPercentage: Int?   // 0-100 percentage
+    let occupancyPerCar: [Int]?     // Per-car occupancy percentages
+
+    // Route display
+    let routeTextColor: String?     // Text color for route badge
+    let isSkipped: Bool?            // true if train skips this stop
+
+    // Vehicle position (direct fields)
+    let vehicleLat: Double?         // Vehicle latitude from GTFS-RT
+    let vehicleLon: Double?         // Vehicle longitude from GTFS-RT
 
     var id: String { tripId }
 
@@ -71,8 +88,17 @@ struct DepartureResponse: Codable, Identifiable {
         case realtimeMinutesUntil = "realtime_minutes_until"
         case isDelayed = "is_delayed"
         case trainPosition = "train_position"
+        case isSuspended = "is_suspended"
+        case wheelchairAccessible = "wheelchair_accessible"
         case frequencyBased = "frequency_based"
         case headwaySecs = "headway_secs"
+        case occupancyStatus = "occupancy_status"
+        case occupancyPercentage = "occupancy_percentage"
+        case occupancyPerCar = "occupancy_per_car"
+        case routeTextColor = "route_text_color"
+        case isSkipped = "is_skipped"
+        case vehicleLat = "vehicle_lat"
+        case vehicleLon = "vehicle_lon"
     }
 }
 
@@ -98,6 +124,7 @@ struct TrainPositionResponse: Codable {
 struct NetworkResponse: Codable, Identifiable {
     let code: String
     let name: String
+    let city: String?
     let region: String
     let color: String
     let textColor: String
@@ -111,7 +138,7 @@ struct NetworkResponse: Codable, Identifiable {
     var id: String { code }
 
     enum CodingKeys: String, CodingKey {
-        case code, name, region, color, description
+        case code, name, city, region, color, description
         case textColor = "text_color"
         case logoUrl = "logo_url"
         case wikipediaUrl = "wikipedia_url"
@@ -123,8 +150,10 @@ struct NetworkResponse: Codable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
+        // Be tolerant to API evolution: if a field disappears temporarily, don't fail the whole decode.
         code = (try? container.decode(String.self, forKey: .code)) ?? ""
         name = (try? container.decode(String.self, forKey: .name)) ?? ""
+        city = try? container.decodeIfPresent(String.self, forKey: .city)
         region = (try? container.decode(String.self, forKey: .region)) ?? ""
         color = (try? container.decode(String.self, forKey: .color)) ?? ""
         textColor = (try? container.decode(String.self, forKey: .textColor)) ?? ""
@@ -134,6 +163,39 @@ struct NetworkResponse: Codable, Identifiable {
         nucleoIdRenfe = try? container.decodeIfPresent(Int.self, forKey: .nucleoIdRenfe)
         routeCount = try? container.decodeIfPresent(Int.self, forKey: .routeCount)
         transportType = try? container.decodeIfPresent(String.self, forKey: .transportType)
+    }
+}
+
+// MARK: - Line Response
+
+/// Response from GET /api/gtfs/networks/{code}/lines
+struct LineResponse: Codable {
+    let lineCode: String
+    let color: String
+    let textColor: String
+    let sortOrder: Int?
+    let routeCount: Int?
+    let routes: [LineRouteInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case lineCode = "line_code"
+        case color, routes
+        case textColor = "text_color"
+        case sortOrder = "sort_order"
+        case routeCount = "route_count"
+    }
+}
+
+struct LineRouteInfo: Codable {
+    let id: String
+    let longName: String
+    let color: String?
+    let agencyId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, color
+        case longName = "long_name"
+        case agencyId = "agency_id"
     }
 }
 
@@ -153,11 +215,12 @@ struct RouteResponse: Codable, Identifiable {
     let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
 
     enum CodingKeys: String, CodingKey {
-        case id, color, description
+        case id, description
         case shortName = "short_name"
         case longName = "long_name"
         case routeType = "route_type"
-        case textColor = "text_color"
+        case color = "route_color"
+        case textColor = "route_text_color"
         case agencyId = "agency_id"
         case networkId = "network_id"
         case isCircular = "is_circular"
@@ -174,7 +237,7 @@ struct StopResponse: Codable, Identifiable {
     let lon: Double
     let sequence: Int?
     let code: String?
-    let locationType: Int
+    let locationType: Int?
     let parentStationId: String?
     let zoneId: String?
 
@@ -185,12 +248,17 @@ struct StopResponse: Codable, Identifiable {
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
-    let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
+    let corTren: String?  // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
     let corFunicular: String?  // Funicular connections
-    let correspondences: StopCorrespondences?
+    let correspondences: StopCorrespondences? // Structured correspondences (JSONB)
     let isHub: Bool?           // true if station has 2+ different transport types
+    let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
+
+    // Service status
+    let serviceStatus: String?    // "normal", "suspended", "partial"
+    let suspendedSince: String?   // ISO8601 timestamp when service was suspended
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, sequence, code, province, accesibilidad, lineas, correspondences
@@ -201,10 +269,13 @@ struct StopResponse: Codable, Identifiable {
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
         case corMl = "cor_ml"
-        case corCercanias = "cor_cercanias"
+        case corTren = "cor_tren"
         case corTranvia = "cor_tranvia"
         case corFunicular = "cor_funicular"
         case isHub = "is_hub"
+        case wheelchairBoarding = "wheelchair_boarding"
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
     }
 
     /// Parse lineas string into array of line IDs
@@ -214,10 +285,10 @@ struct StopResponse: Codable, Identifiable {
     }
 }
 
-/// Structured connection data
+/// Structured connection data (from JSONB field)
 struct StopCorrespondences: Codable, Hashable {
     let metro: [String]?
-    let cercanias: [String]?
+    let tren: [String]?
     let ml: [String]?
     let tranvia: [String]?
     let bus: [String]?
@@ -302,6 +373,16 @@ struct AlertResponse: Codable, Identifiable {
     let timestamp: String?
     let updatedAt: String?
 
+    // AI Metadata (from Week 1 update)
+    let aiSummary: String?
+    let aiSeverity: String?
+    let aiCategory: String?
+    let aiStatus: String?  // "FULL_SUSPENSION", "PARTIAL_SUSPENSION", etc.
+    let aiIsVerified: Bool?
+
+    // Service restoration
+    let estimatedRestorationTime: String?  // "14:30" - when service resumes
+
     var id: String { alertId }
 
     enum CodingKeys: String, CodingKey {
@@ -314,16 +395,42 @@ struct AlertResponse: Codable, Identifiable {
         case isActive = "is_active"
         case informedEntities = "informed_entities"
         case updatedAt = "updated_at"
+        case aiSummary = "ai_summary"
+        case aiSeverity = "ai_severity"
+        case aiCategory = "ai_category"
+        case aiStatus = "ai_status"
+        case aiIsVerified = "ai_is_verified"
+        case estimatedRestorationTime = "estimated_restoration_time"
     }
 
     /// Map severity string to SwiftUI color
     var severityColor: Color {
-        switch severity?.lowercased() {
-        case "error", "critical": return .red
-        case "warning": return .orange
-        case "info", "success": return .blue
-        default: return .orange // Default to warning style
+        // Red for full suspensions
+        if aiCategory?.contains("FULL_SUSPENSION") == true || aiStatus == "FULL_SUSPENSION" {
+            return .red
         }
+
+        // Prefer AI severity if available, fallback to GTFS severity
+        let level = (aiSeverity ?? severity)?.lowercased() ?? "warning"
+        switch level {
+        case "error", "critical", "high": return .red
+        case "warning", "medium": return .orange
+        case "info", "success", "low": return .blue
+        default: return .orange
+        }
+    }
+
+    /// Returns true if this is a suspension alert
+    var isSuspension: Bool {
+        aiStatus == "FULL_SUSPENSION" ||
+        aiCategory?.contains("FULL_SUSPENSION") == true ||
+        (headerText?.lowercased().contains("suspendido") ?? false)
+    }
+
+    /// Check if this is a full suspension alert
+    var isFullSuspension: Bool {
+        aiStatus == "FULL_SUSPENSION" ||
+        aiCategory?.contains("FULL_SUSPENSION") == true
     }
 }
 
@@ -535,6 +642,28 @@ struct PlatformInfo: Codable, Identifiable {
     }
 }
 
+// MARK: - Platform Prediction Response
+
+/// Response from GET /api/gtfs-rt/platforms/predictions
+/// Predicted platform based on 30-day historical data
+struct PlatformPredictionResponse: Codable {
+    let stopId: String
+    let routeShortName: String?
+    let headsign: String?
+    let predictedPlatform: String
+    let confidence: Double
+    let sampleSize: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case routeShortName = "route_short_name"
+        case headsign
+        case predictedPlatform = "predicted_platform"
+        case confidence
+        case sampleSize = "sample_size"
+    }
+}
+
 // MARK: - Correspondence Response
 
 /// Response from GET /api/gtfs/stops/{stop_id}/correspondences
@@ -578,6 +707,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
     let distanceM: Int?          // Distance in meters
     let walkTimeS: Int?          // Walk time in seconds
     let source: String?          // "manual", "proximity", etc.
+    let walkingShape: [ShapePoint]?  // Walking route coordinates (only with include_shape=true)
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -588,6 +718,7 @@ struct CorrespondenceInfo: Codable, Identifiable {
         case distanceM = "distance_m"
         case walkTimeS = "walk_time_s"
         case source
+        case walkingShape = "walking_shape"
     }
 
     /// Stable identifier for UI
@@ -606,7 +737,8 @@ struct CorrespondenceInfo: Codable, Identifiable {
             toTransportTypes: self.toTransportTypes,
             distanceM: self.distanceM,
             walkTimeS: self.walkTimeS,
-            source: self.source
+            source: self.source,
+            walkingShape: self.walkingShape
         )
     }
 
@@ -641,15 +773,18 @@ struct CorrespondenceInfo: Codable, Identifiable {
 
 /// Response from GET /api/gtfs/routes/{route_id}/shape
 /// Contains the polyline coordinates for drawing the route on a map
+/// Use ?include_stops=true to get stop coordinates projected onto the shape
 struct RouteShapeResponse: Codable {
     let routeId: String
     let routeShortName: String?
     let shape: [ShapePoint]
+    let stops: [ShapeStop]?  // Only present with ?include_stops=true
 
     enum CodingKeys: String, CodingKey {
         case routeId = "route_id"
         case routeShortName = "route_short_name"
         case shape
+        case stops
     }
 }
 
@@ -662,6 +797,167 @@ struct ShapePoint: Codable {
     enum CodingKeys: String, CodingKey {
         case lat, lon, sequence
     }
+}
+
+/// Stop info with projected coordinates onto the shape
+struct ShapeStop: Codable {
+    let stopId: String
+    let name: String
+    let sequence: Int
+    let onShape: Coordinate      // Coordinates projected onto the line shape (for map markers)
+    let platform: Coordinate?    // Real platform coordinates (for navigation)
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case name
+        case sequence
+        case onShape = "on_shape"
+        case platform
+    }
+}
+
+/// Simple coordinate pair
+struct Coordinate: Codable {
+    let lat: Double
+    let lon: Double
+}
+
+// MARK: - Route Planner Response
+
+/// Response from GET /api/gtfs/route-planner
+/// Contains complete journeys (Pareto-optimal alternatives) with segments, times, and normalized coordinates
+/// API v2 returns journeys[] (plural), alerts[], departure/arrival timestamps
+struct RoutePlanResponse: Codable {
+    let success: Bool
+    let message: String?
+    let journeys: [RoutePlanJourney]?  // Array of Pareto-optimal alternatives (best first)
+    let alerts: [RouteAlert]?          // Service alerts affecting this route
+
+    // Backwards compatibility: also accept singular journey
+    let journey: RoutePlanJourney?
+
+    /// Get all journeys (handles both old and new API format)
+    var allJourneys: [RoutePlanJourney] {
+        if let journeys = journeys, !journeys.isEmpty {
+            return journeys
+        }
+        if let journey = journey {
+            return [journey]
+        }
+        return []
+    }
+
+    /// Best journey (first in array = fastest/optimal)
+    var bestJourney: RoutePlanJourney? {
+        allJourneys.first
+    }
+}
+
+/// Service alert affecting a route
+struct RouteAlert: Codable {
+    let lineId: String?
+    let message: String
+    let severity: String  // "info", "warning", "error"
+
+    enum CodingKeys: String, CodingKey {
+        case lineId = "line_id"
+        case message, severity
+    }
+}
+
+/// Complete journey from origin to destination (API v2 format)
+struct RoutePlanJourney: Codable {
+    let durationMinutes: Int
+    let walkingMinutes: Int
+    let transfers: Int
+    let segments: [RoutePlanSegment]
+    let departure: String?  // ISO8601 timestamp "2026-01-28T08:32:00"
+    let arrival: String?    // ISO8601 timestamp "2026-01-28T09:07:00"
+
+    enum CodingKeys: String, CodingKey {
+        case segments, departure, arrival, transfers
+        case durationMinutes = "duration_minutes"
+        case walkingMinutes = "walking_minutes"
+    }
+
+    // Computed properties for compatibility
+    var totalDurationMinutes: Int { durationMinutes }
+    var totalWalkingMinutes: Int { walkingMinutes }
+    var totalTransitMinutes: Int { durationMinutes - walkingMinutes }
+    var transferCount: Int { transfers }
+
+    /// Origin is first segment's origin
+    var origin: RoutePlanStop? { segments.first?.origin }
+
+    /// Destination is last segment's destination
+    var destination: RoutePlanStop? { segments.last?.destination }
+
+    /// Parsed departure time
+    var departureDate: Date? {
+        guard let departure = departure else { return nil }
+        return ISO8601DateFormatter().date(from: departure)
+    }
+
+    /// Parsed arrival time
+    var arrivalDate: Date? {
+        guard let arrival = arrival else { return nil }
+        return ISO8601DateFormatter().date(from: arrival)
+    }
+}
+
+/// A stop in the route plan
+struct RoutePlanStop: Codable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+}
+
+/// A segment of the journey (transit or walking) - API v2 format
+struct RoutePlanSegment: Codable {
+    let type: String                    // "transit" or "walking"
+    let mode: String?                   // "metro", "cercanias", "walking", etc.
+    let lineId: String?
+    let lineName: String?
+    let lineColor: String?
+    let headsign: String?
+    let origin: RoutePlanStop
+    let destination: RoutePlanStop
+    let intermediateStops: [RoutePlanStop]?
+    let durationMinutes: Int
+    let distanceMeters: Int?
+    let coordinates: [RoutePlanCoordinate]
+    let suggestedHeading: Double?       // API v2: camera heading 0-360 degrees (0=north)
+    let departure: String?              // API v2: segment departure time
+    let arrival: String?                // API v2: segment arrival time
+
+    // RAPTOR Guidance
+    let instructions: String?           // "Walk to platform 2", "Exit via C/Alcala"
+    let entranceName: String?           // "Boca C/Princesa"
+    let exitName: String?               // "Salida Av. America"
+
+    enum CodingKeys: String, CodingKey {
+        case type, mode, origin, destination, coordinates, headsign, departure, arrival
+        case lineId = "line_id"
+        case lineName = "line_name"
+        case lineColor = "line_color"
+        case intermediateStops = "intermediate_stops"
+        case durationMinutes = "duration_minutes"
+        case distanceMeters = "distance_meters"
+        case suggestedHeading = "suggested_heading"
+        case instructions
+        case entranceName = "entrance_name"
+        case exitName = "exit_name"
+    }
+
+    // Compatibility alias
+    var transportMode: String { mode ?? type }
+}
+
+/// A coordinate in the route plan segment
+struct RoutePlanCoordinate: Codable {
+    let lat: Double
+    let lon: Double
 }
 
 // MARK: - Station Accesses Response
@@ -722,7 +1018,7 @@ struct StationAccess: Codable, Identifiable {
         return "\(open) - \(close)"
     }
 
-    /// Check if currently open
+    /// Check if currently open (simplified - doesn't handle overnight)
     var isCurrentlyOpen: Bool {
         guard let open = openingTime, let close = closingTime else { return true }
 
@@ -742,6 +1038,7 @@ struct StationAccess: Codable, Identifiable {
         guard let openTime = calendar.date(from: openComponents),
               let closeTime = calendar.date(from: closeComponents) else { return true }
 
+        // Handle overnight hours (e.g., 06:00 - 01:30)
         if closeTime < openTime {
             return nowTime >= openTime || nowTime <= closeTime
         }
@@ -750,62 +1047,30 @@ struct StationAccess: Codable, Identifiable {
     }
 }
 
-/// Complete journey from origin to destination
-struct RoutePlanJourney: Codable {
-    let origin: RoutePlanStop
-    let destination: RoutePlanStop
-    let totalDurationMinutes: Int
-    let totalWalkingMinutes: Int
-    let totalTransitMinutes: Int
-    let transferCount: Int
-    let segments: [RoutePlanSegment]
+// MARK: - Stop Full Detail Response (Week 3 Optimization)
 
-    enum CodingKeys: String, CodingKey {
-        case origin, destination, segments
-        case totalDurationMinutes = "total_duration_minutes"
-        case totalWalkingMinutes = "total_walking_minutes"
-        case totalTransitMinutes = "total_transit_minutes"
-        case transferCount = "transfer_count"
-    }
-}
-
-/// A stop in the route plan
-struct RoutePlanStop: Codable {
+/// Response from GET /api/gtfs/stops/{stop_id}/full
+/// Contains comprehensive stop info in a single request
+struct StopFullDetailResponse: Codable {
     let id: String
     let name: String
     let lat: Double
     let lon: Double
-}
-
-/// A segment of the journey (transit or walking)
-struct RoutePlanSegment: Codable {
-    let type: String                    // "transit" or "walking"
-    let transportMode: String           // "metro", "cercanias", "walking", etc.
-    let lineId: String?
-    let lineName: String?
-    let lineColor: String?
-    let headsign: String?
-    let origin: RoutePlanStop
-    let destination: RoutePlanStop
-    let intermediateStops: [RoutePlanStop]?
-    let durationMinutes: Int
-    let distanceMeters: Int?
-    let coordinates: [RoutePlanCoordinate]
+    let province: String?
+    let lineas: String?
+    let locationType: Int?
+    let parentStationId: String?
+    let isHub: Bool?
+    let routes: [RouteResponse]?
+    let correspondences: [CorrespondenceInfo]?
+    let platforms: [PlatformInfo]?
+    let accesses: [StationAccess]?
 
     enum CodingKeys: String, CodingKey {
-        case type, origin, destination, coordinates, headsign
-        case transportMode = "transport_mode"
-        case lineId = "line_id"
-        case lineName = "line_name"
-        case lineColor = "line_color"
-        case intermediateStops = "intermediate_stops"
-        case durationMinutes = "duration_minutes"
-        case distanceMeters = "distance_meters"
+        case id, name, lat, lon, province, lineas
+        case locationType = "location_type"
+        case parentStationId = "parent_station_id"
+        case isHub = "is_hub"
+        case routes, correspondences, platforms, accesses
     }
-}
-
-/// A coordinate in the route plan segment
-struct RoutePlanCoordinate: Codable {
-    let lat: Double
-    let lon: Double
 }

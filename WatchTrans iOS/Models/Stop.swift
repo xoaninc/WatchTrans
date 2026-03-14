@@ -15,7 +15,7 @@ struct Stop: Identifiable, Equatable, Hashable {
     let longitude: Double
     let connectionLineIds: [String]   // IDs of other lines at this stop
 
-    // Additional fields from RenfeServer API
+    // Additional fields from API
     let province: String?
     let accesibilidad: String?
     let hasParking: Bool
@@ -26,19 +26,23 @@ struct Stop: Identifiable, Equatable, Hashable {
     // Connection details - Metro, Metro Ligero, Cercanías, and Tram line numbers
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
-    let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
+    let corTren: String?       // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
     let corFunicular: String?  // Funicular connections
     let correspondences: StopCorrespondences?
+    let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
+    let serviceStatus: String?  // "active", "suspended", "partial" etc.
+    let suspendedSince: String? // ISO date string when service was suspended
 
     init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String] = [],
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
-         corMetro: String? = nil, corMl: String? = nil, corCercanias: String? = nil, corTranvia: String? = nil,
+         corMetro: String? = nil, corMl: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
-         correspondences: StopCorrespondences? = nil) {
+         correspondences: StopCorrespondences? = nil, wheelchairBoarding: Int? = nil,
+         serviceStatus: String? = nil, suspendedSince: String? = nil) {
         self.id = id
         self.name = name
         self.latitude = latitude
@@ -52,11 +56,14 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.isHub = isHub
         self.corMetro = corMetro
         self.corMl = corMl
-        self.corCercanias = corCercanias
+        self.corTren = corTren
         self.corTranvia = corTranvia
         self.corBus = corBus
         self.corFunicular = corFunicular
         self.correspondences = correspondences
+        self.wheelchairBoarding = wheelchairBoarding
+        self.serviceStatus = serviceStatus
+        self.suspendedSince = suspendedSince
     }
 
     // Computed property for CLLocation
@@ -125,8 +132,8 @@ struct Stop: Identifiable, Equatable, Hashable {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
-        // Count cercanías lines excluding current
-        let cercaniasLines = corCercanias?
+        // Count train lines (Cercanías, FEVE, etc.) excluding current
+        let cercaniasLines = corTren?
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
@@ -168,10 +175,25 @@ struct Stop: Identifiable, Equatable, Hashable {
 
 extension Stop: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, name, latitude, longitude, connectionLineIds
+        case id, name
+        case latitude = "lat"
+        case longitude = "lon"
+        case connectionLineIds = "line_ids" // or check API response
         case province, accesibilidad
-        case hasParking, hasBusConnection, hasMetroConnection, isHub
-        case corMetro, corMl, corCercanias, corTranvia, corBus, corFunicular, correspondences
+        case hasParking = "has_parking"
+        case hasBusConnection = "has_bus_connection"
+        case hasMetroConnection = "has_metro_connection"
+        case isHub = "is_hub"
+        case corMetro = "cor_metro"
+        case corMl = "cor_ml"
+        case corTren = "cor_tren"
+        case corTranvia = "cor_tranvia"
+        case corBus = "cor_bus"
+        case corFunicular = "cor_funicular"
+        case correspondences
+        case wheelchairBoarding = "wheelchair_boarding"
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
     }
 
     init(from decoder: Decoder) throws {
@@ -189,10 +211,13 @@ extension Stop: Codable {
         isHub = try container.decodeIfPresent(Bool.self, forKey: .isHub) ?? false
         corMetro = try container.decodeIfPresent(String.self, forKey: .corMetro)
         corMl = try container.decodeIfPresent(String.self, forKey: .corMl)
-        corCercanias = try container.decodeIfPresent(String.self, forKey: .corCercanias)
+        corTren = try container.decodeIfPresent(String.self, forKey: .corTren)
         corTranvia = try container.decodeIfPresent(String.self, forKey: .corTranvia)
         corBus = try container.decodeIfPresent(String.self, forKey: .corBus)
         corFunicular = try container.decodeIfPresent(String.self, forKey: .corFunicular)
         correspondences = try container.decodeIfPresent(StopCorrespondences.self, forKey: .correspondences)
+        wheelchairBoarding = try container.decodeIfPresent(Int.self, forKey: .wheelchairBoarding)
+        serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
+        suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
     }
 }

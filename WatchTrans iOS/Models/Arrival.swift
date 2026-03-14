@@ -29,6 +29,10 @@ struct Arrival: Identifiable, Codable {
     // Route info for detail view
     let routeColor: String?
     let routeId: String?  // Full route ID for API calls (e.g., "RENFE_C3_36")
+    
+    // Service status
+    let isSuspended: Bool  // true if line has FULL_SUSPENSION alert
+    let wheelchairAccessible: Bool  // true if trip is wheelchair accessible
 
     // Frequency-based (Metro)
     let frequencyBased: Bool
@@ -40,6 +44,47 @@ struct Arrival: Identifiable, Codable {
     // Occupancy data (GTFS-RT standard, currently only TMB Metro Barcelona)
     let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
     let occupancyPercentage: Int?   // 0-100 percentage
+
+    // Additional fields (API v2)
+    let routeTextColor: String?     // Text color for route badge
+    let isSkipped: Bool?            // true if this stop is skipped by this trip
+    let vehicleLat: Double?         // Direct vehicle latitude (outside train_position)
+    let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
+    let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07" for Metro Sevilla)
+
+    func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
+        Arrival(
+            id: id,
+            lineId: lineId,
+            lineName: lineName,
+            destination: destination,
+            scheduledTime: scheduledTime,
+            expectedTime: expectedTime,
+            platform: platform,
+            platformEstimated: estimated,
+            trainCurrentStop: trainCurrentStop,
+            trainProgressPercent: trainProgressPercent,
+            trainLatitude: trainLatitude,
+            trainLongitude: trainLongitude,
+            trainStatus: trainStatus,
+            trainEstimated: trainEstimated,
+            delaySeconds: delaySeconds,
+            routeColor: routeColor,
+            routeId: routeId,
+            isSuspended: isSuspended,
+            wheelchairAccessible: wheelchairAccessible,
+            frequencyBased: frequencyBased,
+            headwayMinutes: headwayMinutes,
+            isOfflineData: isOfflineData,
+            occupancyStatus: occupancyStatus,
+            occupancyPercentage: occupancyPercentage,
+            routeTextColor: routeTextColor,
+            isSkipped: isSkipped,
+            vehicleLat: vehicleLat,
+            vehicleLon: vehicleLon,
+            vehicleLabel: vehicleLabel
+        )
+    }
 
     // Delay calculation
     var isDelayed: Bool {

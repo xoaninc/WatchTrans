@@ -11,8 +11,12 @@ import Foundation
 /// Admin service for developer-only functions
 /// Token is stored securely in Keychain
 enum AdminService {
-    // Admin endpoint (different from public API)
-    private static let adminURL = "https://juanmacias.com/admin/reload-gtfs"
+    // Admin endpoints (different from public API)
+    // Try in order; some deployments use /admin/reload or /admin/reload-gtfs
+    private static let adminURLs = [
+        "\(APIConfiguration.apiBaseURL)/admin/reload",
+        "\(APIConfiguration.apiBaseURL)/admin/reload-gtfs"
+    ]
 
     // MARK: - Reload GTFS
 
@@ -30,39 +34,47 @@ enum AdminService {
             return .noToken
         }
 
-        guard let url = URL(string: adminURL) else {
-            return .error("Invalid URL")
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "X-Admin-Token")
-        request.timeoutInterval = 30
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return .error("Invalid response")
+        for urlString in adminURLs {
+            guard let url = URL(string: urlString) else {
+                continue
             }
 
-            switch httpResponse.statusCode {
-            case 200:
-                // Try to parse response message
-                if let json = try? JSONDecoder().decode(ReloadResponse.self, from: data) {
-                    return .success(json.message ?? "GTFS reload iniciado")
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue(token, forHTTPHeaderField: "X-Admin-Token")
+            request.timeoutInterval = 30
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    continue
                 }
-                return .success("GTFS reload iniciado")
 
-            case 401:
-                return .unauthorized
+                switch httpResponse.statusCode {
+                case 200:
+                    // Try to parse response message
+                    if let json = try? JSONDecoder().decode(ReloadResponse.self, from: data) {
+                        return .success(json.message ?? "GTFS reload iniciado")
+                    }
+                    return .success("GTFS reload iniciado")
 
-            default:
-                return .error("Error \(httpResponse.statusCode)")
+                case 401:
+                    return .unauthorized
+
+                case 404:
+                    // Try next URL
+                    continue
+
+                default:
+                    return .error("Error \(httpResponse.statusCode)")
+                }
+            } catch {
+                return .error(error.localizedDescription)
             }
-        } catch {
-            return .error(error.localizedDescription)
         }
+
+        return .error("Error 404")
     }
 
     // MARK: - Token Management

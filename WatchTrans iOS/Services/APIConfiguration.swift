@@ -11,13 +11,17 @@ struct APIConfiguration {
     // MARK: - Production URLs
 
     /// Base URL for API host
-    static let apiBaseURL = "https://api.watchtrans.app"
+    static let apiBaseURL = "https://api.watch-trans.app"
 
     /// Base URL for GTFS Static API (routes, stops, trips)
     static let baseURL = "\(apiBaseURL)/api/gtfs"
 
     /// Base URL for GTFS Real-time API (vehicles, alerts, trip updates)
     static let gtfsRTBaseURL = "\(apiBaseURL)/api/gtfs-rt"
+
+    /// Base URL for static assets (logos, network maps)
+    static let logosBaseURL = "\(apiBaseURL)/static/logos/"
+    static let planosBaseURL = "\(apiBaseURL)/static/planos"
     
     // MARK: - Development URLs (uncomment for local testing)
     // static let baseURL = "http://localhost:8000/api/gtfs"
@@ -26,10 +30,10 @@ struct APIConfiguration {
     // MARK: - Timeouts
 
     /// Default request timeout (seconds)
-    static let requestTimeout: TimeInterval = 5
+    static let requestTimeout: TimeInterval = 15
 
     /// Default resource timeout (seconds)
-    static let resourceTimeout: TimeInterval = 10
+    static let resourceTimeout: TimeInterval = 20
 
     // MARK: - Limits
     /// Maximum favorites

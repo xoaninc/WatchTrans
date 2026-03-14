@@ -7,7 +7,6 @@
 
 import Foundation
 import CoreLocation
-import Combine
 
 @Observable
 class LocationService: NSObject, CLLocationManagerDelegate {

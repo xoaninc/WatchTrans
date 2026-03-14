@@ -3,7 +3,7 @@
 //  WatchTrans iOS
 //
 //  Created by Claude on 15/1/26.
-//  Codable models for WatchTrans API responses (api.watchtrans.app)
+//  Codable models for WatchTrans API responses (api.watch-trans.app)
 //
 
 import Foundation
@@ -31,6 +31,10 @@ struct DepartureResponse: Codable, Identifiable {
     let realtimeMinutesUntil: Int?
     let isDelayed: Bool
     let trainPosition: TrainPositionResponse?
+    
+    // Service status
+    let isSuspended: Bool?         // true if line has FULL_SUSPENSION alert
+    let wheelchairAccessible: String?  // "WHEELCHAIR_ACCESSIBLE", "NOT_WHEELCHAIR_ACCESSIBLE", "NO_VALUE"
 
     // Frequency-based departures (Metro)
     let frequencyBased: Bool?
@@ -40,6 +44,13 @@ struct DepartureResponse: Codable, Identifiable {
     let occupancyStatus: Int?       // 0-8 GTFS-RT OccupancyStatus
     let occupancyPercentage: Int?   // 0-100 percentage
     let occupancyPerCar: [Int]?     // Per-car occupancy percentages
+
+    // Additional fields (API v2)
+    let routeTextColor: String?     // Text color for route badge
+    let isSkipped: Bool?            // true if this stop is skipped by this trip
+    let vehicleLat: Double?         // Direct vehicle latitude (outside train_position)
+    let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
+    let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07" for Metro Sevilla)
 
     var id: String { tripId }
 
@@ -76,11 +87,18 @@ struct DepartureResponse: Codable, Identifiable {
         case realtimeMinutesUntil = "realtime_minutes_until"
         case isDelayed = "is_delayed"
         case trainPosition = "train_position"
+        case isSuspended = "is_suspended"
+        case wheelchairAccessible = "wheelchair_accessible"
         case frequencyBased = "frequency_based"
         case headwaySecs = "headway_secs"
         case occupancyStatus = "occupancy_status"
         case occupancyPercentage = "occupancy_percentage"
         case occupancyPerCar = "occupancy_per_car"
+        case routeTextColor = "route_text_color"
+        case isSkipped = "is_skipped"
+        case vehicleLat = "vehicle_lat"
+        case vehicleLon = "vehicle_lon"
+        case vehicleLabel = "vehicle_label"
     }
 }
 
@@ -106,6 +124,7 @@ struct TrainPositionResponse: Codable {
 struct NetworkResponse: Codable, Identifiable {
     let code: String
     let name: String
+    let city: String?
     let region: String
     let color: String
     let textColor: String
@@ -119,7 +138,7 @@ struct NetworkResponse: Codable, Identifiable {
     var id: String { code }
 
     enum CodingKeys: String, CodingKey {
-        case code, name, region, color, description
+        case code, name, city, region, color, description
         case textColor = "text_color"
         case logoUrl = "logo_url"
         case wikipediaUrl = "wikipedia_url"
@@ -134,6 +153,7 @@ struct NetworkResponse: Codable, Identifiable {
         // Be tolerant to API evolution: if a field disappears temporarily, don't fail the whole decode.
         code = (try? container.decode(String.self, forKey: .code)) ?? ""
         name = (try? container.decode(String.self, forKey: .name)) ?? ""
+        city = try? container.decodeIfPresent(String.self, forKey: .city)
         region = (try? container.decode(String.self, forKey: .region)) ?? ""
         color = (try? container.decode(String.self, forKey: .color)) ?? ""
         textColor = (try? container.decode(String.self, forKey: .textColor)) ?? ""
@@ -193,16 +213,23 @@ struct RouteResponse: Codable, Identifiable {
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
     let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
+    var serviceStatus: String? = nil  // "active", "suspended", "partial" etc.
+    var suspendedSince: String? = nil // ISO date string when service was suspended
+    var isAlternativeService: Bool? = nil // true if running an alternative/replacement service
 
     enum CodingKeys: String, CodingKey {
-        case id, color, description
+        case id, description
         case shortName = "short_name"
         case longName = "long_name"
         case routeType = "route_type"
-        case textColor = "text_color"
+        case color = "route_color"
+        case textColor = "route_text_color"
         case agencyId = "agency_id"
         case networkId = "network_id"
         case isCircular = "is_circular"
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
+        case isAlternativeService = "is_alternative_service"
     }
 }
 
@@ -227,12 +254,15 @@ struct StopResponse: Codable, Identifiable {
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
-    let corCercanias: String?  // Cercanías connections: "C1, C10, C2" (for Metro/ML stops)
+    let corTren: String?       // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
     let corFunicular: String?  // Funicular connections
     let correspondences: StopCorrespondences? // NEW: Structured correspondences (JSONB)
     let isHub: Bool?           // true if station has 2+ different transport types
+    let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
+    let serviceStatus: String?  // "active", "suspended", "partial" etc.
+    let suspendedSince: String? // ISO date string when service was suspended
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, sequence, code, province, accesibilidad, lineas, correspondences
@@ -243,10 +273,13 @@ struct StopResponse: Codable, Identifiable {
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
         case corMl = "cor_ml"
-        case corCercanias = "cor_cercanias"
+        case corTren = "cor_tren"
         case corTranvia = "cor_tranvia"
         case corFunicular = "cor_funicular"
         case isHub = "is_hub"
+        case wheelchairBoarding = "wheelchair_boarding"
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
     }
 
     /// Parse lineas string into array of line IDs
@@ -343,6 +376,16 @@ struct AlertResponse: Codable, Identifiable {
     let severity: String? // "info", "warning", "error"
     let timestamp: String?
     let updatedAt: String?
+    
+    // AI Metadata (from Week 1 update)
+    let aiSummary: String?
+    let aiSeverity: String?
+    let aiCategory: String?
+    let aiStatus: String?  // "FULL_SUSPENSION", "PARTIAL_SUSPENSION", etc.
+    let aiIsVerified: Bool?
+    
+    // Service restoration
+    let estimatedRestorationTime: String?  // "14:30" - when service resumes
 
     var id: String { alertId }
 
@@ -356,16 +399,42 @@ struct AlertResponse: Codable, Identifiable {
         case isActive = "is_active"
         case informedEntities = "informed_entities"
         case updatedAt = "updated_at"
+        case aiSummary = "ai_summary"
+        case aiSeverity = "ai_severity"
+        case aiCategory = "ai_category"
+        case aiStatus = "ai_status"
+        case aiIsVerified = "ai_is_verified"
+        case estimatedRestorationTime = "estimated_restoration_time"
     }
 
     /// Map severity string to SwiftUI color
     var severityColor: Color {
-        switch severity?.lowercased() {
-        case "error", "critical": return .red
-        case "warning": return .orange
-        case "info", "success": return .blue
-        default: return .orange // Default to warning style
+        // Red for full suspensions
+        if aiCategory?.contains("FULL_SUSPENSION") == true || aiStatus == "FULL_SUSPENSION" {
+            return .red
         }
+        
+        // Prefer AI severity if available, fallback to GTFS severity
+        let level = (aiSeverity ?? severity)?.lowercased() ?? "warning"
+        switch level {
+        case "error", "critical", "high": return .red
+        case "warning", "medium": return .orange
+        case "info", "success", "low": return .blue
+        default: return .orange
+        }
+    }
+    
+    /// Returns true if this is a suspension alert
+    var isSuspension: Bool {
+        aiStatus == "FULL_SUSPENSION" || 
+        aiCategory?.contains("FULL_SUSPENSION") == true ||
+        (headerText?.lowercased().contains("suspendido") ?? false)
+    }
+    
+    /// Check if this is a full suspension alert
+    var isFullSuspension: Bool {
+        aiStatus == "FULL_SUSPENSION" || 
+        aiCategory?.contains("FULL_SUSPENSION") == true
     }
 }
 
@@ -574,6 +643,72 @@ struct PlatformInfo: Codable, Identifiable {
     /// Parse lines string into array
     var linesList: [String] {
         lines.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+}
+
+// MARK: - Platform Prediction Response
+
+/// Response from GET /api/gtfs-rt/platforms/predictions
+/// Predicted platform based on 30-day historical data
+struct PlatformPredictionResponse: Codable {
+    let stopId: String
+    let routeShortName: String?
+    let headsign: String?
+    let predictedPlatform: String
+    let confidence: Double
+    let sampleSize: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case routeShortName = "route_short_name"
+        case headsign
+        case predictedPlatform = "predicted_platform"
+        case confidence
+        case sampleSize = "sample_size"
+    }
+}
+
+// MARK: - Station Occupancy Response
+
+/// Response from GET /api/gtfs-rt/station-occupancy
+/// Real-time occupancy data for TMB Metro stations (L1-L5, L11)
+struct StationOccupancyResponse: Codable {
+    let stopId: String
+    let stopName: String?
+    let routeId: String?
+    let track: Int?
+    let occupancyPct: Int?
+    let occupancyStatus: Int?
+    let occupancyStatusLabel: String?
+    let updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case stopName = "stop_name"
+        case routeId = "route_id"
+        case track
+        case occupancyPct = "occupancy_pct"
+        case occupancyStatus = "occupancy_status"
+        case occupancyStatusLabel = "occupancy_status_label"
+        case updatedAt = "updated_at"
+    }
+}
+
+// MARK: - Stop Realtime Response
+
+/// Response from GET /api/gtfs-rt/stops/{stop_id}/realtime
+/// Combined departures + alerts in a single request
+struct StopRealtimeResponse: Codable {
+    let stopId: String
+    let stopName: String?
+    let upcomingArrivals: [DepartureResponse]?
+    let alerts: [AlertResponse]?
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case stopName = "stop_name"
+        case upcomingArrivals = "upcoming_arrivals"
+        case alerts
     }
 }
 
@@ -843,6 +978,11 @@ struct RoutePlanSegment: Codable {
     let suggestedHeading: Double?       // API v2: camera heading 0-360 degrees (0=north)
     let departure: String?              // API v2: segment departure time
     let arrival: String?                // API v2: segment arrival time
+    
+    // RAPTOR Guidance
+    let instructions: String?           // "Walk to platform 2", "Exit via C/Alcala"
+    let entranceName: String?           // "Boca C/Princesa"
+    let exitName: String?               // "Salida Av. America"
 
     enum CodingKeys: String, CodingKey {
         case type, mode, origin, destination, coordinates, headsign, departure, arrival
@@ -853,6 +993,9 @@ struct RoutePlanSegment: Codable {
         case durationMinutes = "duration_minutes"
         case distanceMeters = "distance_meters"
         case suggestedHeading = "suggested_heading"
+        case instructions
+        case entranceName = "entrance_name"
+        case exitName = "exit_name"
     }
 
     // Compatibility alias
@@ -949,5 +1092,89 @@ struct StationAccess: Codable, Identifiable {
         }
 
         return nowTime >= openTime && nowTime <= closeTime
+    }
+}
+
+// MARK: - Equipment Status Response
+
+/// Response from GET /api/gtfs-rt/equipment-status/{stop_id}
+/// Real-time status of elevators and escalators (Metro Sevilla)
+struct EquipmentStatusResponse: Codable, Identifiable {
+    let stopId: String?
+    let deviceId: String?
+    let deviceType: String?        // "elevator" or "escalator"
+    let stationName: String?
+    let location: String?          // "Calle", "Andén", "Andén sentido X", etc.
+    let isOperational: Bool?
+    let direction: String?         // "up", "down", "stopped", "disabled"
+    let updatedAt: String?
+
+    var id: String { deviceId ?? UUID().uuidString }
+
+    enum CodingKeys: String, CodingKey {
+        case stopId = "stop_id"
+        case deviceId = "device_id"
+        case deviceType = "device_type"
+        case stationName = "station_name"
+        case location
+        case isOperational = "is_operational"
+        case direction
+        case updatedAt = "updated_at"
+    }
+
+    var isElevator: Bool { deviceType == "elevator" }
+    var isEscalator: Bool { deviceType == "escalator" }
+    var isBroken: Bool { direction == "stopped" || isOperational == false }
+}
+
+// MARK: - Air Quality Data
+
+/// Air quality data from Metro Sevilla vehicle raw_data
+struct TrainAirQuality: Codable {
+    let co2: Int?
+    let humidity: Int?
+    let temperature: Int?
+    let co2Rating: String?          // "Excelente", "Muy Buena", "Buena", "Aceptable", "Baja", "Muy Baja"
+
+    enum CodingKeys: String, CodingKey {
+        case co2, humidity, temperature
+        case co2Rating = "co2_rating"
+    }
+
+    var ratingColor: String {
+        switch co2Rating {
+        case "Excelente", "Muy Buena": return "green"
+        case "Buena", "Aceptable": return "orange"
+        case "Baja", "Muy Baja": return "red"
+        default: return "gray"
+        }
+    }
+}
+
+// MARK: - Stop Full Detail Response (Week 3 Optimization)
+
+/// Response from GET /api/gtfs/stops/{stop_id}/full
+/// Contains comprehensive stop info in a single request
+struct StopFullDetailResponse: Codable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+    let province: String?
+    let lineas: String?
+    let locationType: Int?
+    let parentStationId: String?
+    let isHub: Bool?
+    let routes: [RouteResponse]?
+    let correspondences: [CorrespondenceInfo]?
+    let platforms: [PlatformInfo]?
+    let accesses: [StationAccess]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, lat, lon, province, lineas
+        case locationType = "location_type"
+        case parentStationId = "parent_station_id"
+        case isHub = "is_hub"
+        case routes, correspondences, platforms, accesses
     }
 }
