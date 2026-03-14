@@ -23,7 +23,7 @@ struct EquipmentStatusSection: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header with count
             HStack {
-                Image(systemName: "elevator.fill")
+                Image(systemName: "arrow.up.arrow.down")
                     .foregroundStyle(.primary)
                 Text("Accesos y equipos")
                     .font(.headline)
@@ -70,7 +70,7 @@ private struct EquipmentRow: View {
         HStack(spacing: 8) {
             // Device icon (color matches status, escalator shows direction arrow)
             HStack(spacing: 2) {
-                Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
+                Image(systemName: device.isElevator ? "arrow.up.arrow.down" : "stairs")
                     .font(.subheadline)
                     .foregroundStyle(device.isBroken ? .red : .green)
                 if device.isEscalator, let dir = device.direction, dir == "up" || dir == "down" {
