@@ -27,6 +27,16 @@ struct ArrivalCard: View {
                 Text(arrival.destination)
                     .font(.subheadline)
                     .lineLimit(1)
+
+                if arrival.isDoubleComposition {
+                    Text("2x")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 1)
+                        .background(Color.blue.opacity(0.7))
+                        .cornerRadius(2)
+                }
             }
 
             // Progress bar, time, and platform

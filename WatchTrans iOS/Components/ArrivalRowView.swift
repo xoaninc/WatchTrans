@@ -68,6 +68,18 @@ struct ArrivalRowView: View {
                     Text(arrival.destination)
                         .font(.body)
                         .lineLimit(1)
+
+                    // Double composition badge
+                    if arrival.isDoubleComposition {
+                        Text("2x")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.blue.opacity(0.7))
+                            .cornerRadius(3)
+                    }
                 }
 
                 // Train position (if available)
