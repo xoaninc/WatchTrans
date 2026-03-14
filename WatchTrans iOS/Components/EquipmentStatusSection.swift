@@ -72,10 +72,10 @@ private struct EquipmentRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Device icon
+            // Device icon (color matches status)
             Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(device.isBroken ? .red : .green)
                 .frame(width: 20)
 
             // Full name
