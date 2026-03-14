@@ -599,8 +599,26 @@ struct StopHeaderView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    if stop.hasMetroConnection {
+                    // Transport type of this stop
+                    switch stop.transportType {
+                    case .cercanias:
+                        Label("Tren", systemImage: "tram.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    case .metro:
                         Label("Metro", systemImage: "tram.tunnel.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    case .tram:
+                        Label("Tram", systemImage: "lightrail.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    case .metroLigero:
+                        Label("Metro Ligero", systemImage: "tram.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    case .fgc:
+                        Label("FGC", systemImage: "tram.fill")
                             .font(.caption)
                             .foregroundStyle(.blue)
                     }
