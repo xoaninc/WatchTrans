@@ -61,31 +61,19 @@ struct ArrivalRowView: View {
 
             // Destination and info
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
+                HStack(spacing: 4) {
                     Image(systemName: "arrow.right")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(arrival.destination)
                         .font(.body)
                         .lineLimit(1)
-
-                }
-
-                // Composition indicator (Metro Sevilla)
-                if arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
-                    HStack(spacing: 2) {
-                        Text("🚃")
-                            .font(.caption2)
-                        if arrival.isDoubleComposition {
-                            Text("🚃")
-                                .font(.caption2)
-                        }
-                        Text(arrival.isDoubleComposition ? "Doble" : "Simple")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundStyle(arrival.isDoubleComposition ? .blue : .white)
+                    // Show /Doble inline for Metro Sevilla double composition
+                    if arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
+                        Text("/Doble")
+                            .font(.body)
+                            .foregroundStyle(.blue)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
                 }
 
                 // Train position (if available)

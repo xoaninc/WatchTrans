@@ -41,12 +41,17 @@ struct TrainDetailView: View {
                             )
 
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack {
+                            HStack(spacing: 4) {
                                 Image(systemName: "arrow.right")
                                     .foregroundStyle(.secondary)
                                 Text(arrival.destination)
                                     .font(.title2)
                                     .fontWeight(.semibold)
+                                if arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
+                                    Text(arrival.isDoubleComposition ? "/Doble" : "/Simple")
+                                        .font(.title2)
+                                        .foregroundStyle(.blue)
+                                }
                             }
 
                             if arrival.frequencyBased {
