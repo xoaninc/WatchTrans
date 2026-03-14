@@ -141,20 +141,22 @@ struct ArrivalRowView: View {
                     OccupancyIndicator(level: arrival.occupancyLevel, percentage: arrival.occupancyPercentage)
                 }
 
-                // Platform badge (if available)
+                // Platform badge or direction fallback
                 if let platform = arrival.platform, !platform.isEmpty {
-                    HStack(spacing: 2) {
-                        Text("Vía \(platform)")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
-                            )
-                    }
+                    Text("Vía \(platform)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
+                        )
+                } else if !arrival.destination.isEmpty && arrival.destination != "Unknown" {
+                    Text("Dir. \(arrival.destination)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Delay indicator

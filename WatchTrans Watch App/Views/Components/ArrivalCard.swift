@@ -72,8 +72,7 @@ struct ArrivalCard: View {
                     }
                 }
 
-                // Platform badge (if available)
-                // Color indicates confidence: blue = confirmed, orange = estimated
+                // Platform badge or direction fallback
                 if let platform = arrival.platform, !platform.isEmpty {
                     Text("Vía \(platform)")
                         .font(.caption2)
@@ -85,6 +84,10 @@ struct ArrivalCard: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
                         )
+                } else if !arrival.destination.isEmpty && arrival.destination != "Unknown" {
+                    Text("Dir. \(arrival.destination)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
 
