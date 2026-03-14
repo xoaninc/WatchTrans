@@ -48,6 +48,18 @@ The following networks are currently **Static Only** (No real-time departures):
 
 
 
+### Equipment status Metro Sevilla: datos de ubicación genéricos
+
+**Endpoint:** `GET /api/gtfs-rt/equipment-status/{stop_id}`
+**Status:** ℹ️ Limitación de la fuente de datos (TCE Metro Sevilla).
+
+El campo `location` solo devuelve la planta genérica ("Calle", "Andén", "Entreplanta vestíbulo") pero no incluye:
+- Nombre de la calle del acceso
+- Qué niveles conecta el ascensor (ej. "de andén a vestíbulo")
+- Número de planta o nivel
+
+Es una limitación del feed TCE de Metro Sevilla, no del backend. Si el operador añade más detalle en el futuro, la app lo mostrará automáticamente.
+
 ### Datos de equipos RT solo disponibles para Metro Sevilla
 
 **Endpoint:** `GET /api/gtfs-rt/equipment-status/{stop_id}`

@@ -155,6 +155,10 @@ struct MainTabView: View {
         guard autoRefreshEnabled && isInitialLoadComplete else { return }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
+                // If stuck in offline, re-check connectivity before refreshing
+                if !NetworkMonitor.shared.isConnected {
+                    NetworkMonitor.shared.restart()
+                }
                 dataService.clearArrivalCache()
                 refreshTrigger = UUID()
                 await checkAndUpdateLocation()
