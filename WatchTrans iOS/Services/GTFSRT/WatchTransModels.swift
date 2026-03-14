@@ -431,8 +431,9 @@ struct AlertResponse: Codable, Identifiable {
     
     /// Check if this is a full suspension alert
     var isFullSuspension: Bool {
-        aiStatus == "FULL_SUSPENSION" || 
-        aiCategory?.contains("FULL_SUSPENSION") == true
+        aiStatus == "FULL_SUSPENSION" ||
+        aiCategory?.contains("FULL_SUSPENSION") == true ||
+        effect == "NO_SERVICE"
     }
 }
 
