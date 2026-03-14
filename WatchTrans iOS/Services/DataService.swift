@@ -492,7 +492,7 @@ class DataService {
     // MARK: - Public Methods
 
     /// Initialize data - call this on app launch
-    /// Loads stops from cache or API. Lines are loaded lazily when needed.
+    /// Loads stops from cache or API, then eagerly loads lines for Map and correspondences.
     private var isFetchingStops = false
     private var lastStopsLoadTime: Date?
 
@@ -535,6 +535,8 @@ class DataService {
             await setLocationContextFromStops()
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE (cached) ==========")
             lastStopsLoadTime = Date()
+            // Eagerly load lines so Map and correspondences work without visiting Lines tab
+            await fetchLinesIfNeeded(latitude: lat, longitude: lon)
             return
         }
 
@@ -614,6 +616,9 @@ class DataService {
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
             DebugLog.log("⏱️ [DataService] Total: \(stops.count) stops in \(String(format: "%.2f", totalTime))s")
             lastStopsLoadTime = Date()
+
+            // Eagerly load lines so Map and correspondences work without visiting Lines tab
+            await fetchLinesIfNeeded(latitude: lat, longitude: lon)
 
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to load stops: \(error)")
