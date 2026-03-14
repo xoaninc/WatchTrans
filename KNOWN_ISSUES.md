@@ -24,5 +24,6 @@ El estado de equipos (ascensores/escaleras mecánicas) de Metro Sevilla aparece 
 - La sección de equipos está metida dentro de `StopDetailView` (iOS) de forma ad-hoc para Metro Sevilla
 - Cuando se añadan datos de equipos de Metro Madrid, TMB, etc., la implementación actual no escala — hay que diseñar una sección genérica de "estado de equipos" que funcione para cualquier red
 - Pendiente definir dónde mostrar esto (sección propia en StopDetailView, o card separada)
+- Comparar con cómo lo muestran las apps de Metro de Madrid y Metro de Barcelona para seguir un patrón familiar para el usuario
 
 **Solo iOS** — watchOS no tiene esta funcionalidad implementada.
