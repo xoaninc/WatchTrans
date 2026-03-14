@@ -644,10 +644,6 @@ struct LineStopRowView: View {
                     .font(isTerminal ? .headline : .body)
                     .fontWeight(isTerminal ? .bold : .regular)
 
-                if !alerts.isEmpty {
-                    StopAlertBadge(alerts: alerts, mode: .inline)
-                }
-
                 // Show connection badges (Metro, Cercanías, Tranvía, ML)
                 if hasConnections {
                     HStack(spacing: 4) {
@@ -681,6 +677,10 @@ struct LineStopRowView: View {
                             }
                         }
                     }
+                }
+
+                if !alerts.isEmpty {
+                    StopAlertBadge(alerts: alerts, mode: .inline)
                 }
             }
 
