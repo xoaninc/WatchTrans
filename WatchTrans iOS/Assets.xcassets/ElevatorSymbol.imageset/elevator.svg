@@ -1,7 +1,43 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <rect x="3" y="1" width="18" height="22" rx="3" fill="none" stroke="black" stroke-width="1.5"/>
-  <line x1="12" y1="3" x2="12" y2="21" stroke="black" stroke-width="1"/>
-  <path d="M7 10 L12 5 L17 10" fill="none" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7 14 L12 19 L17 14" fill="none" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="577.78485" height="578.97675" version="1.0">
+  <defs>
+    <path id="a" stroke-width="1.60000002" d="M208.53936 113.37186a22.326078 26.754066 0 1 1-34.03915 29.5347"/>
+    <path id="b" stroke-width="1.60000002" d="M216.23704 120.80847a24.01902 27.39011 0 1 1-42.16141 3.32709"/>
+    <path id="c" stroke-width="1.60000002" d="M173.4785 125.77371a24.01902 27.39011 0 0 1 42.99241-4.53536"/>
+    <path id="d" stroke-width="1.60000002" d="M218.87387 143.61918a24.01902 27.39011 0 1 1-35.0891-31.7775"/>
+  </defs>
+  <g transform="translate(-71.511642 -217.15952)">
+    <rect width="299.18427" height="297.49875" x="209.20844" y="441.14871" rx="36.481171" ry="36.481171"/>
+    <rect width="216.17117" height="214.90701" x="251.34706" y="482.86597" fill="#fff" ry="0"/>
+    <g stroke="#000" stroke-linecap="square" stroke-linejoin="round">
+      <use xlink:href="#a" stroke-width="1.60000002" transform="matrix(.7846 0 0 .66195 188.9583 244.23362)"/>
+      <use xlink:href="#b" stroke-width="1.60000002" transform="matrix(.83273 0 0 .68409 124.34249 315.60749)"/>
+      <use xlink:href="#c" stroke-width="1.60000002" transform="matrix(.68812 0 0 .55728 152.46715 190.5677)"/>
+      <rect width="99.277641" height="34.652412" x="-114.34281" y="374.90018" stroke-width="1.59614193" ry="8.317997" transform="matrix(.6374 -.77054 .76744 .64112 0 0)"/>
+      <rect width="102.2452" height="34.815559" x="-483.82874" y="31.089006" stroke-width="1.59614193" ry="9.8207321" transform="matrix(-.64195 -.76674 .76984 -.63823 0 0)"/>
+      <use xlink:href="#d" stroke-width="1.60000002" transform="matrix(.72905 0 0 .66277 90.146547 244.19724)"/>
+      <rect width="125.00758" height="39.519062" x="-413.78915" y="268.87262" stroke-width="1.9489578" ry="9.4316044" transform="matrix(.00315 -1 .99995 .00985 0 0)"/>
+    </g>
+    <g stroke="#000200" stroke-linecap="square" stroke-linejoin="round" transform="rotate(-179.83 362.69660675 338.41298287)">
+      <use xlink:href="#a" stroke-width="1.60000002" transform="matrix(.7846 0 0 .66195 188.9583 244.23362)"/>
+      <use xlink:href="#b" stroke-width="1.60000002" transform="matrix(.83273 0 0 .68409 124.34249 315.60749)"/>
+      <use xlink:href="#c" stroke-width="1.60000002" transform="matrix(.68812 0 0 .55728 152.46715 190.5677)"/>
+      <rect width="99.277641" height="34.652412" x="-114.34281" y="374.90018" stroke-width="1.59614193" ry="8.317997" transform="matrix(.6374 -.77054 .76744 .64112 0 0)"/>
+      <rect width="102.2452" height="34.815559" x="-483.82874" y="31.089006" stroke-width="1.59614193" ry="9.8207321" transform="matrix(-.64195 -.76674 .76984 -.63823 0 0)"/>
+      <use xlink:href="#d" stroke-width="1.60000002" transform="matrix(.72905 0 0 .66277 90.146547 244.19724)"/>
+      <rect width="125.00758" height="39.519062" x="-413.78915" y="268.87262" stroke-width="1.9489578" ry="9.4316044" transform="matrix(.00315 -1 .99995 .00985 0 0)"/>
+    </g>
+    <path d="M290.0646778 511.85263462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
+    <rect width="62.78656" height="69.950119" x="265.45734" y="542.35376" ry="8.4277267"/>
+    <rect width="18.119612" height="89.755287" x="277.25613" y="601.34778" ry="9.0598059"/>
+    <rect width="18.119612" height="89.755287" x="298.42447" y="601.5332" ry="9.0598059"/>
+    <path d="M356.1110048 511.82735462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
+    <rect width="62.78656" height="69.950119" x="331.71396" y="542.32843" ry="8.4277267"/>
+    <rect width="18.119612" height="89.755287" x="343.0914" y="601.5332" ry="9.0598059"/>
+    <rect width="18.119612" height="89.755287" x="364.16074" y="601.5332" ry="9.0598059"/>
+    <path d="M422.2686548 511.82735462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
+    <rect width="62.78656" height="69.950119" x="397.45023" y="542.32843" ry="8.4277267"/>
+    <rect width="18.119612" height="89.755287" x="409.24908" y="601.11182" ry="9.0598059"/>
+    <rect width="18.119612" height="89.755287" x="430.31836" y="601.5332" ry="9.0598059"/>
+  </g>
 </svg>
