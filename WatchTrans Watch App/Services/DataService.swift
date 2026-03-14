@@ -1066,13 +1066,22 @@ class DataService {
                 group.addTask {
                     do {
                         let alerts = try await self.gtfsRealtimeService.fetchAlertsForRoute(routeId: routeId)
-                        // Find suspension alert by checking fields directly (avoid computed property)
-                        let hasSuspension = alerts.contains { alert in
-                            alert.aiStatus == "FULL_SUSPENSION" || 
-                            alert.aiCategory?.contains("FULL_SUSPENSION") == true ||
-                            (alert.headerText?.lowercased().contains("suspendido") ?? false)
+                        // Find the most severe disruption alert
+                        for alert in alerts {
+                            if alert.isFullSuspension {
+                                return (index, "Servicio interrumpido")
+                            }
                         }
-                        return (index, hasSuspension ? "Línea suspendida" : nil)
+                        for alert in alerts {
+                            switch alert.effect {
+                            case "REDUCED_SERVICE": return (index, "Servicio reducido")
+                            case "MODIFIED_SERVICE": return (index, "Servicio modificado")
+                            case "SIGNIFICANT_DELAYS": return (index, "Retrasos significativos")
+                            case "DETOUR": return (index, "Desvío de ruta")
+                            default: continue
+                            }
+                        }
+                        return (index, nil)
                     } catch {
                         return (index, nil)
                     }

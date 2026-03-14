@@ -72,6 +72,22 @@ struct LineDetailView: View {
                 // Line header
                 LineHeaderView(line: line, stopsCount: stops.count, isLoading: isLoading)
 
+                // Service disruption banner (below header, same style as per-stop alerts)
+                if let alert = line.suspensionAlert {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(alert == "Servicio interrumpido" ? .red : .orange)
+                        Text(alert)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(alert == "Servicio interrumpido" ? .red : .orange)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background((alert == "Servicio interrumpido" ? Color.red : Color.orange).opacity(0.1))
+                    .cornerRadius(10)
+                }
+
                 // Special line description (hardcoded for specific lines)
                 if let description = specialLineDescription {
                     HStack {

@@ -397,30 +397,23 @@ struct LineRowView: View {
                     Text(line.type.rawValue.capitalized)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    // Service disruption label below long name
+                    if let alert = line.suspensionAlert {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                            Text(alert)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundStyle(alert == "Servicio interrumpido" ? .red : .orange)
+                    }
                 }
 
                 Spacer()
             }
             .padding(.vertical, 4)
-            
-            // Suspension alert banner (red background)
-            if let alert = line.suspensionAlert {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                    Text(alert)
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.red)
-                .cornerRadius(6)
-                .padding(.top, 4)
-            }
         }
     }
 }
