@@ -686,7 +686,7 @@ struct AlertsSectionView: View {
                                 Text("Reanudación: \(restoreTime)")
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(alert.isFullSuspension ? .red : .orange)
+                                    .foregroundStyle(alert.severityColor)
                             }
                         }
                     }
@@ -722,7 +722,7 @@ struct AlertsSectionView: View {
                                     .font(.caption)
                                     .fontWeight(.semibold)
                             }
-                            .foregroundStyle(alert.isFullSuspension ? .red : .orange)
+                            .foregroundStyle(alert.severityColor)
                             .padding(.top, 2)
                         }
                     }
