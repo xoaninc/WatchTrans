@@ -331,7 +331,15 @@ struct AlertsSummaryView: View {
     
     // Determine color based on whether any alert is a suspension
     private var sectionColor: Color {
-        alerts.contains { $0.isFullSuspension } ? .red : .orange
+        alerts.contains { $0.isSuspension } ? .red : .orange
+    }
+
+    /// Alerts sorted with suspensions first
+    private var sortedAlerts: [AlertResponse] {
+        alerts.sorted { a, b in
+            if a.isSuspension != b.isSuspension { return a.isSuspension }
+            return false
+        }
     }
 
     var body: some View {
@@ -359,7 +367,7 @@ struct AlertsSummaryView: View {
 
             // Preview: show first 2 alerts (collapsed)
             if !isExpanded {
-                ForEach(alerts.prefix(2)) { alert in
+                ForEach(sortedAlerts.prefix(2)) { alert in
                     AlertBannerCompactView(alert: alert)
                 }
                 if alerts.count > 2 {
@@ -371,7 +379,7 @@ struct AlertsSummaryView: View {
 
             // Expanded: show all alerts
             if isExpanded {
-                ForEach(alerts) { alert in
+                ForEach(sortedAlerts) { alert in
                     AlertBannerView(alert: alert)
                 }
             }

@@ -665,11 +665,19 @@ struct AlertsSectionView: View {
     let alerts: [AlertResponse]
     @Binding var isExpanded: Bool
     
+    /// Alerts sorted with suspensions first
+    private var sortedAlerts: [AlertResponse] {
+        alerts.sorted { a, b in
+            if a.isSuspension != b.isSuspension { return a.isSuspension }
+            return false
+        }
+    }
+
     /// Check if any alert is a full suspension
     private var hasFullSuspension: Bool {
         alerts.contains { $0.isFullSuspension }
     }
-    
+
     /// Primary color for the alerts section
     private var primaryColor: Color {
         hasFullSuspension ? .red : .orange
@@ -701,7 +709,7 @@ struct AlertsSectionView: View {
 
             // Preview: show first 2 alerts (collapsed)
             if !isExpanded {
-                ForEach(alerts.prefix(2)) { alert in
+                ForEach(sortedAlerts.prefix(2)) { alert in
                     HStack(alignment: .top, spacing: 8) {
                         Circle()
                             .fill(alert.severityColor)
@@ -741,7 +749,7 @@ struct AlertsSectionView: View {
 
             // Expanded: show all alerts
             if isExpanded {
-                ForEach(alerts) { alert in
+                ForEach(sortedAlerts) { alert in
                     VStack(alignment: .leading, spacing: 4) {
                         if let header = alert.headerText, !header.isEmpty {
                             Text(header)

@@ -406,8 +406,8 @@ struct AlertResponse: Codable, Identifiable {
 
     /// Map severity string to SwiftUI color
     var severityColor: Color {
-        // Red for full suspensions
-        if aiCategory?.contains("FULL_SUSPENSION") == true || aiStatus == "FULL_SUSPENSION" {
+        // Red for any suspension (full or partial)
+        if isSuspension || effect == "NO_SERVICE" {
             return .red
         }
 
