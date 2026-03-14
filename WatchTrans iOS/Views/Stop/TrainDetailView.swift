@@ -444,6 +444,13 @@ struct TrainDetailView: View {
         if tripDetail == nil, let routeId = arrival.routeId {
             let routeStops = await dataService.fetchStopsForRoute(routeId: routeId)
             if !routeStops.isEmpty {
+                // If headsign matches first stop, the route is in reverse direction — flip it
+                let destination = arrival.destination.lowercased()
+                let firstStopName = routeStops.first?.name.lowercased() ?? ""
+                let orderedStops = firstStopName.contains(destination) || destination.contains(firstStopName)
+                    ? routeStops.reversed() as [Stop]
+                    : routeStops
+
                 tripDetail = TripDetailResponse(
                     id: arrival.id,
                     routeId: routeId,
@@ -452,7 +459,7 @@ struct TrainDetailView: View {
                     routeColor: arrival.routeColor,
                     headsign: arrival.destination,
                     directionId: nil,
-                    stops: routeStops.enumerated().map { index, stop in
+                    stops: orderedStops.enumerated().map { index, stop in
                         TripStopResponse(
                             stopId: stop.id,
                             stopName: stop.name,
