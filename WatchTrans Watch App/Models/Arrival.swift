@@ -52,6 +52,8 @@ struct Arrival: Identifiable, Codable {
     let isSkipped: Bool?            // true if this stop is skipped by this trip
     let vehicleLat: Double?         // Direct vehicle latitude (outside train_position)
     let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
+    var vehicleLabel: String? = nil
+    var isDoubleComposition: Bool = false
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
@@ -84,7 +86,9 @@ struct Arrival: Identifiable, Codable {
             routeTextColor: routeTextColor,
             isSkipped: isSkipped,
             vehicleLat: vehicleLat,
-            vehicleLon: vehicleLon
+            vehicleLon: vehicleLon,
+            vehicleLabel: vehicleLabel,
+            isDoubleComposition: isDoubleComposition
         )
     }
 

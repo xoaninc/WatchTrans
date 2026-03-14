@@ -52,6 +52,7 @@ struct DepartureResponse: Codable, Identifiable {
     // Vehicle position (direct fields)
     let vehicleLat: Double?         // Vehicle latitude from GTFS-RT
     let vehicleLon: Double?         // Vehicle longitude from GTFS-RT
+    let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07", or "108,119" for double)
 
     var id: String { tripId }
 
@@ -99,6 +100,7 @@ struct DepartureResponse: Codable, Identifiable {
         case isSkipped = "is_skipped"
         case vehicleLat = "vehicle_lat"
         case vehicleLon = "vehicle_lon"
+        case vehicleLabel = "vehicle_label"
     }
 }
 

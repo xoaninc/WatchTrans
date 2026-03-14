@@ -53,6 +53,7 @@ struct Arrival: Identifiable, Codable {
     let vehicleLat: Double?         // Direct vehicle latitude (outside train_position)
     let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
     let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07" for Metro Sevilla)
+    var isDoubleComposition: Bool = false
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
@@ -86,7 +87,8 @@ struct Arrival: Identifiable, Codable {
             isSkipped: isSkipped,
             vehicleLat: vehicleLat,
             vehicleLon: vehicleLon,
-            vehicleLabel: vehicleLabel
+            vehicleLabel: vehicleLabel,
+            isDoubleComposition: isDoubleComposition
         )
     }
 

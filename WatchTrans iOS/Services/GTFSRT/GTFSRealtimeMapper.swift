@@ -38,13 +38,22 @@ class GTFSRealtimeMapper {
             let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
             guard effectiveMinutes >= 0 else { continue }
 
-            DebugLog.log("🚂 [Mapper] \(departure.routeShortName) - headsign from API: \"\(departure.headsign ?? "nil")\" (trip: \(departure.tripId))")
+            // Extract and clean headsign (strip /T.DOBLE suffix from Metro Sevilla double compositions)
+            let rawHeadsign = departure.headsign ?? ""
+            let isDoubleComposition = departure.vehicleLabel?.contains(",") == true
+                || rawHeadsign.uppercased().contains("/T.DOBLE")
+            let cleanHeadsign = rawHeadsign
+                .replacingOccurrences(of: "/T.DOBLE", with: "", options: .caseInsensitive)
+                .replacingOccurrences(of: "/T. DOBLE", with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: .whitespaces)
 
-            // Skip terminus trains (where headsign = current stop)
-            if let headsign = departure.headsign,
+            DebugLog.log("🚂 [Mapper] \(departure.routeShortName) - headsign: \"\(rawHeadsign)\" -> \"\(cleanHeadsign)\" (double: \(isDoubleComposition), trip: \(departure.tripId))")
+
+            // Skip terminus trains (where cleaned headsign = current stop)
+            if !cleanHeadsign.isEmpty,
                let stopName = currentStopName,
-               headsign.localizedCaseInsensitiveCompare(stopName) == .orderedSame {
-                DebugLog.log("⏭️ [Mapper] Skipping terminus train: \(departure.routeShortName) -> \(headsign)")
+               cleanHeadsign.localizedCaseInsensitiveCompare(stopName) == .orderedSame {
+                DebugLog.log("⏭️ [Mapper] Skipping terminus train: \(departure.routeShortName) -> \(cleanHeadsign)")
                 continue
             }
 
@@ -60,10 +69,9 @@ class GTFSRealtimeMapper {
             let expectedTime = now.addingTimeInterval(TimeInterval(effectiveMinutes * 60))
             let scheduledTime = now.addingTimeInterval(TimeInterval(departure.minutesUntil * 60))
 
-            // Use headsign as destination
-            let destination = departure.headsign ?? "Unknown"
+            let destination = cleanHeadsign.isEmpty ? "Unknown" : cleanHeadsign
 
-            if departure.headsign == nil {
+            if cleanHeadsign.isEmpty && rawHeadsign.isEmpty {
                 DebugLog.log("⚠️ [Mapper] headsign was nil, using fallback: \"\(destination)\"")
             }
 
@@ -98,7 +106,8 @@ class GTFSRealtimeMapper {
                 isSkipped: departure.isSkipped,
                 vehicleLat: departure.vehicleLat,
                 vehicleLon: departure.vehicleLon,
-                vehicleLabel: departure.vehicleLabel
+                vehicleLabel: departure.vehicleLabel,
+                isDoubleComposition: isDoubleComposition
             )
 
             arrivals.append(arrival)
