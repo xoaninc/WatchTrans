@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct SearchView: View {
     let dataService: DataService
@@ -13,7 +14,7 @@ struct SearchView: View {
     let favoritesManager: FavoritesManager?
 
     @State private var searchText = ""
-    @State private var searchResults: [Stop] = []
+    @State private var searchResults: [StopDisplay] = []
     @State private var recentStopIds: [String] = []
     @State private var isSearching = false
 
@@ -42,15 +43,15 @@ struct SearchView: View {
                             .listRowBackground(Color.clear)
                     } else {
                         Section("Resultados") {
-                            ForEach(searchResults) { stop in
+                            ForEach(searchResults) { display in
                                 NavigationLink(destination: StopDetailViewWithTracking(
-                                    stop: stop,
+                                    display: display,
                                     dataService: dataService,
                                     locationService: locationService,
                                     favoritesManager: favoritesManager,
-                                    onViewedLongEnough: { addRecentStop(stop.id) }
+                                    onViewedLongEnough: { addRecentStop(display.recentKey) }
                                 )) {
-                                    SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
+                                    SearchResultRow(display: display, locationService: locationService, dataService: dataService)
                                 }
                             }
                         }
@@ -59,19 +60,19 @@ struct SearchView: View {
                     // Recent stops (viewed > 5 seconds)
                     if !recentStops.isEmpty {
                         Section("Paradas recientes") {
-                            ForEach(recentStops) { stop in
+                            ForEach(recentStops) { display in
                                 NavigationLink(destination: StopDetailViewWithTracking(
-                                    stop: stop,
+                                    display: display,
                                     dataService: dataService,
                                     locationService: locationService,
                                     favoritesManager: favoritesManager,
-                                    onViewedLongEnough: { addRecentStop(stop.id) }
+                                    onViewedLongEnough: { addRecentStop(display.recentKey) }
                                 )) {
-                                    SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
+                                    SearchResultRow(display: display, locationService: locationService, dataService: dataService)
                                 }
                             }
                             .onDelete { indexSet in
-                                let idsToRemove = indexSet.map { recentStops[$0].id }
+                                let idsToRemove = indexSet.map { recentStops[$0].recentKey }
                                 recentStopIds.removeAll { idsToRemove.contains($0) }
                                 saveRecentStops()
                             }
@@ -80,15 +81,15 @@ struct SearchView: View {
 
                     // Popular stops (when no search)
                     Section("Estaciones principales") {
-                        ForEach(popularStops) { stop in
+                        ForEach(popularStops) { display in
                             NavigationLink(destination: StopDetailViewWithTracking(
-                                stop: stop,
+                                display: display,
                                 dataService: dataService,
                                 locationService: locationService,
                                 favoritesManager: favoritesManager,
-                                onViewedLongEnough: { addRecentStop(stop.id) }
+                                onViewedLongEnough: { addRecentStop(display.recentKey) }
                             )) {
-                                SearchResultRow(stop: stop, locationService: locationService, dataService: dataService)
+                                SearchResultRow(display: display, locationService: locationService, dataService: dataService)
                             }
                         }
                     }
@@ -99,7 +100,7 @@ struct SearchView: View {
                 // Debounced search
                 searchTask?.cancel()
                 searchTask = Task {
-                    try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+                    try? await Task.sleep(nanoseconds: 150_000_000) // 150ms debounce (faster)
                     if !Task.isCancelled && !newValue.isEmpty {
                         await performSearch(query: newValue)
                     }
@@ -109,55 +110,51 @@ struct SearchView: View {
         }
         .onAppear {
             loadRecentStops()
+            if let location = locationService.currentLocation {
+                Task {
+                    await dataService.fetchLinesIfNeeded(
+                        latitude: location.coordinate.latitude,
+                        longitude: location.coordinate.longitude
+                    )
+                }
+            }
         }
     }
 
     // MARK: - Transport Type Filter
 
-    /// Extract network type from stop ID
-    private func networkType(for stop: Stop) -> String {
-        if let underscore = stop.id.firstIndex(of: "_") {
-            return String(stop.id.prefix(upTo: underscore))
-        }
-        return "OTHER"
-    }
-
-    /// Check if stop matches any of the enabled transport types
-    private func stopMatchesEnabledTypes(_ stop: Stop, enabledTypes: Set<TransportType>) -> Bool {
+    /// Check if display matches enabled transport types
+    private func displayMatchesEnabledTypes(_ display: StopDisplay, enabledTypes: Set<TransportType>) -> Bool {
         if enabledTypes.isEmpty { return true }
-
-        let network = networkType(for: stop).uppercased()
-
-        for type in enabledTypes {
-            switch type {
-            case .metro:
-                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) { return true }
-            case .metroLigero:
-                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
-            case .cercanias:
-                if network == "RENFE" || (stop.corCercanias != nil && !stop.corCercanias!.isEmpty) { return true }
-            case .tram:
-                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
-            case .fgc:
-                if network == "FGC" { return true }
-            }
-        }
-        return false
+        return enabledTypes.contains(display.transportType)
     }
 
     // MARK: - Popular Stops
 
-    private var popularStops: [Stop] {
+    private var popularStops: [StopDisplay] {
         let enabledTypes = DataService.getEnabledTransportTypes()
-        let filtered = dataService.stops.filter { stopMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
-        return Array(filtered.sorted { $0.name < $1.name }.prefix(10))
+        let filteredStops = dataService.stops
+
+        // Prefer hub stops from server (isHub flag)
+        let hubStops = filteredStops.filter { $0.isHub }
+        let baseStops = hubStops.isEmpty ? filteredStops : hubStops
+
+        let sortedStops: [Stop]
+        if let location = locationService.currentLocation {
+            sortedStops = baseStops.sorted { $0.distance(from: location) < $1.distance(from: location) }
+        } else {
+            sortedStops = baseStops.sorted { $0.name < $1.name }
+        }
+
+        let displays = sortedStops.prefix(10).flatMap { dataService.makeStopDisplays(for: $0) }
+        return displays.filter { displayMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
     }
 
     // MARK: - Search
 
     @MainActor
     private func performSearch(query: String) async {
-        guard query.count >= 2 else {
+        guard query.count >= 1 else {
             searchResults = []
             return
         }
@@ -166,15 +163,24 @@ struct SearchView: View {
         let results = await dataService.searchStops(query: query)
         // Apply transport type filter
         let enabledTypes = DataService.getEnabledTransportTypes()
-        searchResults = results.filter { stopMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
+        let displays = results.flatMap { dataService.makeStopDisplays(for: $0) }
+        searchResults = displays.filter { displayMatchesEnabledTypes($0, enabledTypes: enabledTypes) }
         isSearching = false
     }
 
     // MARK: - Recent Stops
 
     /// Convert stop IDs to Stop objects
-    private var recentStops: [Stop] {
-        recentStopIds.compactMap { dataService.getStop(by: $0) }
+    private var recentStops: [StopDisplay] {
+        recentStopIds.compactMap { entry in
+            let (stopId, transportType) = parseRecentStopId(entry)
+            guard let stop = dataService.getStop(by: stopId) else { return nil }
+            let displays = dataService.makeStopDisplays(for: stop)
+            if let transportType = transportType {
+                return displays.first { $0.transportType == transportType } ?? displays.first
+            }
+            return displays.first
+        }
     }
 
     private func loadRecentStops() {
@@ -185,12 +191,12 @@ struct SearchView: View {
         UserDefaults.standard.set(recentStopIds, forKey: recentStopsKey)
     }
 
-    private func addRecentStop(_ stopId: String) {
+    private func addRecentStop(_ stopKey: String) {
         // Remove if already exists
-        recentStopIds.removeAll { $0 == stopId }
+        recentStopIds.removeAll { $0 == stopKey }
 
         // Add at beginning
-        recentStopIds.insert(stopId, at: 0)
+        recentStopIds.insert(stopKey, at: 0)
 
         // Keep only max items
         if recentStopIds.count > maxRecentStops {
@@ -199,13 +205,21 @@ struct SearchView: View {
 
         saveRecentStops()
     }
+
+    private func parseRecentStopId(_ value: String) -> (String, TransportType?) {
+        let parts = value.split(separator: "|", maxSplits: 1).map(String.init)
+        if parts.count == 2 {
+            return (parts[0], TransportType(rawValue: parts[1]))
+        }
+        return (value, nil)
+    }
 }
 
 // MARK: - StopDetailView with Time Tracking
 
 /// Wrapper that tracks viewing time and calls callback after 5 seconds
 struct StopDetailViewWithTracking: View {
-    let stop: Stop
+    let display: StopDisplay
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
@@ -218,7 +232,8 @@ struct StopDetailViewWithTracking: View {
 
     var body: some View {
         StopDetailView(
-            stop: stop,
+            stop: display.stop,
+            display: display,
             dataService: dataService,
             locationService: locationService,
             favoritesManager: favoritesManager
@@ -243,7 +258,7 @@ struct StopDetailViewWithTracking: View {
 // MARK: - Search Result Row
 
 struct SearchResultRow: View {
-    let stop: Stop
+    let display: StopDisplay
     let locationService: LocationService
     let dataService: DataService
 
@@ -284,26 +299,26 @@ struct SearchResultRow: View {
     private var connectionBadges: [(name: String, color: Color)] {
         var badges: [(String, Color)] = []
 
-        // Cercanías connections
-        for line in parseLines(stop.corCercanias) {
+        // Train connections (Cercanías, FEVE, etc.)
+        for line in parseLines(display.stop.corTren) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
             badges.append((line, color))
         }
 
         // Metro connections
-        for line in parseLines(stop.corMetro) {
+        for line in parseLines(display.stop.corMetro) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMetroColor) ?? .red
             badges.append((line, color))
         }
 
         // Metro Ligero connections
-        for line in parseLines(stop.corMl) {
+        for line in parseLines(display.stop.corMl) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
             badges.append((line, color))
         }
 
         // Tranvía connections
-        for line in parseLines(stop.corTranvia) {
+        for line in parseLines(display.stop.corTranvia) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red
             badges.append((line, color))
         }
@@ -320,20 +335,20 @@ struct SearchResultRow: View {
         HStack(spacing: 12) {
             // Transport logo from API
             LogoImageView(
-                type: stop.transportType,
-                nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                type: display.transportType,
+                nucleo: dataService.currentLocation?.provinceName ?? (display.stop.province ?? ""),
                 height: 28
             )
             .frame(width: 40)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(stop.name)
+                Text(display.stop.name)
                     .font(.body)
                     .fontWeight(.medium)
 
                 // Connection badges (Metro, Cercanías, Tranvía, ML)
                 if hasConnections {
-                    HStack(spacing: 4) {
+                    FlowLayout(spacing: 4) {
                         ForEach(Array(connectionBadges.prefix(6).enumerated()), id: \.offset) { _, badge in
                             Text(badge.name)
                                 .font(.caption2)
@@ -357,7 +372,7 @@ struct SearchResultRow: View {
 
             // Distance
             if let location = locationService.currentLocation {
-                Text(stop.formattedDistance(from: location))
+                Text(display.stop.formattedDistance(from: location))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

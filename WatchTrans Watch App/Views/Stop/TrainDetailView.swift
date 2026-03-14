@@ -45,6 +45,26 @@ struct TrainDetailView: View {
                         Text("Llegada")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        // Wheelchair accessibility indicator
+                        if arrival.wheelchairAccessible {
+                            HStack(spacing: 2) {
+                                Image(systemName: "figure.roll")
+                                    .font(.caption2)
+                                Text("Accesible")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.green.opacity(0.15))
+                            )
+                        }
                     }
 
                     HStack {
@@ -261,7 +281,10 @@ struct TrainDetailView: View {
         guard let dataService = dataService,
               let routeId = arrival.routeId else { return }
         isLoadingAlerts = true
-        alerts = await dataService.fetchAlertsForRoute(routeId: routeId)
+        alerts = await dataService.fetchAlertsForRoute(
+            routeId: routeId,
+            routeShortName: arrival.lineName
+        )
         isLoadingAlerts = false
     }
 }
@@ -287,8 +310,17 @@ struct TrainDetailView: View {
                 delaySeconds: 180,
                 routeColor: "#813380",
                 routeId: "RENFE_C3_36",
+                isSuspended: false,
+                wheelchairAccessible: false,
                 frequencyBased: false,
-                headwayMinutes: nil
+                headwayMinutes: nil,
+                isOfflineData: false,
+                occupancyStatus: nil,
+                occupancyPercentage: nil,
+                routeTextColor: nil,
+                isSkipped: nil,
+                vehicleLat: nil,
+                vehicleLon: nil
             ),
             lineColor: Color(red: 129/255, green: 51/255, blue: 128/255),
             dataService: DataService()

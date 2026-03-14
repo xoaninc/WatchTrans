@@ -7,19 +7,13 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct LogoImageView: View {
     let logoType: LogoType
     let height: CGFloat
 
-    @State private var loadedImage: UIImage?
-    @State private var loadState: LoadState = .idle
-
-    private static let baseURL = "https://redcercanias.com/static/logos/"
-
-    enum LoadState {
-        case idle, loading, loaded, failed
-    }
+    private static let baseURL = APIConfiguration.logosBaseURL
 
     enum LogoType {
         case cercanias
@@ -117,7 +111,11 @@ struct LogoImageView: View {
                 default:
                     return nil  // Usar SF Symbol en vez de logo incorrecto
                 }
-            case .tram:
+            case .tram(let nucleo):
+                // Fallback local para Sevilla si falla el remoto
+                if nucleo.lowercased() == "sevilla" {
+                    return "MetroSevillaLogo"
+                }
                 // No tenemos logos específicos de tram por ciudad
                 return nil  // Usar SF Symbol
             case .fgc:
@@ -148,68 +146,25 @@ struct LogoImageView: View {
     }
 
     var body: some View {
-        Group {
-            switch loadState {
-            case .idle, .loading:
-                // Show SF Symbol while loading
-                Image(systemName: logoType.sfSymbol)
-                    .font(.system(size: height * 0.6))
-                    .foregroundStyle(.secondary)
-            case .loaded:
-                if let image = loadedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: height)
-                } else {
-                    localImage
+        if let url = remoteURL {
+            KFImage(url)
+                .placeholder {
+                    // Show SF Symbol while loading
+                    Image(systemName: logoType.sfSymbol)
+                        .font(.system(size: height * 0.6))
+                        .foregroundStyle(.secondary)
                 }
-            case .failed:
-                localImage
-            }
-        }
-        .task(id: logoType.remoteFilename) {
-            await loadImage()
-        }
-    }
-
-    private func loadImage() async {
-        guard let filename = logoType.remoteFilename else {
-            loadState = .failed
-            return
-        }
-
-        let cacheKey = "\(filename).\(logoType.fileExtension)"
-
-        // Check cache first
-        if let cached = await ImageCacheService.shared.getImage(for: cacheKey) {
-            loadedImage = cached
-            loadState = .loaded
-            return
-        }
-
-        // Load from network
-        guard let url = remoteURL else {
-            loadState = .failed
-            return
-        }
-
-        loadState = .loading
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let image = UIImage(data: data) {
-                // Save to cache for offline use
-                await ImageCacheService.shared.saveImage(image, for: cacheKey)
-                loadedImage = image
-                loadState = .loaded
-            } else {
-                loadState = .failed
-            }
-        } catch {
-            loadState = .failed
+                .fade(duration: 0.25)
+                .cacheOriginalImage()
+                .resizable()
+                .scaledToFit()
+                .frame(height: height)
+        } else {
+            localImage
         }
     }
+    
+    // Legacy load logic removed in favor of Kingfisher
 
     @ViewBuilder
     private var localImage: some View {
@@ -271,6 +226,10 @@ extension LogoImageView {
             self.logoType = .tram(nucleo: nucleo)
         case .fgc:
             self.logoType = .fgc
+        case .euskotren:
+            self.logoType = .euskotren
+        case .bus:
+            self.logoType = .metro(nucleo: nucleo)  // Default to metro logo for bus
         case .cercanias:
             if nucleo.lowercased() == "rodalies de catalunya" {
                 self.logoType = .rodalies

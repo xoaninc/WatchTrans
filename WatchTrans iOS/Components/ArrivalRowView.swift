@@ -10,6 +10,7 @@ import SwiftUI
 struct ArrivalRowView: View {
     let arrival: Arrival
     let dataService: DataService
+    var airQuality: TrainAirQuality? = nil
 
     var lineColor: Color {
         if let hex = arrival.routeColor {
@@ -17,21 +18,46 @@ struct ArrivalRowView: View {
         }
         return dataService.getLine(by: arrival.lineId)?.color ?? .blue
     }
+    
+    /// Metro Ligero and Ramal use inverted style: white background, colored border and text
+    var isMetroLigero: Bool {
+        arrival.lineName.hasPrefix("ML") || arrival.lineName == "R"
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             // Line badge
-            Text(arrival.lineName)
-                .font(.headline)
-                .fontWeight(.heavy)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(lineColor)
-                )
-                .frame(minWidth: 50)
+            if isMetroLigero {
+                // Metro Ligero: white background, colored border and text
+                Text(arrival.lineName)
+                    .font(.headline)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(lineColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(lineColor, lineWidth: 2)
+                            )
+                    )
+                    .frame(minWidth: 50)
+            } else {
+                // Standard: colored background, white text
+                Text(arrival.lineName)
+                    .font(.headline)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(lineColor)
+                    )
+                    .frame(minWidth: 50)
+            }
 
             // Destination and info
             VStack(alignment: .leading, spacing: 4) {
@@ -64,9 +90,14 @@ struct ArrivalRowView: View {
                     }
                 }
 
+                // Air quality indicator (Metro Sevilla)
+                if let aq = airQuality {
+                    AirQualityBadgeView(airQuality: aq)
+                }
+
                 // Progress bar
                 ProgressView(value: arrival.progressValue)
-                    .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
+                    .tint(arrival.isSuspended ? .red : (arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green)))
             }
 
             Spacer()
@@ -101,7 +132,7 @@ struct ArrivalRowView: View {
                 // Platform badge (if available)
                 if let platform = arrival.platform, !platform.isEmpty {
                     HStack(spacing: 2) {
-                        Text("Via \(platform)")
+                        Text("Vía \(platform)")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.white)
@@ -123,6 +154,31 @@ struct ArrivalRowView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.orange)
+                }
+                
+                // Suspension indicator (line closed)
+                if arrival.isSuspended {
+                    HStack(spacing: 2) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption2)
+                        Text("CERRADA")
+                    }
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.red)
+                    )
+                }
+                
+                // Wheelchair accessibility indicator
+                if arrival.wheelchairAccessible {
+                    Image(systemName: "figure.roll")
+                        .font(.caption)
+                        .foregroundStyle(.green)
                 }
 
                 // Offline indicator
@@ -186,6 +242,47 @@ struct OccupancyIndicator: View {
     }
 }
 
+// MARK: - Air Quality Badge
+
+/// Compact air quality indicator for Metro Sevilla trains
+struct AirQualityBadgeView: View {
+    let airQuality: TrainAirQuality
+
+    private var ratingColor: Color {
+        switch airQuality.ratingColor {
+        case "green": return .green
+        case "orange": return .orange
+        case "red": return .red
+        default: return .gray
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "aqi.medium")
+                .font(.caption2)
+                .foregroundStyle(ratingColor)
+
+            if let temp = airQuality.temperature {
+                Text("\(temp)\u{00B0}C")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let rating = airQuality.co2Rating {
+                Text(rating)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(ratingColor)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(ratingColor.opacity(0.12))
+        .cornerRadius(4)
+    }
+}
+
 #Preview {
     VStack(spacing: 8) {
         ArrivalRowView(
@@ -207,11 +304,18 @@ struct OccupancyIndicator: View {
                 delaySeconds: 180,
                 routeColor: "#813380",
                 routeId: "RENFE_C3_36",
+                isSuspended: false,
+                wheelchairAccessible: true,
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: false,
                 occupancyStatus: nil,
-                occupancyPercentage: nil
+                occupancyPercentage: nil,
+                routeTextColor: nil,
+                isSkipped: nil,
+                vehicleLat: nil,
+                vehicleLon: nil,
+                vehicleLabel: nil
             ),
             dataService: DataService()
         )
@@ -236,11 +340,18 @@ struct OccupancyIndicator: View {
                 delaySeconds: nil,
                 routeColor: "#E23131",
                 routeId: "TMB_METRO_L1",
+                isSuspended: false,
+                wheelchairAccessible: false,
                 frequencyBased: true,
                 headwayMinutes: 5,
                 isOfflineData: false,
                 occupancyStatus: 2,  // FEW_SEATS_AVAILABLE
-                occupancyPercentage: 45
+                occupancyPercentage: 45,
+                routeTextColor: nil,
+                isSkipped: nil,
+                vehicleLat: nil,
+                vehicleLon: nil,
+                vehicleLabel: nil
             ),
             dataService: DataService()
         )

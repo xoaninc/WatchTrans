@@ -8,16 +8,6 @@
 import WidgetKit
 import SwiftUI
 
-//
-//  WatchTransFavoritesWidget.swift
-//  WatchTransWidgetExtension
-//
-//  Created by Conductor on 06/02/26.
-//
-
-import WidgetKit
-import SwiftUI
-
 #if os(iOS)
 
 // MARK: - Models

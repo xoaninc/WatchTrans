@@ -1,0 +1,291 @@
+import SwiftUI
+import MapKit
+
+// Estructura auxiliar para asegurar que el Mapa reciba datos limpios y estables
+struct MapShape: Identifiable {
+    let id: String
+    let coordinates: [CLLocationCoordinate2D]
+    let color: Color
+}
+
+struct FullMapView: View {
+    var dataService: DataService
+    var locationService: LocationService
+    
+    private let gtfsService = GTFSRealtimeService()
+    
+    @AppStorage("visibleRouteIds") private var visibleRouteIdsString: String = ""
+    
+    @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var trainPositions: [EstimatedPositionResponse] = []
+    
+    // Lista única y estable para el renderizado
+    @State private var visibleShapes: [MapShape] = []
+    
+    @State private var stops: [Stop] = [] 
+    @State private var availableLines: [Line] = []
+    @State private var timer: Timer?
+    @State private var hasCenteredOnUser = false
+    @State private var debugInfo: String = "Iniciando..."
+    @State private var zoomLevel: Double = 0.1 // Default initial zoom (span delta)
+    
+    private var visibleIds: Set<String> {
+        let trimmed = visibleRouteIdsString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed == "NONE" { return [] }
+        return Set(trimmed.split(separator: ",").map(String.init))
+    }
+    
+    // LOD Logic
+    private func shouldShowStop(_ stop: Stop) -> Bool {
+        if zoomLevel < 0.05 { return true } // High zoom: Show all
+        return stop.isHub // Low zoom: Only Hubs
+    }
+    
+    private func shouldShowStopName() -> Bool {
+        return zoomLevel < 0.02 // Only show names at very high zoom
+    }
+
+    var body: some View {
+        ZStack {
+            Map(position: $position) {
+                // 0. UBICACIÓN USUARIO
+                UserAnnotation()
+                
+                // 1. LÍNEAS DE TRANSPORTE
+                ForEach(visibleShapes) { shape in
+                    MapPolyline(coordinates: shape.coordinates)
+                        .stroke(shape.color, lineWidth: 4)
+                }
+                
+                // 2. PARADAS
+                ForEach(stops.prefix(200)) { stop in // Increased limit for better coverage
+                    if isValidCoordinate(lat: stop.latitude, lon: stop.longitude) && shouldShowStop(stop) {
+                        Annotation(stop.name, coordinate: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)) {
+                            VStack(spacing: 2) {
+                                if shouldShowStopName() {
+                                    Text(stop.name)
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.primary)
+                                        .padding(2)
+                                        .background(.ultraThinMaterial)
+                                        .cornerRadius(4)
+                                }
+                                
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: stop.isHub ? 8 : 5, height: stop.isHub ? 8 : 5)
+                                    .overlay(Circle().stroke(.gray, lineWidth: stop.isHub ? 1.5 : 0.5))
+                            }
+                        }
+                    }
+                }
+                
+                // 3. TRENES
+                ForEach(trainPositions, id: \.tripId) { train in
+                    if isValidCoordinate(lat: train.position.latitude, lon: train.position.longitude) {
+                        Annotation(train.tripId, coordinate: CLLocationCoordinate2D(latitude: train.position.latitude, longitude: train.position.longitude)) {
+                            TrainAnnotationView(train: train)
+                        }
+                    }
+                }
+            }
+            .mapStyle(.standard(elevation: .flat))
+            .onMapCameraChange { context in
+                // Update zoom level for LOD
+                zoomLevel = context.region.span.latitudeDelta
+            }
+            .mapControls {
+                MapUserLocationButton()
+                MapCompass()
+                MapScaleView()
+            }
+            
+            // Consola de estado (Debug)
+            VStack {
+                if !debugInfo.isEmpty {
+                    Text(debugInfo)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .padding(6)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(8)
+                        .padding(.top, 60)
+                }
+                Spacer()
+            }
+            
+            layersButton
+        }
+        .task {
+            setupInitialZoom()
+            await initialLoad()
+        }
+        .onChange(of: dataService.lines) { _, newLines in
+            Task { await processAndLoadShapes(newLines) }
+        }
+        .onAppear { startRefreshTimer() }
+        .onDisappear { stopRefreshTimer() }
+    }
+    
+    private var layersButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Menu {
+                    Button(isAllSelected ? "Ocultar todas" : "Mostrar todas") { toggleAllLines() }
+                    Divider()
+                    ForEach(availableLines) { line in
+                        Button {
+                            toggleLine(line.id)
+                        } label: {
+                            HStack {
+                                Text(line.name)
+                                if isVisible(line.id) { Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "square.2.layers.3d")
+                        .font(.title2)
+                        .padding(10)
+                        .background(.regularMaterial)
+                        .clipShape(Circle())
+                        .shadow(radius: 2)
+                }
+                .padding()
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Core Loading
+    
+    func initialLoad() async {
+        // 1. Esperar a tener ubicación si es necesario
+        if locationService.currentLocation == nil {
+            await MainActor.run { debugInfo = "Buscando GPS..." }
+            // Pequeña espera para que el GPS se estabilice
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        
+        // 2. Forzar carga de líneas si está vacío
+        if dataService.lines.isEmpty, let loc = locationService.currentLocation {
+            await MainActor.run { debugInfo = "Cargando red de transporte..." }
+            await dataService.fetchLinesIfNeeded(latitude: loc.coordinate.latitude, longitude: loc.coordinate.longitude)
+        }
+        
+        // 3. Cargar paradas y shapes
+        let lines = dataService.lines
+        let loadedStops = dataService.stops
+        await MainActor.run { 
+            self.availableLines = lines
+            self.stops = loadedStops 
+        }
+        
+        await processAndLoadShapes(lines)
+        await loadTrainPositions()
+    }
+    
+    func processAndLoadShapes(_ lines: [Line]) async {
+        guard !lines.isEmpty else { return }
+        
+        await MainActor.run { debugInfo = "Descargando mapas de líneas..." }
+        
+        var newShapes: [MapShape] = []
+        
+        // Descarga secuencial o por bloques para no saturar
+        for line in lines {
+            // Solo procesamos si la línea es visible
+            guard isVisible(line.id) else { continue }
+            
+            for rId in line.routeIds {
+                let points = await dataService.fetchRouteShape(routeId: rId)
+                if points.count > 1 {
+                    let coords = points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                    // Creación del color segura
+                    let color = Color(hex: line.colorHex) ?? .blue
+                    newShapes.append(MapShape(id: rId, coordinates: coords, color: color))
+                }
+            }
+            
+            // Actualización progresiva para que el usuario vea cómo aparecen
+            let currentShapes = newShapes
+            await MainActor.run { 
+                self.visibleShapes = currentShapes
+                self.debugInfo = "Líneas: \(currentShapes.count) visibles"
+            }
+        }
+        
+        await MainActor.run { 
+            self.debugInfo = "" // Ocultar al terminar si todo ok
+            if newShapes.isEmpty { self.debugInfo = "⚠️ No hay trazados disponibles" }
+        }
+    }
+
+    // MARK: - Helpers
+    
+    private var isAllSelected: Bool {
+        !availableLines.isEmpty && availableLines.allSatisfy { isVisible($0.id) }
+    }
+    
+    private func isVisible(_ lineId: String) -> Bool {
+        if visibleRouteIdsString.isEmpty { return true }
+        if visibleRouteIdsString == "NONE" { return false }
+        return visibleIds.contains(lineId)
+    }
+    
+    private func toggleLine(_ id: String) {
+        var current = visibleIds
+        if current.contains(id) { current.remove(id) } else { current.insert(id) }
+        visibleRouteIdsString = current.isEmpty ? "NONE" : Array(current).joined(separator: ",")
+        // Recargar shapes al cambiar filtro
+        Task { await processAndLoadShapes(dataService.lines) }
+    }
+    
+    private func toggleAllLines() {
+        if isAllSelected {
+            visibleRouteIdsString = "NONE" 
+        } else {
+            visibleRouteIdsString = availableLines.map { $0.id }.joined(separator: ",")
+        }
+        Task { await processAndLoadShapes(dataService.lines) }
+    }
+    
+    private func isValidCoordinate(lat: Double, lon: Double) -> Bool {
+        lat != 0 && lon != 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+    }
+    
+    func loadTrainPositions() async {
+        var allTrains: [EstimatedPositionResponse] = []
+        if let location = dataService.currentLocation {
+            for network in location.networks {
+                // LLAMADA DIRECTA AL GTFS-RT con manejo de errores individual
+                do {
+                    let nt = try await gtfsService.fetchEstimatedPositionsForNetwork(networkId: network.code)
+                    allTrains.append(contentsOf: nt)
+                } catch {
+                    print("🗺️ [Map] Error cargando trenes para \(network.code): \(error)")
+                }
+            }
+        }
+        await MainActor.run {
+            withAnimation(.linear(duration: 15)) { self.trainPositions = allTrains }
+        }
+    }
+    
+    private func setupInitialZoom() {
+        guard !hasCenteredOnUser, let userLocation = locationService.currentLocation else { return }
+        let region = MKCoordinateRegion(center: userLocation.coordinate, latitudinalMeters: 10000, longitudinalMeters: 10000)
+        Task { @MainActor in
+            withAnimation { position = .region(region) }
+            hasCenteredOnUser = true
+        }
+    }
+    
+    func startRefreshTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { _ in
+            Task { await loadTrainPositions() }
+        }
+    }
+    
+    func stopRefreshTimer() { timer?.invalidate(); timer = nil }
+}

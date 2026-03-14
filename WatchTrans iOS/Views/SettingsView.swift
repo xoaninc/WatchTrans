@@ -332,24 +332,42 @@ struct SettingsView: View {
                     Text("Soporte")
                 }
 
-                // Credits section (dynamic based on province)
+                // Credits section (dynamic based on province + full attribution)
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Datos proporcionados por:")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if !relevantCredits.isEmpty {
+                            Text("En tu zona:")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.secondary)
 
-                        ForEach(relevantCredits) { credit in
+                            ForEach(relevantCredits) { credit in
+                                HStack {
+                                    Image(systemName: credit.icon)
+                                        .foregroundStyle(credit.color)
+                                    Text(credit.name)
+                                }
+                            }
+                            
+                            Divider()
+                        }
+                        
+                        NavigationLink {
+                            DataSourcesView()
+                        } label: {
                             HStack {
-                                Image(systemName: credit.icon)
-                                    .foregroundStyle(credit.color)
-                                Text(credit.name)
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundStyle(.blue)
+                                Text("Fuentes de datos y Licencias")
+                                Spacer()
                             }
                         }
                     }
                     .padding(.vertical, 4)
                 } header: {
                     Text("Creditos")
+                } footer: {
+                    Text("WatchTrans utiliza datos abiertos bajo las licencias de cada operador.")
                 }
 
                 // Developer section (hidden until activated)
@@ -449,6 +467,10 @@ struct SettingsView: View {
             return "tram"
         case .fgc:
             return "tram.fill"
+        case .euskotren:
+            return "tram.fill"
+        case .bus:
+            return "bus.fill"
         }
     }
 
@@ -464,6 +486,10 @@ struct SettingsView: View {
             return .green
         case .fgc:
             return .orange
+        case .euskotren:
+            return .red
+        case .bus:
+            return .blue
         }
     }
 
@@ -545,8 +571,8 @@ struct SettingsView: View {
             // 1. Clear HTTP cache
             URLCache.shared.removeAllCachedResponses()
 
-            // 2. Clear arrival cache in DataService
-            dataService.clearArrivalCache()
+            // 2. Clear ALL DataService caches (arrivals, stops, lines, colors, platforms, shapes)
+            dataService.clearAllPersistentCaches()
 
             // 3. Clear offline schedules
             await OfflineScheduleService.shared.clearCache()

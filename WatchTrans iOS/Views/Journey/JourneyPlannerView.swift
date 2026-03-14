@@ -30,6 +30,11 @@ struct JourneyPlannerView: View {
     @State private var showAlerts = true  // Service alerts expanded by default
     @State private var errorMessage: String?
 
+    // Time range search
+    @State private var useTimeRange = false
+    @State private var rangeStartTime = Date()
+    @State private var endTime = Date().addingTimeInterval(3600) // 1 hour from now
+
     // Debounce timers for search
     @State private var originSearchTask: Task<Void, Never>?
     @State private var destinationSearchTask: Task<Void, Never>?
@@ -133,7 +138,14 @@ struct JourneyPlannerView: View {
                     TextField("Buscar estacion...", text: $originText)
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .origin)
-                        .onChange(of: originText) { _, newValue in
+                        .onChange(of: originText) { oldValue, newValue in
+                            // If user manually clears the text, also clear selection
+                            if newValue.isEmpty && selectedOrigin != nil {
+                                selectedOrigin = nil
+                                routePlanResult = nil
+                                selectedJourney = nil
+                            }
+                            
                             // Debounced search (300ms)
                             originSearchTask?.cancel()
                             originSearchTask = Task {
@@ -196,7 +208,14 @@ struct JourneyPlannerView: View {
                     TextField("Buscar estacion...", text: $destinationText)
                         .textFieldStyle(.plain)
                         .focused($focusedField, equals: .destination)
-                        .onChange(of: destinationText) { _, newValue in
+                        .onChange(of: destinationText) { oldValue, newValue in
+                            // If user manually clears the text, also clear selection
+                            if newValue.isEmpty && selectedDestination != nil {
+                                selectedDestination = nil
+                                routePlanResult = nil
+                                selectedJourney = nil
+                            }
+                            
                             // Debounced search (300ms)
                             destinationSearchTask?.cancel()
                             destinationSearchTask = Task {
@@ -229,6 +248,43 @@ struct JourneyPlannerView: View {
                 }
             }
 
+            // Time range toggle
+            VStack(spacing: 12) {
+                Toggle(isOn: $useTimeRange) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.2.circlepath")
+                            .foregroundStyle(.blue)
+                        Text("Buscar por franja horaria")
+                            .font(.subheadline)
+                    }
+                }
+                .tint(.blue)
+
+                if useTimeRange {
+                    VStack(spacing: 10) {
+                        HStack {
+                            Text("Desde")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 50, alignment: .leading)
+                            DatePicker("", selection: $rangeStartTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        HStack {
+                            Text("Hasta")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 50, alignment: .leading)
+                            DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: useTimeRange)
+
             // Search button
             Button {
                 Task {
@@ -240,9 +296,9 @@ struct JourneyPlannerView: View {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Image(systemName: "magnifyingglass")
+                        Image(systemName: useTimeRange ? "clock.arrow.2.circlepath" : "magnifyingglass")
                     }
-                    Text(isCalculating ? "Calculando..." : "Buscar ruta")
+                    Text(isCalculating ? "Calculando..." : (useTimeRange ? "Buscar en franja" : "Buscar ruta"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -275,7 +331,7 @@ struct JourneyPlannerView: View {
                         // Transport logo
                         LogoImageView(
                             type: stop.transportType,
-                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
+                            nucleo: dataService.currentLocation?.provinceName ?? (stop.province ?? ""),
                             height: 24
                         )
                         .frame(width: 28)
@@ -325,7 +381,7 @@ struct JourneyPlannerView: View {
         case .metro:
             return stop.corMetro
         case .cercanias:
-            return stop.corCercanias
+            return stop.corTren
         case .metroLigero:
             return stop.corMl
         case .tram:
@@ -333,6 +389,10 @@ struct JourneyPlannerView: View {
         case .fgc:
             // FGC doesn't have a specific corFgc field, show all FGC-related
             return nil
+        case .euskotren:
+            return nil  // No correspondence field for Euskotren
+        case .bus:
+            return stop.corBus
         }
     }
 
@@ -359,11 +419,15 @@ struct JourneyPlannerView: View {
             case .metroLigero:
                 if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
             case .cercanias:
-                if network == "RENFE" || (stop.corCercanias != nil && !stop.corCercanias!.isEmpty) { return true }
+                if network == "RENFE" || (stop.corTren != nil && !stop.corTren!.isEmpty) { return true }
             case .tram:
                 if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
             case .fgc:
                 if network == "FGC" { return true }
+            case .euskotren:
+                if network == "EUSKOTREN" { return true }
+            case .bus:
+                if network == "BUS" || (stop.corBus != nil && !stop.corBus!.isEmpty) { return true }
             }
         }
         return false
@@ -408,8 +472,17 @@ struct JourneyPlannerView: View {
             destinationSuggestions = []
             focusedField = nil
         }
+        
+        // Clear previous results
         routePlanResult = nil
         selectedJourney = nil
+        
+        // Auto-calculate route if both stops are selected
+        if selectedOrigin != nil && selectedDestination != nil {
+            Task {
+                await calculateRoute()
+            }
+        }
     }
 
     private func swapOriginDestination() {
@@ -424,6 +497,13 @@ struct JourneyPlannerView: View {
 
         routePlanResult = nil
         selectedJourney = nil
+        
+        // Auto-calculate route after swap if both stops are selected
+        if selectedOrigin != nil && selectedDestination != nil {
+            Task {
+                await calculateRoute()
+            }
+        }
     }
 
     private func calculateRoute() async {
@@ -436,13 +516,35 @@ struct JourneyPlannerView: View {
         DebugLog.log("🗺️ [JourneyPlanner] ▶️ Starting route calculation")
         DebugLog.log("🗺️ [JourneyPlanner]   Origin: \(origin.name) (ID: \(origin.id))")
         DebugLog.log("🗺️ [JourneyPlanner]   Destination: \(destination.name) (ID: \(destination.id))")
+        DebugLog.log("🗺️ [JourneyPlanner]   Time range mode: \(useTimeRange)")
 
         isCalculating = true
         errorMessage = nil
         showAlternatives = false
 
-        // Use API route planner via DataService
-        if let result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id) {
+        let result: DataService.RoutePlanResult?
+
+        if useTimeRange {
+            // Format times as HH:mm:ss for the API
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss"
+            let startTimeStr = formatter.string(from: rangeStartTime)
+            let endTimeStr = formatter.string(from: endTime)
+
+            DebugLog.log("🗺️ [JourneyPlanner]   Range: \(startTimeStr) - \(endTimeStr)")
+
+            result = await dataService.planJourneysRange(
+                fromStopId: origin.id,
+                toStopId: destination.id,
+                startTime: startTimeStr,
+                endTime: endTimeStr
+            )
+        } else {
+            // Use standard single-departure route planner
+            result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id)
+        }
+
+        if let result = result {
             DebugLog.log("🗺️ [JourneyPlanner] ✅ Route plan received:")
             DebugLog.log("🗺️ [JourneyPlanner]   Journeys: \(result.journeys.count)")
             DebugLog.log("🗺️ [JourneyPlanner]   Alerts: \(result.alerts.count)")
@@ -461,14 +563,19 @@ struct JourneyPlannerView: View {
             await MainActor.run {
                 routePlanResult = result
                 selectedJourney = result.bestJourney
+                // Auto-expand alternatives in range mode since that's the whole point
+                if useTimeRange {
+                    showAlternatives = true
+                }
                 isCalculating = false
             }
         } else {
+            let modeLabel = useTimeRange ? "en esta franja horaria" : "entre estas estaciones"
             DebugLog.log("🗺️ [JourneyPlanner] ❌ No route found between \(origin.id) and \(destination.id)")
             await MainActor.run {
                 routePlanResult = nil
                 selectedJourney = nil
-                errorMessage = "No se encontro ruta entre estas estaciones"
+                errorMessage = "No se encontro ruta \(modeLabel)"
                 isCalculating = false
             }
         }
@@ -795,6 +902,28 @@ struct SegmentRowView: View {
                                 .font(.caption)
                                 .foregroundStyle(.blue)
                         }
+                        
+                        // Platform/Track information
+                        if let platform = segment.platform {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.forward.square")
+                                    .font(.caption2)
+                                Text(segment.platformEstimated ? "Vía \(platform) (aprox.)" : "Vía \(platform)")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(segment.platformEstimated ? .orange : .blue)
+                        }
+                        
+                        // RAPTOR Entrance
+                        if let entrance = segment.entranceName {
+                            HStack(spacing: 4) {
+                                Image(systemName: "door.left.hand.open")
+                                    .font(.caption2)
+                                Text("Entrada: \(entrance)")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.green)
+                        }
                     }
 
                     Spacer()
@@ -814,24 +943,45 @@ struct SegmentRowView: View {
                 }
 
                 // Duration, stops info, and arrival
-                HStack {
-                    if segment.type == .transit {
-                        Text("\(segment.stopCount) parada\(segment.stopCount > 1 ? "s" : "") · \(segment.durationMinutes) min")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Andando · \(segment.durationMinutes) min")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        if segment.type == .transit {
+                            Text("\(segment.stopCount) parada\(segment.stopCount > 1 ? "s" : "") · \(segment.durationMinutes) min")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Andando · \(segment.durationMinutes) min")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        // Arrival time
+                        if let time = segment.arrivalTimeString {
+                            Text("→ \(time)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-
-                    Spacer()
-
-                    // Arrival time
-                    if let time = segment.arrivalTimeString {
-                        Text("→ \(time)")
+                    
+                    // RAPTOR Exit
+                    if let exit = segment.exitName {
+                        HStack(spacing: 4) {
+                            Image(systemName: "door.right.hand.open")
+                                .font(.caption2)
+                            Text("Salida: \(exit)")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.orange)
+                    }
+                    
+                    // General Instructions
+                    if let instruction = segment.instructions {
+                        Text(instruction)
                             .font(.caption)
-                            .fontWeight(.medium)
+                            .italic()
                             .foregroundStyle(.secondary)
                     }
                 }

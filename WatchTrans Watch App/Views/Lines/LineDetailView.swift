@@ -74,13 +74,15 @@ struct LineDetailView: View {
 
                 // Alert banner (taps to show all)
                 if !alerts.isEmpty {
+                    let sectionColor: Color = alerts.contains { $0.isFullSuspension } ? .red : .orange
+                    
                     NavigationLink(destination: AlertsListView(alerts: alerts, title: line.name)) {
                         VStack(alignment: .leading, spacing: 6) {
                             // Header
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.caption)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(sectionColor)
                                 Text("\(alerts.count) aviso\(alerts.count == 1 ? "" : "s")")
                                     .font(.caption)
                                     .fontWeight(.semibold)
@@ -107,7 +109,7 @@ struct LineDetailView: View {
                             }
                         }
                         .padding(10)
-                        .background(Color.orange.opacity(0.15))
+                        .background(sectionColor.opacity(0.15))
                         .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
@@ -194,26 +196,22 @@ struct LineDetailView: View {
 
         DebugLog.log("🚀 [LineDetail] Loading data for line \(line.name) (routeIds: \(line.routeIds))")
 
-        // Fetch stops, alerts, and operating hours in parallel
-        async let stopsTask: [Stop] = {
-            if let routeId = line.routeIds.first {
-                return await dataService.fetchStopsForRoute(routeId: routeId)
-            }
-            return []
-        }()
-        async let alertsTask = dataService.fetchAlertsForLine(line)
-        async let hoursTask: OperatingHoursResult? = {
-            if let routeId = line.routeIds.first {
-                DebugLog.log("📅 [LineDetail] Requesting operating hours for routeId: \(routeId)")
-                return await dataService.fetchOperatingHours(routeId: routeId)
-            }
-            DebugLog.log("⚠️ [LineDetail] No routeId available for line \(line.name)")
-            return nil
-        }()
+        // Fetch stops, alerts, and operating hours sequentially
+        if let routeId = line.routeIds.first {
+            stops = await dataService.fetchStopsForRoute(routeId: routeId)
+        } else {
+            stops = []
+        }
 
-        stops = await stopsTask
-        alerts = await alertsTask
-        operatingHoursResult = await hoursTask
+        alerts = await dataService.fetchAlertsForLine(line)
+        
+        if let routeId = line.routeIds.first {
+            DebugLog.log("📅 [LineDetail] Requesting operating hours for routeId: \(routeId)")
+            operatingHoursResult = await dataService.fetchOperatingHours(routeId: routeId)
+        } else {
+            DebugLog.log("⚠️ [LineDetail] No routeId available for line \(line.name)")
+            operatingHoursResult = nil
+        }
 
         DebugLog.log("✅ [LineDetail] Loaded: \(stops.count) stops, \(alerts.count) alerts, suspended=\(operatingHoursResult?.isSuspended ?? false)")
 
@@ -298,7 +296,7 @@ struct WrappingHStack: View {
 
 // MARK: - All Connection Badges (Combined Wrapping View)
 
-/// View showing all connection badges (Metro, ML, Cercanías, Tranvía, Funicular) in a wrapping layout
+/// View showing all connection badges (Metro, ML, Train, Tranvía, Funicular) in a wrapping layout
 struct AllConnectionBadges: View {
     let stop: Stop
     let dataService: DataService
@@ -318,9 +316,9 @@ struct AllConnectionBadges: View {
         let excludeLower = excludeLineName?.lowercased()
         let excludeIdsNormalized = Set(excludeLineIds.map { normalizeLineName($0) })
 
-        // 1. Cercanías
-        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corCercanias)
-        for line in cercaniasLines {
+        // 1. Train connections (Cercanías, FEVE, etc.)
+        let trenLines = stop.correspondences?.tren ?? parseLines(stop.corTren)
+        for line in trenLines {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultCercaniasColor
@@ -436,23 +434,23 @@ struct MetroConnectionBadges: View {
         AllConnectionBadges(
             corMetro: corMetro,
             corMl: corMl,
-            corCercanias: nil,
+            corTren: nil,
             corTranvia: nil,
             dataService: dataService
         )
     }
 }
 
-/// View showing Cercanías connection badges
+/// View showing train connection badges (Cercanías, FEVE, etc.)
 struct CercaniasConnectionBadges: View {
-    let corCercanias: String?
+    let corTren: String?
     let dataService: DataService
 
     var body: some View {
         AllConnectionBadges(
             corMetro: nil,
             corMl: nil,
-            corCercanias: corCercanias,
+            corTren: corTren,
             corTranvia: nil,
             dataService: dataService
         )
@@ -468,7 +466,7 @@ struct TranviaConnectionBadges: View {
         AllConnectionBadges(
             corMetro: nil,
             corMl: nil,
-            corCercanias: nil,
+            corTren: nil,
             corTranvia: corTranvia,
             dataService: dataService
         )
@@ -569,9 +567,9 @@ struct StopRow: View {
         (stop.corMl != nil && !stop.corMl!.isEmpty)
     }
 
-    /// Check if stop has Cercanías connections (for Metro/ML stops)
-    var hasCercaniasConnections: Bool {
-        stop.corCercanias != nil && !stop.corCercanias!.isEmpty
+    /// Check if stop has train connections (Cercanías, FEVE, etc.) (for Metro/ML stops)
+    var hasTrainConnections: Bool {
+        stop.corTren != nil && !stop.corTren!.isEmpty
     }
 
     /// Check if stop has Tranvía connections
@@ -616,9 +614,9 @@ struct StopRow: View {
                             WrappingHStack(otherLineConnections, dataService: dataService)
                         }
 
-                        // All other connection badges (Metro, ML, Cercanías, Tranvía, Funicular) combined
+                        // All other connection badges (Metro, ML, Train, Tranvía, Funicular) combined
                         // Exclude current line AND lines already shown in WrappingHStack
-                        if hasMetroConnections || hasCercaniasConnections || hasTranviaConnections || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) || stop.correspondences != nil {
+                        if hasMetroConnections || hasTrainConnections || hasTranviaConnections || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) || stop.correspondences != nil {
                             AllConnectionBadges(
                                 stop: stop,
                                 dataService: dataService,
@@ -700,7 +698,10 @@ struct AlertsListView: View {
                 colorHex: "#75B6E0",
                 nucleo: "madrid",
                 routeIds: ["RENFE_C1_34"],
-                isCircular: false
+                isCircular: false,
+                serviceStatus: nil,
+                suspendedSince: nil,
+                isAlternativeService: nil
             ),
             dataService: DataService(),
             locationService: LocationService()

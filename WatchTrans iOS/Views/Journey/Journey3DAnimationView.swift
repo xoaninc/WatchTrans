@@ -294,7 +294,7 @@ struct Journey3DAnimationView: View {
     private func play() {
         guard !isPlaying || isPaused else { return }
 
-        print("🎬 [SwiftUI] Play pressed")
+        DebugLog.log("🎬 [SwiftUI] Play pressed")
         isPlaying = true
         isPaused = false
         // Animation is now handled by NativeAnimatedMapView's Coordinator
@@ -323,8 +323,8 @@ struct Journey3DAnimationView: View {
 #Preview {
     Journey3DAnimationView(
         journey: Journey(
-            origin: Stop(id: "1", name: "Sol", latitude: 40.4169, longitude: -3.7033, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L2, L3", corMl: nil, corCercanias: "C3, C4", corTranvia: nil),
-            destination: Stop(id: "2", name: "Nuevos Ministerios", latitude: 40.4459, longitude: -3.6917, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L6, L8, L10", corMl: nil, corCercanias: "C3, C4, C7, C8", corTranvia: nil),
+            origin: Stop(id: "1", name: "Sol", latitude: 40.4169, longitude: -3.7033, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L2, L3", corMl: nil, corTren: "C3, C4", corTranvia: nil),
+            destination: Stop(id: "2", name: "Nuevos Ministerios", latitude: 40.4459, longitude: -3.6917, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L6, L8, L10", corMl: nil, corTren: "C3, C4, C7, C8", corTranvia: nil),
             segments: [],
             totalDurationMinutes: 12,
             totalWalkingMinutes: 2,

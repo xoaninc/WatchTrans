@@ -185,7 +185,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? "Madrid"),
+                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? ""),
                                 height: 18
                             ),
                             title: metroSectionTitle,
@@ -331,6 +331,10 @@ struct LinesListView: View {
             lines: dataService.filteredLines,
             dataService: dataService
         )
+
+        // Update line long names using cached endpoints (Metro/Tram)
+        // DISABLED: Causing "Circular" flickering. API names are now trustworthy.
+        // await dataService.refreshLineLongNamesFromItineraries()
     }
 }
 
@@ -343,60 +347,81 @@ struct LineRowView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
-    /// Metro Ligero uses inverted style: white background, colored border and text
+    /// Metro Ligero and Ramal use inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        line.type == .metroLigero
+        line.type == .metroLigero || line.name == "R"
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Line badge
-            if isMetroLigero {
-                // Metro Ligero: white background, colored border and text
-                Text(line.name)
-                    .font(.headline)
-                    .fontWeight(.heavy)
-                    .foregroundStyle(lineColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(lineColor, lineWidth: 2)
-                            )
-                    )
-                    .frame(minWidth: 50)
-            } else {
-                // Standard: colored background, white text
-                Text(line.name)
-                    .font(.headline)
-                    .fontWeight(.heavy)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(lineColor)
-                    )
-                    .frame(minWidth: 50)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Line badge
+                if isMetroLigero {
+                    // Metro Ligero: white background, colored border and text
+                    Text(line.name)
+                        .font(.headline)
+                        .fontWeight(.heavy)
+                        .foregroundStyle(lineColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(lineColor, lineWidth: 2)
+                                )
+                        )
+                        .frame(minWidth: 50)
+                } else {
+                    // Standard: colored background, white text
+                    Text(line.name)
+                        .font(.headline)
+                        .fontWeight(.heavy)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(lineColor)
+                        )
+                        .frame(minWidth: 50)
+                }
+
+                // Line description
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(line.longName)
+                        .font(.subheadline)
+                        .lineLimit(2)
+
+                    Text(line.type.rawValue.capitalized)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
             }
-
-            // Line description
-            VStack(alignment: .leading, spacing: 2) {
-                Text(line.longName)
-                    .font(.subheadline)
-                    .lineLimit(2)
-
-                Text(line.type.rawValue.capitalized)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            .padding(.vertical, 4)
+            
+            // Suspension alert banner (red background)
+            if let alert = line.suspensionAlert {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                    Text(alert)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red)
+                .cornerRadius(6)
+                .padding(.top, 4)
             }
-
-            Spacer()
         }
-        .padding(.vertical, 4)
     }
 }
 
@@ -442,7 +467,7 @@ struct NetworkPlanView: View {
     @State private var isLoadingPDF = false
     @State private var pdfLoadError = false
 
-    private let baseURL = "https://redcercanias.com/static/planos"
+    private let baseURL = APIConfiguration.planosBaseURL
 
     /// Static plan URLs from the server
     /// Some are images (viewable in-app), others are PDFs (open in Safari)
@@ -479,6 +504,10 @@ struct NetworkPlanView: View {
             }
         case .metroLigero:
             path = "metro_ligero/madrid_metro_ligero.pdf"
+        case .euskotren:
+            path = nil  // No map available
+        case .bus:
+            path = nil  // No map available
         case .cercanias:
             switch nucleoLower {
             case "madrid":
@@ -715,6 +744,8 @@ struct NetworkPlanView: View {
         case .metroLigero: return "Plano Metro Ligero"
         case .tram: return "Plano Tranvía"
         case .fgc: return "Plano FGC"
+        case .euskotren: return "Plano Euskotren"
+        case .bus: return "Plano Bus"
         }
     }
 }

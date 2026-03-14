@@ -12,6 +12,9 @@ import SwiftUI
 struct WatchTransWidgetBundle: WidgetBundle {
     var body: some Widget {
         WatchTransWidget()
+        #if os(iOS)
         WatchTransFavoritesWidget()
+        TrainLiveActivityWidget()
+        #endif
     }
 }

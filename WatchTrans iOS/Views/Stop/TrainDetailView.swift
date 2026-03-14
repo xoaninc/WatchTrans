@@ -11,6 +11,7 @@ struct TrainDetailView: View {
     let arrival: Arrival
     let lineColor: Color
     var dataService: DataService?
+    var airQuality: TrainAirQuality? = nil
 
     @State private var alerts: [AlertResponse] = []
     @State private var isAlertsExpanded = false
@@ -65,9 +66,31 @@ struct TrainDetailView: View {
 
                 // Time section
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("Llegada", systemImage: "clock.fill")
-                        .font(.headline)
-                        .foregroundStyle(.blue)
+                    HStack {
+                        Label("Llegada", systemImage: "clock.fill")
+                            .font(.headline)
+                            .foregroundStyle(.blue)
+                        
+                        Spacer()
+                        
+                        // Wheelchair accessibility indicator
+                        if arrival.wheelchairAccessible {
+                            HStack(spacing: 4) {
+                                Image(systemName: "figure.roll")
+                                    .font(.subheadline)
+                                Text("Accesible")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.green.opacity(0.15))
+                            )
+                        }
+                    }
 
                     HStack {
                         Text(arrival.arrivalTimeString)
@@ -120,35 +143,124 @@ struct TrainDetailView: View {
                 // Platform section
                 if let platform = arrival.platform, !platform.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        Label("Anden", systemImage: "train.side.front.car")
+                        Label("Vía", systemImage: "train.side.front.car")
                             .font(.headline)
                             .foregroundStyle(.blue)
 
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("Via")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                            Text(platform)
-                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                        HStack {
+                            Text("Vía \(platform)")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(arrival.platformEstimated ? Color.orange.opacity(0.85) : Color.blue.opacity(0.85))
+                                )
 
                             Spacer()
 
                             if arrival.platformEstimated {
-                                Label("Estimada", systemImage: "questionmark.circle")
+                                Text("Estimada")
                                     .font(.caption)
+                                    .fontWeight(.semibold)
                                     .foregroundStyle(.orange)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange.opacity(0.15))
-                                    .cornerRadius(8)
                             } else {
-                                Label("Confirmada", systemImage: "checkmark.circle")
+                                Text("Confirmada")
                                     .font(.caption)
-                                    .foregroundStyle(.green)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green.opacity(0.15))
-                                    .cornerRadius(8)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                }
+
+                // Air quality section (Metro Sevilla)
+                if let aq = airQuality {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Calidad del aire", systemImage: "aqi.medium")
+                            .font(.headline)
+                            .foregroundStyle(.blue)
+
+                        HStack(spacing: 20) {
+                            // CO2 Rating
+                            if let rating = aq.co2Rating {
+                                VStack(spacing: 4) {
+                                    Text(rating)
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(airQualityColor(aq.ratingColor))
+                                    Text("CO\u{2082}")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            // Temperature
+                            if let temp = aq.temperature {
+                                VStack(spacing: 4) {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "thermometer.medium")
+                                            .font(.title3)
+                                            .foregroundStyle(.orange)
+                                        Text("\(temp)\u{00B0}C")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                    }
+                                    Text("Temperatura")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            // Humidity
+                            if let humidity = aq.humidity {
+                                VStack(spacing: 4) {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "humidity")
+                                            .font(.title3)
+                                            .foregroundStyle(.cyan)
+                                        Text("\(humidity)%")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                    }
+                                    Text("Humedad")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+
+                        // CO2 ppm detail
+                        if let co2 = aq.co2 {
+                            HStack(spacing: 6) {
+                                Image(systemName: "leaf.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(airQualityColor(aq.ratingColor))
+                                Text("\(co2) ppm CO\u{2082}")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.top, 4)
+                        }
+
+                        // Vehicle label
+                        if let label = arrival.vehicleLabel {
+                            HStack(spacing: 6) {
+                                Image(systemName: "tram.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text("Unidad \(label)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -313,6 +425,15 @@ struct TrainDetailView: View {
         }
     }
 
+    private func airQualityColor(_ colorName: String) -> Color {
+        switch colorName {
+        case "green": return .green
+        case "orange": return .orange
+        case "red": return .red
+        default: return .gray
+        }
+    }
+
     private func loadTripDetails() async {
         guard let dataService = dataService,
               !arrival.frequencyBased else { return }
@@ -325,7 +446,10 @@ struct TrainDetailView: View {
         guard let dataService = dataService,
               let routeId = arrival.routeId else { return }
         isLoadingAlerts = true
-        alerts = await dataService.fetchAlertsForRoute(routeId: routeId)
+        alerts = await dataService.fetchAlertsForRoute(
+            routeId: routeId,
+            routeShortName: arrival.lineName
+        )
         isLoadingAlerts = false
     }
 }
@@ -560,11 +684,18 @@ struct JourneyStopsListView: View {
                 delaySeconds: 180,
                 routeColor: "#813380",
                 routeId: "RENFE_C3_36",
+                isSuspended: false,
+                wheelchairAccessible: true,
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: false,
                 occupancyStatus: nil,
-                occupancyPercentage: nil
+                occupancyPercentage: nil,
+                routeTextColor: nil,
+                isSkipped: nil,
+                vehicleLat: nil,
+                vehicleLon: nil,
+                vehicleLabel: nil
             ),
             lineColor: Color(red: 129/255, green: 51/255, blue: 128/255)
         )

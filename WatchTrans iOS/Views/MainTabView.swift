@@ -29,9 +29,15 @@ struct MainTabView: View {
 
     @State private var selectedTab = 0
 
+    // Deep Link State
+    struct DeepLinkItem: Identifiable {
+        let id: String // The stop ID
+    }
+    @State private var deepLinkItem: DeepLinkItem?
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: Home (Favoritos + Cercanas)
+            // Tab 1: Inicio
             HomeView(
                 dataService: dataService,
                 locationService: locationService,
@@ -43,8 +49,15 @@ struct MainTabView: View {
             }
             .tag(0)
 
-            // Tab 2: Search
-            SearchView(
+            // Tab 2: Mapa
+            FullMapView(dataService: dataService, locationService: locationService)
+            .tabItem {
+                Label("Mapa", systemImage: "map.fill")
+            }
+            .tag(1)
+
+            // Tab 3: Buscar
+            UnifiedSearchView(
                 dataService: dataService,
                 locationService: locationService,
                 favoritesManager: favoritesManager
@@ -52,44 +65,45 @@ struct MainTabView: View {
             .tabItem {
                 Label("Buscar", systemImage: "magnifyingglass")
             }
-            .tag(1)
+            .tag(2)
 
-            // Tab 3: Lines
+            // Tab 4: Lineas
             LinesListView(
                 dataService: dataService,
                 locationService: locationService,
                 favoritesManager: favoritesManager
             )
             .tabItem {
-                Label("Lineas", systemImage: "list.bullet")
-            }
-            .tag(2)
-
-            // Tab 4: Journey Planner
-            JourneyPlannerView(
-                dataService: dataService,
-                locationService: locationService
-            )
-            .tabItem {
-                Label("Planificar", systemImage: "point.topleft.down.to.point.bottomright.curvepath.fill")
+                Label("Líneas", systemImage: "list.bullet")
             }
             .tag(3)
 
-            // Tab 5: Settings/More
+            // Tab 5: Otros
             SettingsView(dataService: dataService)
             .tabItem {
                 Label("Otros", systemImage: "ellipsis")
             }
             .tag(4)
         }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+        .sheet(item: $deepLinkItem) { item in
+            StopLoaderView(
+                stopId: item.id,
+                dataService: dataService,
+                locationService: locationService,
+                favoritesManager: favoritesManager
+            )
+        }
         .task {
             await loadData()
         }
+        // ... (Rest of modifiers)
         .onAppear {
             if favoritesManager == nil {
                 favoritesManager = FavoritesManager(modelContext: modelContext)
             }
-            // NO iniciar auto-refresh aquí - se inicia cuando loadData() termina
         }
         .onDisappear {
             stopAutoRefresh()
@@ -97,20 +111,13 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
-                DebugLog.log("📱 [iOS] App activa")
-                // Solo iniciar auto-refresh si la carga inicial ya termino
                 if isInitialLoadComplete {
-                    DebugLog.log("📱 [iOS] Iniciando auto-refresh (carga inicial completa)")
                     startAutoRefresh()
-                    // Check if location changed while in background
                     Task {
                         await checkAndUpdateLocation()
                     }
-                } else {
-                    DebugLog.log("📱 [iOS] ⏳ Esperando carga inicial antes de auto-refresh")
                 }
             case .inactive, .background:
-                DebugLog.log("📱 [iOS] App en background - deteniendo auto-refresh")
                 stopAutoRefresh()
             @unknown default:
                 break
@@ -118,38 +125,37 @@ struct MainTabView: View {
         }
         .onChange(of: autoRefreshEnabled) { _, newValue in
             if newValue {
-                DebugLog.log("📱 [iOS] Auto-refresh activado")
                 startAutoRefresh()
             } else {
-                DebugLog.log("📱 [iOS] Auto-refresh desactivado")
                 stopAutoRefresh()
             }
         }
     }
+    
+    private func handleDeepLink(_ url: URL) {
+        // Schema: watchtrans://stop/{stop_id}
+        guard url.scheme == "watchtrans" else { return }
+        
+        if url.host == "stop" {
+            let pathComponents = url.pathComponents
+            // pathComponents usually ["/", "STOP_ID"]
+            if pathComponents.count > 1 {
+                let stopId = pathComponents[1]
+                self.deepLinkItem = DeepLinkItem(id: stopId)
+            } else if let id = url.query?.replacingOccurrences(of: "id=", with: "") {
+                // Fallback for query param style: watchtrans://stop?id=STOP_ID
+                self.deepLinkItem = DeepLinkItem(id: id)
+            }
+        }
+    }
 
-    // MARK: - Auto Refresh
-
+    // MARK: - Refresh Logic
     private func startAutoRefresh() {
-        stopAutoRefresh() // Cancel existing timer
-
-        // Only start if auto-refresh is enabled in settings
-        guard autoRefreshEnabled else {
-            DebugLog.log("📱 [iOS] Auto-refresh desactivado en ajustes")
-            return
-        }
-
-        // NO iniciar si la carga inicial no ha terminado
-        guard isInitialLoadComplete else {
-            DebugLog.log("📱 [iOS] ⏳ Auto-refresh pospuesto - carga inicial en progreso")
-            return
-        }
-
-        DebugLog.log("📱 [iOS] ✅ Iniciando timer de auto-refresh")
+        stopAutoRefresh()
+        guard autoRefreshEnabled && isInitialLoadComplete else { return }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: APIConfiguration.autoRefreshInterval, repeats: true) { _ in
             Task { @MainActor in
-                // Clear arrival cache to force fresh data
                 dataService.clearArrivalCache()
-                // Trigger UI refresh for arrivals
                 refreshTrigger = UUID()
                 await checkAndUpdateLocation()
             }
@@ -161,52 +167,24 @@ struct MainTabView: View {
         refreshTimer = nil
     }
 
-    /// Check if location changed (different province) and reload data if needed
     private func checkAndUpdateLocation() async {
-        // No ejecutar si la carga inicial esta en progreso
-        guard !isLoadingData else {
-            DebugLog.log("📱 [iOS] checkAndUpdateLocation: ⏳ Saltando - carga inicial en progreso")
-            return
-        }
-
-        guard let currentLocation = locationService.currentLocation else {
-            DebugLog.log("📱 [iOS] checkAndUpdateLocation: No hay ubicacion actual")
-            return
-        }
-
+        guard !isLoadingData, let currentLocation = locationService.currentLocation else { return }
         let lat = currentLocation.coordinate.latitude
         let lon = currentLocation.coordinate.longitude
-
-        // If we don't have data yet, load it
         if dataService.currentLocation == nil {
-            DebugLog.log("📱 [iOS] checkAndUpdateLocation: No hay datos, cargando...")
             await dataService.fetchTransportData(latitude: lat, longitude: lon)
             lastKnownProvince = dataService.currentLocation?.provinceName
             return
         }
-
-        // Solo recargar si la ubicacion cambio significativamente
-        // No hacer reload completo en cada refresh - solo limpiar cache de arrivals
         let savedLocation = SharedStorage.shared.getLocation()
         if let saved = savedLocation {
             let distance = abs(lat - saved.latitude) + abs(lon - saved.longitude)
-            if distance < 0.01 {
-                // Ubicacion similar - no recargar datos de transporte
-                DebugLog.log("📱 [iOS] checkAndUpdateLocation: Ubicacion similar, omitiendo recarga")
-                return
-            }
+            if distance < 0.01 { return }
         }
-
-        // Ubicacion cambio significativamente - recargar
-        DebugLog.log("📱 [iOS] checkAndUpdateLocation: 🔄 Ubicacion cambio, recargando...")
         await dataService.fetchTransportData(latitude: lat, longitude: lon)
-
         let newProvince = dataService.currentLocation?.provinceName
         if newProvince != lastKnownProvince {
-            DebugLog.log("📱 [iOS] ⚠️ PROVINCIA CAMBIO: \(lastKnownProvince ?? "nil") -> \(newProvince ?? "nil")")
             lastKnownProvince = newProvince
-
-            // Save new location for Widget
             SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
             if let location = dataService.currentLocation {
                 let networkName = location.primaryNetworkName ?? location.provinceName
@@ -216,177 +194,155 @@ struct MainTabView: View {
     }
 
     private func loadData() async {
-        // Evitar carga duplicada
-        guard !isLoadingData else {
-            DebugLog.log("📱 [iOS] ⚠️ loadData() ya en progreso - ignorando")
-            return
-        }
+        guard !isLoadingData else { return }
         isLoadingData = true
-
-        DebugLog.log("📱 [iOS] ========== INICIANDO APP ==========")
-
-        // FASE 1: CARGA RAPIDA - Stops desde cache o API
         if let savedLocation = SharedStorage.shared.getLocation() {
-            DebugLog.log("📱 [iOS] ✅ Ubicacion guardada: (\(savedLocation.latitude), \(savedLocation.longitude))")
             await dataService.fetchTransportData(latitude: savedLocation.latitude, longitude: savedLocation.longitude)
-            DebugLog.log("📱 [iOS] ✅ Stops cargados: \(dataService.stops.count)")
-
-            // Save network info for Widget
             if let location = dataService.currentLocation {
                 let networkName = location.primaryNetworkName ?? location.provinceName
                 SharedStorage.shared.saveNucleo(name: networkName, id: 0)
             }
-        } else {
-            DebugLog.log("📱 [iOS] ⚠️ No hay ubicacion guardada - esperando GPS...")
         }
-
-        // FASE 2: PREFETCH ARRIVALS (paralelo, pero esperamos resultado)
-        // Esto llena el cache antes de mostrar la UI
         await prefetchArrivalsForHomeView()
-
-        // FASE 3: MOSTRAR UI
         isLoadingData = false
         isInitialLoadComplete = true
-        DebugLog.log("📱 [iOS] ========== UI LISTA ==========")
         startAutoRefresh()
-
-        // FASE 4: BACKGROUND - Verificar ubicacion GPS
-        Task {
-            await requestAndUpdateLocation()
-        }
-
-        // FASE 5: BACKGROUND (diferido) - Cache offline
+        Task { await requestAndUpdateLocation() }
         if NetworkMonitor.shared.isConnected {
             Task {
-                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 segundos
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
                 await dataService.cacheOfflineSchedulesForFavorites()
             }
         }
-
-        DebugLog.log("📱 [iOS] ========== BACKGROUND TASKS INICIADAS ==========")
     }
 
-    /// Prefetch arrivals for favorites, frequent stops, and nearby stops (runs in background)
     private func prefetchArrivalsForHomeView() async {
         var stopIds = Set<String>()
-
-        // Add favorite stops
         if let manager = favoritesManager {
             for favorite in manager.favorites {
                 stopIds.insert(favorite.stopId)
             }
         }
-
-        // Add frequent stops (top 5)
-        let frequentStops = FrequentStopsService.shared.getSuggestedStops().prefix(5)
-        for frequent in frequentStops {
-            stopIds.insert(frequent.id)
-        }
-
-        // Add nearby stops (top 5) - sorted by distance
-        let nearbyStops: [Stop]
-        if let location = locationService.currentLocation {
-            nearbyStops = dataService.stops
-                .sorted { $0.distance(from: location) < $1.distance(from: location) }
-                .filter { stop in !stopIds.contains(stop.id) }  // Exclude already added
-                .prefix(5)
-                .map { $0 }
-        } else {
-            // No location - just take first 5 stops
-            nearbyStops = Array(dataService.stops.prefix(5))
-        }
-        for stop in nearbyStops {
-            stopIds.insert(stop.id)
-        }
-
         guard !stopIds.isEmpty else { return }
-
-        DebugLog.log("📱 [iOS] 🚀 Prefetching arrivals para \(stopIds.count) paradas (favoritos + frecuentes + cercanas)...")
-
         await withTaskGroup(of: Void.self) { group in
             for stopId in stopIds {
-                group.addTask {
-                    _ = await self.dataService.fetchArrivals(for: stopId)
-                }
+                group.addTask { _ = await self.dataService.fetchArrivals(for: stopId) }
             }
         }
-
-        // Trigger UI refresh
         refreshTrigger = UUID()
-        DebugLog.log("📱 [iOS] ✅ Prefetch completado")
     }
 
-    /// Request location permission and update data if location changed
     private func requestAndUpdateLocation() async {
-        // Request location permission if needed
-        DebugLog.log("📱 [iOS] Authorization status: \(locationService.authorizationStatus.rawValue)")
         if locationService.authorizationStatus == .notDetermined {
-            DebugLog.log("📱 [iOS] Solicitando permisos de ubicacion...")
             locationService.requestPermission()
-
-            // Wait for authorization (max 5 seconds - reduced from 10)
             var authWaitCount = 0
-            while locationService.authorizationStatus == CLAuthorizationStatus.notDetermined && authWaitCount < 10 {
+            while locationService.authorizationStatus == .notDetermined && authWaitCount < 10 {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 authWaitCount += 1
             }
         }
-
-        // Start location updates if authorized
-        guard locationService.authorizationStatus == CLAuthorizationStatus.authorizedWhenInUse ||
-              locationService.authorizationStatus == CLAuthorizationStatus.authorizedAlways else {
-            DebugLog.log("📱 [iOS] ⚠️ Ubicacion no autorizada")
-            return
-        }
-
-        DebugLog.log("📱 [iOS] Iniciando actualizacion de ubicacion...")
+        guard locationService.authorizationStatus == .authorizedWhenInUse ||
+              locationService.authorizationStatus == .authorizedAlways else { return }
         locationService.startUpdating()
-
-        // Wait for location (max 3 seconds - reduced from 5)
         var locationWaitCount = 0
         while locationService.currentLocation == nil && locationWaitCount < 6 {
             try? await Task.sleep(nanoseconds: 500_000_000)
             locationWaitCount += 1
         }
-
-        guard let currentLocation = locationService.currentLocation else {
-            DebugLog.log("📱 [iOS] ⚠️ No se pudo obtener ubicacion GPS")
-            return
-        }
-
+        guard let currentLocation = locationService.currentLocation else { return }
         let lat = currentLocation.coordinate.latitude
         let lon = currentLocation.coordinate.longitude
-        DebugLog.log("📱 [iOS] Ubicacion GPS obtenida: (\(lat), \(lon))")
-
-        // Save new location
         SharedStorage.shared.saveLocation(latitude: lat, longitude: lon)
-
-        // Check if we need to reload (different province or no data yet)
         let savedLocation = SharedStorage.shared.getLocation()
-        let distanceFromSaved: Double
-        if let saved = savedLocation {
-            // Calculate rough distance (degrees)
-            distanceFromSaved = abs(lat - saved.latitude) + abs(lon - saved.longitude)
-        } else {
-            distanceFromSaved = 999 // Force reload
-        }
-
-        // Reload if moved significantly (> 0.01 degrees ~ 1km) or no data
+        let distanceFromSaved = (savedLocation != nil) ? abs(lat - savedLocation!.latitude) + abs(lon - savedLocation!.longitude) : 999
         if distanceFromSaved > 0.01 || dataService.stops.isEmpty {
-            DebugLog.log("📱 [iOS] 🔄 Ubicacion cambio significativamente, recargando datos...")
             await dataService.fetchTransportData(latitude: lat, longitude: lon)
-
             if let location = dataService.currentLocation {
                 let networkName = location.primaryNetworkName ?? location.provinceName
                 SharedStorage.shared.saveNucleo(name: networkName, id: 0)
                 lastKnownProvince = location.provinceName
             }
-        } else {
-            DebugLog.log("📱 [iOS] ✅ Ubicacion similar, no es necesario recargar")
         }
     }
 }
 
-#Preview {
-    MainTabView()
+// MARK: - Deep Link Support
+
+struct StopLoaderView: View {
+    let stopId: String
+    let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
+    
+    @State private var stop: Stop?
+    @State private var isLoading = true
+    @State private var error: String?
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Cargando parada...")
+                            .foregroundStyle(.secondary)
+                    }
+                } else if let stop = stop {
+                    StopDetailView(
+                        stop: stop,
+                        dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager
+                    )
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundStyle(.orange)
+                        Text(error ?? "Parada no encontrada")
+                            .font(.headline)
+                        Button("Cerrar") {
+                            dismiss()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+            .toolbar {
+                // Add close button only if showing detail (StopDetailView might have its own toolbar)
+                // But since we are in a sheet, we usually need a top-left close button if not provided
+                if stop != nil {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cerrar") {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
+        .task {
+            await loadStop()
+        }
+    }
+    
+    private func loadStop() async {
+        // 1. Try from cache
+        if let cached = dataService.getStop(by: stopId) {
+            stop = cached
+            isLoading = false
+            return
+        }
+        
+        // 2. Try fetch from API
+        if let fetched = await dataService.fetchStopDetails(stopId: stopId) {
+            stop = fetched
+            isLoading = false
+        } else {
+            isLoading = false
+            error = "No se pudo cargar la parada \(stopId)"
+        }
+    }
 }

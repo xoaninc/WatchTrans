@@ -16,6 +16,7 @@ struct LineDetailView: View {
 
     @State private var stops: [Stop] = []
     @State private var alerts: [AlertResponse] = []
+    @State private var stopAlerts: [String: [AlertResponse]] = [:]
     @State private var operatingHoursResult: OperatingHoursResult?
     @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var stopOnShapeCoords: [String: CLLocationCoordinate2D] = [:]  // Stop coordinates projected onto shape
@@ -26,6 +27,11 @@ struct LineDetailView: View {
 
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
+    }
+    
+    /// Check if line has any full suspension alerts
+    var isLineSuspended: Bool {
+        alerts.contains { $0.isFullSuspension }
     }
 
     /// Special descriptions for specific lines (hardcoded)
@@ -127,7 +133,7 @@ struct LineDetailView: View {
                         dataService: dataService,
                         shapePoints: shapePoints.isEmpty ? nil : shapePoints,
                         stopOnShapeCoords: stopOnShapeCoords.isEmpty ? nil : stopOnShapeCoords,
-                        isSuspended: operatingHoursResult?.isSuspended ?? false,
+                        isSuspended: isLineSuspended,
                         isShapeLoading: isShapeLoading
                     )
                 }
@@ -159,7 +165,8 @@ struct LineDetailView: View {
                                     isFirst: index == 0,
                                     isLast: index == stops.count - 1,
                                     isCircular: line.isCircular,
-                                    dataService: dataService
+                                    dataService: dataService,
+                                    alerts: stopAlerts[stop.id] ?? []
                                 )
                             }
                             .buttonStyle(.plain)
@@ -196,35 +203,41 @@ struct LineDetailView: View {
             }
         }
 
-        // Online: fetch from API
-        async let stopsTask: [Stop] = {
-            if let routeId = line.routeIds.first {
-                return await dataService.fetchStopsForRoute(routeId: routeId)
+        // Online: fetch from API (Sequential)
+        if let routeId = line.routeIds.first {
+            stops = await dataService.fetchStopsForRoute(routeId: routeId)
+        } else {
+            stops = []
+        }
+
+        // Fetch alerts for all stops in parallel
+        await withTaskGroup(of: (String, [AlertResponse]).self) { group in
+            for stop in stops {
+                group.addTask {
+                    let alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
+                    return (stop.id, alerts)
+                }
             }
-            return []
-        }()
-
-        async let alertsTask: [AlertResponse] = dataService.fetchAlertsForLine(line)
-
-        async let hoursTask: OperatingHoursResult? = {
-            if let routeId = line.routeIds.first {
-                return await dataService.fetchOperatingHours(routeId: routeId)
+            for await (stopId, alerts) in group {
+                stopAlerts[stopId] = alerts
             }
-            return nil
-        }()
+        }
 
-        async let shapeTask: DataService.ShapeWithStops = {
-            if let routeId = line.routeIds.first {
-                return await dataService.fetchRouteShapeWithStops(routeId: routeId, maxGap: 100)
-            }
-            return DataService.ShapeWithStops(shapePoints: [], stopCoordinates: [:])
-        }()
+        alerts = await dataService.fetchAlertsForLine(line)
 
-        stops = await stopsTask
-        alerts = await alertsTask
+        if let routeId = line.routeIds.first {
+            operatingHoursResult = await dataService.fetchOperatingHours(routeId: routeId)
+        } else {
+            operatingHoursResult = nil
+        }
+
+        let shapeResult: DataService.ShapeWithStops
+        if let routeId = line.routeIds.first {
+            shapeResult = await dataService.fetchRouteShapeWithStops(routeId: routeId, maxGap: 100)
+        } else {
+            shapeResult = DataService.ShapeWithStops(shapePoints: [], stopCoordinates: [:])
+        }
         
-        operatingHoursResult = await hoursTask
-        let shapeResult = await shapeTask
         shapePoints = shapeResult.shapePoints.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
         stopOnShapeCoords = shapeResult.stopCoordinates
         isShapeLoading = false
@@ -330,6 +343,11 @@ struct LineHeaderView: View {
 struct AlertsSummaryView: View {
     let alerts: [AlertResponse]
     @Binding var isExpanded: Bool
+    
+    // Determine color based on whether any alert is a suspension
+    private var sectionColor: Color {
+        alerts.contains { $0.isFullSuspension } ? .red : .orange
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -341,7 +359,7 @@ struct AlertsSummaryView: View {
             } label: {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(sectionColor)
                     Text("\(alerts.count) aviso\(alerts.count == 1 ? "" : "s")")
                         .font(.headline)
                         .foregroundStyle(.primary)
@@ -374,7 +392,7 @@ struct AlertsSummaryView: View {
             }
         }
         .padding()
-        .background(Color.orange.opacity(0.1))
+        .background(sectionColor.opacity(0.1))
         .cornerRadius(12)
     }
 }
@@ -404,7 +422,7 @@ struct AlertBannerCompactView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Circle()
-                .fill(Color.orange)
+                .fill(alert.severityColor)
                 .frame(width: 6, height: 6)
                 .padding(.top, 6)
 
@@ -463,7 +481,7 @@ struct AlertBannerView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(alert.severityColor)
 
             VStack(alignment: .leading, spacing: 4) {
                 if let header = effectiveHeader {
@@ -481,7 +499,7 @@ struct AlertBannerView: View {
             Spacer()
         }
         .padding()
-        .background(Color.orange.opacity(0.15))
+        .background(alert.severityColor.opacity(0.15))
         .cornerRadius(10)
     }
 }
@@ -495,6 +513,7 @@ struct LineStopRowView: View {
     let isLast: Bool
     let isCircular: Bool  // For circular lines (L6, L12)
     let dataService: DataService
+    var alerts: [AlertResponse] = []
 
     // Default colors for connection badges
     private let defaultMetroColor = "#ED1C24"
@@ -539,8 +558,8 @@ struct LineStopRowView: View {
     private var connectionBadges: [(name: String, color: Color, isMetroLigero: Bool)] {
         var badges: [(String, Color, Bool)] = []
 
-        // 1. Cercanías connections
-        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corCercanias)
+        // 1. Train connections (Cercanías, FEVE, etc.)
+        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corTren)
         for line in cercaniasLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
             badges.append((formatLineName(line, type: "Cercanías"), color, false))
@@ -625,6 +644,10 @@ struct LineStopRowView: View {
                     .font(isTerminal ? .headline : .body)
                     .fontWeight(isTerminal ? .bold : .regular)
 
+                if !alerts.isEmpty {
+                    StopAlertBadge(alerts: alerts, mode: .inline)
+                }
+
                 // Show connection badges (Metro, Cercanías, Tranvía, ML)
                 if hasConnections {
                     HStack(spacing: 4) {
@@ -684,7 +707,10 @@ struct LineStopRowView: View {
                 colorHex: "#813380",
                 nucleo: "madrid",
                 routeIds: ["RENFE_C3_34"],
-                isCircular: false
+                isCircular: false,
+                serviceStatus: nil,
+                suspendedSince: nil,
+                isAlternativeService: nil
             ),
             dataService: DataService(),
             locationService: LocationService(),

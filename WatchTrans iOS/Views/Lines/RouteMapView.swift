@@ -159,7 +159,7 @@ struct RouteMapView: View {
             if let shape = shapePoints, shape.count > 2 {
                 if isSuspended {
                     MapPolyline(coordinates: shape)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [8, 4]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [8, 10]))
                 } else {
                     MapPolyline(coordinates: shape)
                         .stroke(lineColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
@@ -169,7 +169,7 @@ struct RouteMapView: View {
                 let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
                 if isSuspended {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 4]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 10]))
                 } else {
                     MapPolyline(coordinates: coords)
                         .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
@@ -187,7 +187,7 @@ struct RouteMapView: View {
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
-                Annotation("", coordinate: coord) {
+                Annotation(stop.name, coordinate: coord) {
                     if isTerminal && hasCorrespondence {
                         // Terminal + Interchange: BIGGEST - white with thick black border
                         Circle()
@@ -398,7 +398,7 @@ struct FullScreenMapView: View {
             if let shape = shapePoints, shape.count > 2 {
                 if isSuspended {
                     MapPolyline(coordinates: shape)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [10, 5]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [10, 12]))
                 } else {
                     MapPolyline(coordinates: shape)
                         .stroke(lineColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
@@ -408,7 +408,7 @@ struct FullScreenMapView: View {
                 let coords = stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
                 if isSuspended {
                     MapPolyline(coordinates: coords)
-                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [10, 5]))
+                        .stroke(lineColor.opacity(0.5), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [10, 12]))
                 } else {
                     MapPolyline(coordinates: coords)
                         .stroke(lineColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
@@ -424,7 +424,7 @@ struct FullScreenMapView: View {
                 let hasCorrespondence = stop.hasCorrespondence(excludingLine: line.name)
                 // Use projected coordinates if available, otherwise fall back to stop coordinates
                 let coord = stopOnShapeCoords?[stop.id] ?? CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
-                Annotation("", coordinate: coord) {
+                Annotation(stop.name, coordinate: coord) {
                     if hasCorrespondence {
                         // Interchange: white circle with black border
                         Circle()
@@ -482,12 +482,15 @@ struct FullScreenMapView: View {
             colorHex: "#38A3DC",
             nucleo: "madrid",
             routeIds: ["METRO_1"],
-            isCircular: false
+            isCircular: false,
+            serviceStatus: nil,
+            suspendedSince: nil,
+            isAlternativeService: nil
         ),
         stops: [
-            Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corMl: nil, corCercanias: nil, corTranvia: nil),
-            Stop(id: "2", name: "Bambu", latitude: 40.4768, longitude: -3.6764, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1", corMl: nil, corCercanias: nil, corTranvia: nil),
-            Stop(id: "3", name: "Chamartin", latitude: 40.4721, longitude: -3.6826, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L10", corMl: nil, corCercanias: "C3, C4", corTranvia: nil),
+            Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corMl: nil, corTren: nil, corTranvia: nil),
+            Stop(id: "2", name: "Bambu", latitude: 40.4768, longitude: -3.6764, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1", corMl: nil, corTren: nil, corTranvia: nil),
+            Stop(id: "3", name: "Chamartin", latitude: 40.4721, longitude: -3.6826, connectionLineIds: [], province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L10", corMl: nil, corTren: "C3, C4", corTranvia: nil),
         ],
         dataService: DataService()
     )

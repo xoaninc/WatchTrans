@@ -8,6 +8,8 @@
 import WidgetKit
 import SwiftUI
 
+#if os(iOS)
+
 // MARK: - Models
 
 struct FavoriteStopData: Identifiable {
@@ -51,7 +53,7 @@ struct FavoritesProvider: TimelineProvider {
         }
     }
     
-    private func fetchEntry() -> FavoritesEntry {
+    private func fetchEntry() async -> FavoritesEntry {
         // 1. Get favorites from SharedStorage
         let sharedFavorites = SharedStorage.shared.getFavorites()
         
@@ -61,14 +63,9 @@ struct FavoritesProvider: TimelineProvider {
         
         // 2. Fetch data for top 3 favorites
         let topFavorites = Array(sharedFavorites.prefix(3))
-        let stopIds = topFavorites.map { $0.stopId }
+        // let stopIds = topFavorites.map { $0.stopId } // Unused
         
-        // 3. Fetch concurrently (synchronous wait for async task)
-        // Since we are in a non-async context wrapper (Task), we can await.
-        // But fetchMultipleDepartures is async.
-        
-        // Note: fetchMultipleDepartures was defined as async.
-        // We need to call it.
+        // 3. Fetch concurrently
         return await performFetch(favorites: topFavorites)
     }
     
@@ -190,3 +187,5 @@ struct WatchTransFavoritesWidget: Widget {
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
+
+#endif

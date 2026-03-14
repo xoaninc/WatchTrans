@@ -7,8 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import BackgroundTasks
-import Sentry
 import Pulse
 
 // MARK: - App Delegate for Background Tasks
@@ -39,17 +37,6 @@ struct WatchTransApp: App {
         // 1. Pulse (Network Logging)
         // Enable automatic URLSession proxying for any session that doesn't use the delegate explicitly
         // Experimental.URLSessionProxy.shared.isEnabled = true
-        
-        // 2. Sentry (Error Tracking)
-        /*
-        SentrySDK.start { options in
-            // TODO: REPLACE WITH YOUR REAL SENTRY DSN
-            options.dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
-            options.debug = false // Disabled for production/performance
-            options.tracesSampleRate = 1.0
-            options.enableAppHangTracking = true
-        }
-        */
         
         // ------------------------------------
 
@@ -84,6 +71,11 @@ struct WatchTransApp: App {
         }
         .modelContainer(sharedModelContainer)
         .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Restart network monitor to ensure we catch connectivity changes
+                // that happened while in background/suspended
+                NetworkMonitor.shared.restart()
+            }
             if newPhase == .background {
                 // Schedule background refresh when app goes to background
                 BackgroundRefreshService.shared.scheduleRefresh()

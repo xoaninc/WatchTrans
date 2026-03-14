@@ -31,6 +31,9 @@ struct StopDetailView: View {
     @State private var showFavoriteAlert = false
     @State private var favoriteAlertMessage = ""
     @State private var showMapOptions = false
+    @State private var stationOccupancy: [StationOccupancyResponse] = []
+    @State private var equipmentStatus: [EquipmentStatusResponse] = []
+    @State private var airQualityData: [String: TrainAirQuality] = [:]
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -119,6 +122,83 @@ struct StopDetailView: View {
                         AlertsSectionView(alerts: alerts, isExpanded: $isAlertsExpanded)
                     }
 
+                    // Station occupancy (TMB Metro)
+                    if !stationOccupancy.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Ocupación de la estación")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            ForEach(stationOccupancy, id: \.track) { occ in
+                                HStack(spacing: 6) {
+                                    Text("Andén \(occ.track ?? 0)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    ProgressView(value: Double(occ.occupancyPct ?? 0), total: 100)
+                                        .tint(occupancyColor(pct: occ.occupancyPct ?? 0))
+                                    Text("\(occ.occupancyPct ?? 0)%")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Equipment status (Metro Sevilla elevators/escalators)
+                    if !equipmentStatus.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Estado de equipos")
+                                .font(.headline)
+
+                            let broken = equipmentStatus.filter { $0.isBroken }
+                            if !broken.isEmpty {
+                                ForEach(broken) { device in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
+                                            .foregroundStyle(.red)
+                                        VStack(alignment: .leading) {
+                                            Text(device.isElevator ? "Ascensor" : "Escalera mecánica")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                            Text("\(device.location ?? "") — Fuera de servicio")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.red)
+                                    }
+                                }
+                            }
+
+                            let working = equipmentStatus.filter { !$0.isBroken }
+                            if !working.isEmpty {
+                                DisclosureGroup("Todos los equipos (\(working.count) operativos)") {
+                                    ForEach(working) { device in
+                                        HStack(spacing: 6) {
+                                            Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
+                                                .foregroundStyle(.green)
+                                                .font(.caption)
+                                            Text(device.isElevator ? "Ascensor" : "Escalera")
+                                                .font(.caption)
+                                            Text(device.location ?? "")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Spacer()
+                                            if let dir = device.direction, dir != "disabled" {
+                                                Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                .font(.subheadline)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
                     // Connection badges
                     if hasConnections {
                         ConnectionsSectionView(
@@ -134,6 +214,7 @@ struct StopDetailView: View {
                     if !correspondences.isEmpty {
                         NearbyStationsSectionView(
                             correspondences: correspondences,
+                            parentStopId: stop.id,
                             dataService: dataService,
                             locationService: locationService,
                             favoritesManager: favoritesManager
@@ -152,7 +233,8 @@ struct StopDetailView: View {
                     DeparturesSectionView(
                         departures: departures,
                         isLoading: isLoading,
-                        dataService: dataService
+                        dataService: dataService,
+                        airQualityData: airQualityData
                     )
                 }
                 .padding()
@@ -254,7 +336,7 @@ struct StopDetailView: View {
         !stop.connectionLineIds.isEmpty ||
         !(stop.corMetro?.isEmpty ?? true) ||
         !(stop.corMl?.isEmpty ?? true) ||
-        !(stop.corCercanias?.isEmpty ?? true) ||
+        !(stop.corTren?.isEmpty ?? true) ||
         !(stop.corTranvia?.isEmpty ?? true)
     }
 
@@ -289,22 +371,34 @@ struct StopDetailView: View {
             isLoading = true
         }
 
-        // Load ALL data on first load
-        async let departuresTask = dataService.fetchArrivals(for: stop.id)
-        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
-        async let correspondencesTask = dataService.fetchCorrespondences(stopId: stop.id)
-        async let transportModesTask = dataService.fetchTransportModes(stopId: stop.id)
-        async let accessesTask = dataService.fetchAccesses(stopId: stop.id)
+        // Week 3 Optimization: Load full details + arrivals in parallel
+        async let fullDetailsTask = dataService.fetchStopDetails(stopId: stop.id)
+        async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
+        
+        let (fullDetails, rawDepartures) = await (fullDetailsTask, arrivalsTask)
+        
+        // Update UI with full details
+        if fullDetails != nil {
+            alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
+            // TODO: Re-enable when Stop model has correspondences, accesses, and routes properties
+            // correspondences = fullDetails.correspondences ?? []
+            // accesses = fullDetails.accesses ?? []
+            // if fullDetails.routes != nil {
+            //     // Future optimization: Use routes from /full to populate connection badges
+            // }
+        } else {
+            // Fallback to old method if /full fails
+            alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
+            correspondences = await dataService.fetchCorrespondences(stopId: stop.id)
+            transportModes = await dataService.fetchTransportModes(stopId: stop.id)
+            accesses = await dataService.fetchAccesses(stopId: stop.id)
+        }
 
-        departures = dataService.filterArrivals(await departuresTask, for: display)
-        alerts = await alertsTask
-        correspondences = await correspondencesTask
-        transportModes = await transportModesTask
-        accesses = await accessesTask
+        // Process arrivals
+        departures = dataService.filterArrivals(rawDepartures, for: display)
 
         // If no accesses found and this stop has Metro correspondence,
         // try to load accesses from the corresponding Metro station
-        // (Metro Madrid has accesses imported, Cercanías doesn't)
         if accesses.isEmpty, let corMetro = stop.corMetro, !corMetro.isEmpty {
             // Find Metro station with same name in loaded stops
             let metroStop = dataService.stops.first { otherStop in
@@ -322,18 +416,36 @@ struct StopDetailView: View {
             updateMapToIncludeAccesses()
         }
 
+        // Fetch station occupancy for TMB Metro stops
+        if stop.id.hasPrefix("TMB_METRO_") {
+            stationOccupancy = (try? await dataService.gtfsRealtimeService.fetchStationOccupancy(stopIds: [stop.id])) ?? []
+        }
+
+        // Fetch equipment status and air quality for Metro Sevilla stops
+        if stop.id.hasPrefix("METRO_SEV_") {
+            equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
+            airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
+        }
+
         hasLoadedOnce = true
         isLoading = false
+        
+        // Haptic feedback on completion
+        let impact = UIImpactFeedbackGenerator(style: .soft)
+        impact.impactOccurred()
     }
 
     /// Light refresh - only fetches time-sensitive data (departures + alerts)
     /// Used for pull-to-refresh and auto-refresh
     private func refreshDepartures() async {
-        async let departuresTask = dataService.fetchArrivals(for: stop.id)
-        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
-
-        departures = dataService.filterArrivals(await departuresTask, for: display)
-        alerts = await alertsTask
+        let rawDepartures = await dataService.fetchArrivals(for: stop.id)
+        departures = dataService.filterArrivals(rawDepartures, for: display)
+        
+        alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
+        
+        // Soft haptic feedback on silent refresh
+        let impact = UIImpactFeedbackGenerator(style: .soft)
+        impact.impactOccurred()
     }
 
     /// Update map region to include both the station and all accesses
@@ -368,6 +480,12 @@ struct StopDetailView: View {
         ))
 
         DebugLog.log("🗺️ [StopDetail] Updated map to include \(accesses.count) accesses")
+    }
+
+    private func occupancyColor(pct: Int) -> Color {
+        if pct < 30 { return .green }
+        if pct < 60 { return .orange }
+        return .red
     }
 }
 
@@ -546,6 +664,16 @@ struct StopHeaderView: View {
 struct AlertsSectionView: View {
     let alerts: [AlertResponse]
     @Binding var isExpanded: Bool
+    
+    /// Check if any alert is a full suspension
+    private var hasFullSuspension: Bool {
+        alerts.contains { $0.isFullSuspension }
+    }
+    
+    /// Primary color for the alerts section
+    private var primaryColor: Color {
+        hasFullSuspension ? .red : .orange
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -556,8 +684,8 @@ struct AlertsSectionView: View {
                 }
             } label: {
                 HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                    Image(systemName: hasFullSuspension ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(primaryColor)
                     Text("\(alerts.count) aviso\(alerts.count == 1 ? "" : "s")")
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -576,7 +704,7 @@ struct AlertsSectionView: View {
                 ForEach(alerts.prefix(2)) { alert in
                     HStack(alignment: .top, spacing: 8) {
                         Circle()
-                            .fill(Color.orange)
+                            .fill(alert.severityColor)
                             .frame(width: 6, height: 6)
                             .padding(.top, 6)
 
@@ -592,6 +720,14 @@ struct AlertsSectionView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
+                            }
+                            
+                            // Show restoration time for suspensions
+                            if let restoreTime = alert.estimatedRestorationTime {
+                                Text("Reanudación: \(restoreTime)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(alert.isFullSuspension ? .red : .orange)
                             }
                         }
                     }
@@ -617,16 +753,29 @@ struct AlertsSectionView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                        
+                        // Show restoration time for suspensions
+                        if let restoreTime = alert.estimatedRestorationTime {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock.fill")
+                                    .font(.caption2)
+                                Text("Reanudación estimada: \(restoreTime)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(alert.isFullSuspension ? .red : .orange)
+                            .padding(.top, 2)
+                        }
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.orange.opacity(0.15))
+                    .background(alert.severityColor.opacity(0.15))
                     .cornerRadius(8)
                 }
             }
         }
         .padding()
-        .background(Color.orange.opacity(0.1))
+        .background(primaryColor.opacity(0.1))
         .cornerRadius(12)
     }
 }
@@ -647,7 +796,7 @@ struct ConnectionsSectionView: View {
         var badges: [(String, String)] = []
 
         // 1. Cercanías
-        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corCercanias)
+        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corTren)
         for line in cercaniasLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "Cercanías"), color))
@@ -751,6 +900,7 @@ struct DeparturesSectionView: View {
     let departures: [Arrival]
     let isLoading: Bool
     let dataService: DataService
+    var airQualityData: [String: TrainAirQuality] = [:]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -775,7 +925,19 @@ struct DeparturesSectionView: View {
                 .padding(.vertical, 20)
             } else if departures.isEmpty {
                 VStack(spacing: 8) {
-                    if !NetworkMonitor.shared.isConnected {
+                    if let _ = dataService.error {
+                        // API Error (e.g. 504 Gateway Timeout from Renfe)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                        Text("Sin conexion con el operador")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("El servidor de transporte no responde. Intentalo de nuevo mas tarde.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else if !NetworkMonitor.shared.isConnected {
                         // Offline with no cache - show helpful message
                         Image(systemName: "icloud.slash")
                             .font(.title2)
@@ -803,8 +965,17 @@ struct DeparturesSectionView: View {
                         return dataService.getLine(by: departure.lineId)?.color ?? .blue
                     }()
 
-                    NavigationLink(destination: TrainDetailView(arrival: departure, lineColor: lineColor, dataService: dataService)) {
-                        ArrivalRowView(arrival: departure, dataService: dataService)
+                    NavigationLink(destination: TrainDetailView(
+                        arrival: departure,
+                        lineColor: lineColor,
+                        dataService: dataService,
+                        airQuality: departure.vehicleLabel.flatMap { airQualityData[$0] }
+                    )) {
+                        ArrivalRowView(
+                            arrival: departure,
+                            dataService: dataService,
+                            airQuality: departure.vehicleLabel.flatMap { airQualityData[$0] }
+                        )
                     }
                     .buttonStyle(.plain)
                     .padding(.vertical, 4)
@@ -867,6 +1038,7 @@ struct FlowLayout: Layout {
 
 struct NearbyStationsSectionView: View {
     let correspondences: [CorrespondenceInfo]
+    let parentStopId: String
     let dataService: DataService
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
@@ -884,7 +1056,7 @@ struct NearbyStationsSectionView: View {
                     .fontWeight(.semibold)
             }
 
-            ForEach(correspondences, id: \.identifiableId) { correspondence in
+            ForEach(correspondences.filter { $0.toStopId != parentStopId }, id: \.identifiableId) { correspondence in
                 Button {
                     Task {
                         loadingStopId = correspondence.toStopId
@@ -988,7 +1160,7 @@ struct CorrespondenceRow: View {
                 hasMetroConnection: true,
                 corMetro: "L1",
                 corMl: nil,
-                corCercanias: "C1, C3, C4",
+                corTren: "C1, C3, C4",
                 corTranvia: nil
             ),
             dataService: DataService(),

@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 import WatchKit
-import Sentry
 import Pulse
 
 @main
@@ -21,15 +20,6 @@ struct WatchTrans_Watch_AppApp: App {
         // 1. Pulse (Network Logging)
         Experimental.URLSessionProxy.shared.isEnabled = true
         
-        // 2. Sentry (Error Tracking)
-        /*
-        SentrySDK.start { options in
-            // TODO: REPLACE WITH YOUR REAL SENTRY DSN
-            options.dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
-            options.debug = false
-            options.tracesSampleRate = 1.0
-        }
-        */
     }
 
     var sharedModelContainer: ModelContainer = {

@@ -138,8 +138,17 @@ struct ArrivalCard: View {
         delaySeconds: 120,
         routeColor: "#813380",
         routeId: "RENFE_C3_36",
+        isSuspended: false,
+        wheelchairAccessible: false,
         frequencyBased: false,
-        headwayMinutes: nil
+        headwayMinutes: nil,
+        isOfflineData: false,
+        occupancyStatus: nil,
+        occupancyPercentage: nil,
+        routeTextColor: nil,
+        isSkipped: nil,
+        vehicleLat: nil,
+        vehicleLon: nil
     )
 
     ArrivalCard(arrival: mockArrival, lineColor: .blue)

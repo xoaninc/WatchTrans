@@ -13,7 +13,7 @@ import AppIntents
 // NOTE: Keep in sync with APIConfiguration.swift in main app
 
 enum WidgetAPIConfig {
-    static let baseURL = "https://api.watchtrans.app/api/gtfs"
+    static let baseURL = "https://api.watch-trans.app/api/gtfs"
     static let refreshInterval: TimeInterval = 150  // 2.5 minutes
     static let requestTimeout: TimeInterval = 10
     static let resourceTimeout: TimeInterval = 15

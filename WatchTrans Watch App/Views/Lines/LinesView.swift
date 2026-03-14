@@ -3,7 +3,7 @@
 //  WatchTrans Watch App
 //
 //  Created by Juan Macias Gomez on 14/1/26.
-//  Line browser - browse all networks from RenfeServer API
+//  Line browser - browse all networks from WatchTrans API
 //
 
 import SwiftUI
@@ -291,7 +291,7 @@ struct LinesView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
                             LogoImageView(
-                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? "Madrid"),
+                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? ""),
                                 height: 14  // Smaller height for diamond shape
                             )
 

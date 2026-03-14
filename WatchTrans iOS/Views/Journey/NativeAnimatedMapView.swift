@@ -31,25 +31,30 @@ struct NativeAnimatedMapView: UIViewRepresentable {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
 
-        // 3D configuration
-        mapView.showsBuildings = false
+        // 3D configuration (Uber/Navigation Style)
+        if #available(iOS 16.0, *) {
+            let config = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .default)
+            config.showsTraffic = false
+            config.pointOfInterestFilter = .excludingAll
+            mapView.preferredConfiguration = config
+        } else {
+            mapView.showsBuildings = true
+        }
+        
         mapView.isPitchEnabled = true
         mapView.isRotateEnabled = true
-        mapView.mapType = .standard
-        mapView.pointOfInterestFilter = .excludingAll
-        mapView.showsTraffic = false
 
         // Debug: Log segment info
-        print("🗺️ [NativeMap] makeUIView called with \(segments.count) segments")
+        DebugLog.log("🗺️ [NativeMap] makeUIView called with \(segments.count) segments")
         for (index, segment) in segments.enumerated() {
-            print("🗺️ [NativeMap]   Segment \(index): \(segment.lineName ?? "walk") - \(segment.coordinates.count) coords")
+            DebugLog.log("🗺️ [NativeMap]   Segment \(index): \(segment.lineName ?? "walk") - \(segment.coordinates.count) coords")
         }
-        print("🗺️ [NativeMap] Total coordinates: \(allCoordinates.count)")
+        DebugLog.log("🗺️ [NativeMap] Total coordinates: \(allCoordinates.count)")
 
         // Add polylines for each segment (only if they have coordinates)
         for (index, segment) in segments.enumerated() {
             guard segment.coordinates.count >= 2 else {
-                print("🗺️ [NativeMap] ⚠️ Skipping segment \(index) - insufficient coordinates")
+                DebugLog.log("🗺️ [NativeMap] ⚠️ Skipping segment \(index) - insufficient coordinates")
                 continue
             }
             let polyline = SegmentPolyline(coordinates: segment.coordinates, count: segment.coordinates.count)
@@ -66,7 +71,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
         if let first = allCoordinates.first {
             context.coordinator.setupAnnotation(at: first, in: mapView)
         } else {
-            print("🗺️ [NativeMap] ⚠️ No coordinates for marker!")
+            DebugLog.log("🗺️ [NativeMap] ⚠️ No coordinates for marker!")
         }
 
         // Add stop markers
@@ -101,7 +106,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
         if !allCoordinates.isEmpty {
             context.coordinator.showEntireRoute(in: mapView, coordinates: allCoordinates)
         } else {
-            print("🗺️ [NativeMap] ⚠️ No coordinates for initial camera!")
+            DebugLog.log("🗺️ [NativeMap] ⚠️ No coordinates for initial camera!")
         }
 
         return mapView
@@ -144,7 +149,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
                     progressBinding.wrappedValue = 1.0
                 }
             }
-            context.coordinator.startAnimation(speed: 0.4 * speedMultiplier)
+            context.coordinator.startAnimation(speed: speedMultiplier)
         } else if !isPlaying && context.coordinator.isAnimating {
             context.coordinator.stopAnimation()
         }
@@ -163,21 +168,21 @@ struct NativeAnimatedMapView: UIViewRepresentable {
         var currentHeading: Double = 0
         var mapView: MKMapView?
 
-        // MKAnnotation marker (MapKit handles coordinate-to-screen conversion)
+        // MKAnnotation marker
         var marker: MKPointAnnotation = MKPointAnnotation()
 
-        // Pre-computed distances for fast lookup (avoids creating CLLocation objects every frame)
-        private var cumulativeDistances: [Double] = []
-
-        // Animation state
-        private var displayLink: CADisplayLink?
-        private var animationStartTime: CFTimeInterval = 0
-        private var totalDistance: Double = 0
-        private var speedKmPerSec: Double = 0.15
-        private var frameCount: Int = 0  // For throttling updates
-        private var cameraAnimator: UIViewPropertyAnimator?  // Smooth camera animation
-        private var savedProgress: Double = 0  // For pause/resume
+        // Core Animation State
         var isAnimating: Bool = false
+        private var currentCoordIndex: Int = 0
+        private var progressUpdateTimer: Timer?
+        private var accumulatedDistance: Double = 0
+        private var totalDistance: Double = 0
+        private var cumulativeDistances: [Double] = []
+        
+        // Speed Multiplier (Global)
+        var speedMultiplier: Double = 1.0
+
+        // Callbacks
         var onProgressUpdate: ((Double) -> Void)?
         var onSegmentIndexUpdate: ((Int) -> Void)?
         var onAnimationComplete: (() -> Void)?
@@ -189,7 +194,156 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             map.addAnnotation(marker)
         }
 
-        // MARK: - Map Setup
+        // MARK: - Animation Control (Core Animation)
+
+        func startAnimation(speed: Double) {
+            guard !allCoordinates.isEmpty, !isAnimating else { return }
+            
+            // Pre-compute if needed
+            if cumulativeDistances.isEmpty {
+                precomputeDistances()
+                totalDistance = cumulativeDistances.last ?? 0
+            }
+            
+            // Resume logic: find index closest to accumulatedDistance
+            if currentCoordIndex == 0 && accumulatedDistance > 0 {
+                // Determine currentCoordIndex based on saved distance
+                // (Simple approximation: find first distance > accumulated)
+                if let index = cumulativeDistances.firstIndex(where: { $0 >= accumulatedDistance }) {
+                    currentCoordIndex = max(0, index - 1)
+                }
+            }
+            
+            self.speedMultiplier = speed
+            self.isAnimating = true
+            
+            DebugLog.log("🎬 [Coordinator] Starting Core Animation loop. Total Coords: \(allCoordinates.count), Index: \(currentCoordIndex)")
+            
+            // Start Progress Timer (Independent from visual animation)
+            startProgressTimer()
+            
+            // Kick off recursive animation
+            animateToNextCoordinate()
+        }
+
+        func stopAnimation() {
+            isAnimating = false
+            // Stop recursion by flag
+            // Stop View Animations
+            if let markerView = mapView?.view(for: marker) {
+                markerView.layer.removeAllAnimations()
+            }
+            progressUpdateTimer?.invalidate()
+            progressUpdateTimer = nil
+        }
+        
+        func resetAnimation() {
+            stopAnimation()
+            currentCoordIndex = 0
+            accumulatedDistance = 0
+            // Reset position
+            if let start = allCoordinates.first {
+                marker.coordinate = start
+                mapView?.camera.centerCoordinate = start
+            }
+        }
+
+        // MARK: - Recursive Animation Logic
+
+        private func animateToNextCoordinate() {
+            guard isAnimating,
+                  currentCoordIndex < allCoordinates.count - 1,
+                  let map = mapView else {
+                
+                if currentCoordIndex >= allCoordinates.count - 1 {
+                    // Finished
+                    stopAnimation()
+                    onProgressUpdate?(1.0)
+                    onAnimationComplete?()
+                }
+                return
+            }
+
+            let startCoord = allCoordinates[currentCoordIndex]
+            let endCoord = allCoordinates[currentCoordIndex + 1]
+            
+            // 1. Calculate Distance & Duration
+            let segmentDistance = haversineDistance(from: startCoord, to: endCoord)
+            
+            // Determine speed based on Transport Mode
+            let currentSegmentIdx = segmentIndexForCoordinateIndex(currentCoordIndex)
+            let mode = segments[currentSegmentIdx].transportMode
+            
+            // Speed logic: Base (km/s) * Mode Multiplier * User Multiplier
+            // Increased to 0.3 for a much faster preview (User feedback: "lentísimo")
+            let baseSpeedKmS = 0.3 
+            let effectiveSpeed = baseSpeedKmS * mode.animationSpeed * self.speedMultiplier
+            
+            // Avoid division by zero
+            let duration = effectiveSpeed > 0 ? (segmentDistance / effectiveSpeed) : 0.0
+            
+            // 2. Update Context (Segment Index & Heading)
+            if currentSegmentIdx != currentSegmentIndex {
+                currentSegmentIndex = currentSegmentIdx
+                onSegmentIndexUpdate?(currentSegmentIdx)
+                updateMarkerAppearance() // Direct view update for icon
+            }
+            
+            // Calculate Heading
+            let heading = calculateBearing(from: startCoord, to: endCoord)
+            self.currentHeading = heading
+
+            // 3. Execute Core Animation (UIView.animate)
+            // .curveLinear is CRITICAL for smooth chaining of segments
+            // Duration set to 0.0 would jump instantly, ensure minimum
+            let safeDuration = max(duration, 0.01)
+            
+            UIView.animate(withDuration: safeDuration, delay: 0, options: [.curveLinear, .allowUserInteraction], animations: { [weak self] in
+                guard let self = self else { return }
+                
+                // Move Marker Visuals
+                self.marker.coordinate = endCoord
+                
+                if let markerView = map.view(for: self.marker) {
+                    // Rotate
+                    markerView.transform = CGAffineTransform(rotationAngle: CGFloat(heading.toRadians()))
+                }
+                
+                // Move Camera (Smooth Follow)
+                let altitude = mode.cameraAltitude
+                let pitch = mode.cameraPitch
+                
+                let camera = MKMapCamera(lookingAtCenter: endCoord, fromDistance: altitude, pitch: pitch, heading: heading)
+                map.camera = camera
+                
+            }) { [weak self] finished in
+                guard let self = self, self.isAnimating else { return }
+                
+                // Even if interrupted, we generally want to proceed if we are still "playing"
+                // But typically if finished=false it means we stopped or started a new one.
+                if finished {
+                    // Advance to next point
+                    self.currentCoordIndex += 1
+                    self.accumulatedDistance += segmentDistance
+                    
+                    // Recursive Call
+                    self.animateToNextCoordinate()
+                }
+            }
+        }
+        
+        private func startProgressTimer() {
+            progressUpdateTimer?.invalidate()
+            progressUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                guard let self = self, self.totalDistance > 0 else { return }
+                
+                // Estimate smooth progress based on current index + accumulated
+                let progress = self.accumulatedDistance / self.totalDistance
+                self.onProgressUpdate?(min(progress, 1.0))
+            }
+        }
+
+        // MARK: - Helpers & Setup
 
         func showEntireRoute(in map: MKMapView, coordinates: [CLLocationCoordinate2D]) {
             guard !coordinates.isEmpty else { return }
@@ -213,7 +367,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             map.setRegion(region, animated: false)
 
             // 2. Transición directa al punto de inicio en 3D
-            print("🗺️ [Map] Setting up 3D start position")
+            DebugLog.log("🗺️ [Map] Setting up 3D start position")
 
             if let startCoord = coordinates.first {
                 // Colocar marcador en el inicio
@@ -234,7 +388,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
                 UIView.animate(withDuration: 1.0, delay: 0.5, options: .curveEaseInOut) {
                     map.camera = startCamera
                 } completion: { [weak self] _ in
-                    print("🗺️ [Map] ✅ Ready to play")
+                    DebugLog.log("🗺️ [Map] ✅ Ready to play")
                     self?.onMapReady?()
                 }
             } else {
@@ -242,44 +396,108 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             }
         }
 
-        // MARK: - Animation Control
-
-        func startAnimation(speed: Double) {
-            guard !allCoordinates.isEmpty else {
-                print("🎬 [Coordinator] Cannot start - no coordinates")
-                return
-            }
-
-            // Stop display link but don't reset progress
-            displayLink?.invalidate()
-            displayLink = nil
-            cameraAnimator?.stopAnimation(true)
-            cameraAnimator = nil
-
-            // Pre-compute cumulative distances if not done yet
-            if cumulativeDistances.isEmpty {
-                precomputeDistances()
-            }
-
-            speedKmPerSec = speed
-            totalDistance = cumulativeDistances.last ?? 0
-            isAnimating = true
-            frameCount = 0
-
-            // Resume from saved progress: calculate start time as if we started earlier
-            let alreadyTraveled = savedProgress * totalDistance
-            let timeAlreadyElapsed = alreadyTraveled / speedKmPerSec
-            animationStartTime = CACurrentMediaTime() - timeAlreadyElapsed
-
-            print("🎬 [Coordinator] Starting animation: \(allCoordinates.count) coords, \(totalDistance) km, \(speed) km/s, resuming from \(Int(savedProgress * 100))%")
-
-            displayLink = CADisplayLink(target: self, selector: #selector(animationTick))
-            displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-            displayLink?.add(to: .main, forMode: .common)
+        /// Updates the marker image directly without removing/adding the annotation
+        private func updateMarkerAppearance() {
+            guard let map = mapView, let view = map.view(for: self.marker) else { return }
+            let segment = segments[currentSegmentIndex]
+            view.image = renderMarkerImage(for: segment)
         }
-
-        func resetAnimation() {
-            savedProgress = 0
+        
+        /// Generates the "Premium Pill" image for a segment
+        private func renderMarkerImage(for segment: JourneySegment) -> UIImage {
+            let lineColor = segment.lineColor.flatMap { UIColor(hex: $0) } ?? .systemBlue
+            let lineName = segment.lineName ?? ""
+            
+            // Determine logo/icon
+            let iconName: String
+            let localLogoName: String?
+            let province = segment.origin.province?.lowercased() ?? "madrid"
+            
+            switch segment.transportMode {
+            case .walking:
+                iconName = "figure.walk"
+                localLogoName = nil
+            case .metro:
+                iconName = "tram.fill"
+                localLogoName = province == "sevilla" ? "MetroSevillaLogo" : "MetroLogo"
+            case .cercanias:
+                iconName = "train.side.front.car"
+                localLogoName = province.contains("catalunya") || province.contains("barcelona") ? "RodaliesLogo" : "CercaniasLogo"
+            case .tranvia:
+                iconName = "cablecar.fill"
+                localLogoName = "TramLogo"
+            case .metroLigero:
+                iconName = "lightrail.fill"
+                localLogoName = "MetroLigeroLogo"
+            case .bus:
+                iconName = "bus.fill"
+                localLogoName = nil
+            }
+            
+            // RENDERER: Crear un "Pill" (Burbuja alargada con Logo + Nombre)
+            let hasLineName = !lineName.isEmpty && segment.transportMode != .walking
+            let pillWidth: CGFloat = hasLineName ? 70 : 44
+            let size = CGSize(width: pillWidth, height: 44)
+            let renderer = UIGraphicsImageRenderer(size: size)
+            
+            return renderer.image { ctx in
+                let rect = CGRect(origin: .zero, size: size).insetBy(dx: 4, dy: 4)
+                let cornerRadius = rect.height / 2
+                
+                // 1. Sombra
+                ctx.cgContext.setShadow(offset: CGSize(width: 0, height: 2), blur: 4, color: UIColor.black.withAlphaComponent(0.3).cgColor)
+                
+                // 2. Fondo Blanco (Pill)
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+                UIColor.white.setFill()
+                path.fill()
+                
+                // 3. Borde de color de línea
+                lineColor.setStroke()
+                path.lineWidth = 2
+                path.stroke()
+                
+                // 4. Logo / Icono (Lado izquierdo)
+                let iconRect = CGRect(x: rect.minX + 4, y: rect.minY + 4, width: rect.height - 8, height: rect.height - 8)
+                
+                if let logoName = localLogoName, let logoImg = UIImage(named: logoName) {
+                    logoImg.draw(in: iconRect)
+                } else {
+                    let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .bold)
+                    if let symbol = UIImage(systemName: iconName, withConfiguration: config)?.withTintColor(lineColor, renderingMode: .alwaysOriginal) {
+                        let symbolRect = CGRect(
+                            x: iconRect.midX - symbol.size.width / 2,
+                            y: iconRect.midY - symbol.size.height / 2,
+                            width: symbol.size.width,
+                            height: symbol.size.height
+                        )
+                        symbol.draw(in: symbolRect)
+                    }
+                }
+                
+                // 5. Nombre de línea (Lado derecho, si aplica)
+                if hasLineName {
+                    let textRect = CGRect(x: iconRect.maxX + 2, y: rect.minY, width: rect.width - iconRect.width - 10, height: rect.height)
+                    let paragraphStyle = NSMutableParagraphStyle()
+                    paragraphStyle.alignment = .center
+                    
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: UIFont.systemFont(ofSize: 14, weight: .black),
+                        .foregroundColor: lineColor,
+                        .paragraphStyle: paragraphStyle
+                    ]
+                    
+                    let string = NSAttributedString(string: lineName, attributes: attributes)
+                    let textSize = string.size()
+                    let textDrawRect = CGRect(
+                        x: textRect.minX,
+                        y: textRect.midY - textSize.height / 2,
+                        width: textRect.width,
+                        height: textSize.height
+                    )
+                    string.draw(in: textDrawRect)
+                }
+            }
         }
 
         private func precomputeDistances() {
@@ -288,7 +506,6 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             for i in 0..<allCoordinates.count - 1 {
                 let from = allCoordinates[i]
                 let to = allCoordinates[i + 1]
-                // Haversine distance (faster than CLLocation)
                 let dist = haversineDistance(from: from, to: to)
                 total += dist
                 cumulativeDistances.append(total)
@@ -307,112 +524,6 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             return R * c
         }
 
-        func stopAnimation() {
-            // Save current progress before stopping
-            if isAnimating && totalDistance > 0 {
-                let elapsed = CACurrentMediaTime() - animationStartTime
-                let distanceTraveled = elapsed * speedKmPerSec
-                savedProgress = min(distanceTraveled / totalDistance, 1.0)
-            }
-
-            displayLink?.invalidate()
-            displayLink = nil
-            cameraAnimator?.stopAnimation(true)
-            cameraAnimator = nil
-            isAnimating = false
-        }
-
-        @objc private func animationTick() {
-            guard let map = mapView, !allCoordinates.isEmpty else { return }
-
-            frameCount += 1
-            let elapsed = CACurrentMediaTime() - animationStartTime
-            let distanceTraveled = elapsed * speedKmPerSec
-            let progress = min(distanceTraveled / totalDistance, 1.0)
-
-            // THROTTLE: Only update SwiftUI every 6 frames (~10fps) to avoid re-render overhead
-            if frameCount % 6 == 0 {
-                onProgressUpdate?(progress)
-            }
-
-            if progress >= 1.0 {
-                onProgressUpdate?(1.0)  // Final update
-                stopAnimation()
-                onAnimationComplete?()
-                return
-            }
-
-            // Calculate position using pre-computed distances (fast binary search)
-            let (interpolatedCoord, coordIndex) = coordinateAtProgressFast(progress)
-
-            // Calculate which segment we're in (only notify when it changes)
-            let newSegmentIndex = segmentIndexForCoordinateIndex(coordIndex)
-            if newSegmentIndex != currentSegmentIndex {
-                currentSegmentIndex = newSegmentIndex
-                onSegmentIndexUpdate?(newSegmentIndex)
-            }
-
-            // Look-ahead for camera (balanced: smooth but follows closely)
-            let lookAheadIndex = min(coordIndex + 3, allCoordinates.count - 1)
-            let targetCoord = allCoordinates[lookAheadIndex]
-
-            // Smooth heading
-            let targetHeading = calculateBearing(from: interpolatedCoord, to: targetCoord)
-            smoothHeading(target: targetHeading)
-
-            // Update every 3 frames (20fps) with smooth property animator
-            // Longer duration creates overlap between animations for ultra-smooth motion
-            if frameCount % 3 == 0 {
-                // Stop any running animation
-                cameraAnimator?.stopAnimation(true)
-
-                let camera = MKMapCamera(
-                    lookingAtCenter: targetCoord,
-                    fromDistance: 2000,
-                    pitch: 60,
-                    heading: self.currentHeading
-                )
-
-                // Animate BOTH marker and camera together with easeInOut for smoother feel
-                cameraAnimator = UIViewPropertyAnimator(duration: 0.1, curve: .easeInOut) { [weak self, weak map] in
-                    self?.marker.coordinate = interpolatedCoord
-                    map?.camera = camera
-                }
-                cameraAnimator?.startAnimation()
-            }
-        }
-
-        /// Fast coordinate lookup using pre-computed cumulative distances
-        private func coordinateAtProgressFast(_ progress: Double) -> (CLLocationCoordinate2D, Int) {
-            let targetDistance = progress * totalDistance
-
-            // Binary search to find the segment
-            var low = 0
-            var high = cumulativeDistances.count - 1
-            while low < high {
-                let mid = (low + high + 1) / 2
-                if cumulativeDistances[mid] <= targetDistance {
-                    low = mid
-                } else {
-                    high = mid - 1
-                }
-            }
-
-            let i = min(low, allCoordinates.count - 2)
-            let segmentStart = cumulativeDistances[i]
-            let segmentEnd = cumulativeDistances[i + 1]
-            let segmentLength = segmentEnd - segmentStart
-
-            let ratio = segmentLength > 0 ? (targetDistance - segmentStart) / segmentLength : 0
-            let from = allCoordinates[i]
-            let to = allCoordinates[i + 1]
-
-            let lat = from.latitude + (to.latitude - from.latitude) * ratio
-            let lon = from.longitude + (to.longitude - from.longitude) * ratio
-
-            return (CLLocationCoordinate2D(latitude: lat, longitude: lon), i)
-        }
-
         /// Determine which segment a coordinate index belongs to
         private func segmentIndexForCoordinateIndex(_ coordIndex: Int) -> Int {
             var accumulated = 0
@@ -423,17 +534,6 @@ struct NativeAnimatedMapView: UIViewRepresentable {
                 }
             }
             return max(0, segments.count - 1)
-        }
-
-        private func smoothHeading(target: Double) {
-            var delta = target - currentHeading
-            if delta > 180 { delta -= 360 }
-            if delta < -180 { delta += 360 }
-            currentHeading += delta * 0.08  // Smoothing factor
-
-            // Normalize to 0-360
-            if currentHeading < 0 { currentHeading += 360 }
-            if currentHeading >= 360 { currentHeading -= 360 }
         }
 
         private func calculateBearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
@@ -453,14 +553,28 @@ struct NativeAnimatedMapView: UIViewRepresentable {
         // MARK: - MKMapViewDelegate
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            // Moving marker
+            // Moving marker (Premium Pill View)
             if annotation === marker {
-                let view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "movingMarker")
-                view.displayPriority = .required  // Prevents frustum culling
-                view.zPriority = .max             // Always on top
-                view.animatesWhenAdded = false
-                view.glyphImage = UIImage(systemName: "tram.fill")
-                view.markerTintColor = .systemBlue
+                let identifier = "movingVehicle"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                
+                if view == nil {
+                    view = MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                    view?.canShowCallout = false
+                } else {
+                    view?.annotation = annotation
+                }
+                
+                let segment = segments[currentSegmentIndex]
+                view?.image = renderMarkerImage(for: segment)
+                
+                view?.displayPriority = .required
+                view?.zPriority = .max
+                view?.centerOffset = CGPoint(x: 0, y: 0)
+                
+                // Rotación suave
+                view?.transform = CGAffineTransform(rotationAngle: CGFloat(currentHeading.toRadians()))
+                
                 return view
             }
 
@@ -500,7 +614,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             return MKOverlayRenderer(overlay: overlay)
         }
     }
-}
+} // End of NativeAnimatedMapView
 
 // MARK: - Helper Classes
 

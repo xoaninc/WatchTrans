@@ -243,10 +243,8 @@ struct StopDetailView: View {
         if !hasLoadedOnce {
             isLoading = true
         }
-        async let departuresTask = dataService.fetchArrivals(for: stop.id)
-        async let alertsTask = dataService.fetchAlertsForStop(stopId: stop.id)
-        departures = await departuresTask
-        alerts = await alertsTask
+        departures = await dataService.fetchArrivals(for: stop.id)
+        alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
         hasLoadedOnce = true
         isLoading = false
     }
@@ -296,7 +294,7 @@ struct StopDetailView: View {
                 hasMetroConnection: true,
                 corMetro: "6, 8, 10",
                 corMl: nil,
-                corCercanias: nil
+                corTren: nil
             ),
             dataService: DataService(),
             locationService: LocationService(),
