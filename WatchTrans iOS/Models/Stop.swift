@@ -69,25 +69,14 @@ struct Stop: Identifiable, Equatable, Hashable {
         CLLocation(latitude: latitude, longitude: longitude)
     }
 
-    /// Get the transport type from the stop ID prefix
+    /// Get the transport type from the stop ID prefix only (cor_* are correspondences, not this stop's type)
     var transportType: TransportType {
-        if id.hasPrefix("METRO_") {
-            return .metro
-        } else if id.hasPrefix("ML_") || id.hasPrefix("METRO_LIGERO") {
-            return .metroLigero
-        } else if id.hasPrefix("TRANVIA_") || id.hasPrefix("TRAM_") {
-            return .tram
-        } else if id.hasPrefix("FGC") {
-            return .fgc
-        }
-
-        // If the stop ID doesn't encode the mode, infer from cor_* fields.
-        if corMl != nil && !(corMl?.isEmpty ?? true) { return .metroLigero }
-        if corMetro != nil && !(corMetro?.isEmpty ?? true) { return .metro }
-        if corTranvia != nil && !(corTranvia?.isEmpty ?? true) { return .tram }
-        if corTren != nil && !(corTren?.isEmpty ?? true) { return .cercanias }
-        if corFunicular != nil && !(corFunicular?.isEmpty ?? true) { return .cercanias }
-
+        // ML_ must be checked before METRO_ to avoid false match
+        if id.hasPrefix("ML_") || id.hasPrefix("METRO_LIGERO") || id.hasPrefix("METRO_L_") { return .metroLigero }
+        if id.hasPrefix("METRO_") || id.hasPrefix("TMB_METRO") { return .metro }
+        if id.hasPrefix("TRANVIA_") || id.hasPrefix("TRAM_") { return .tram }
+        if id.hasPrefix("FGC") { return .fgc }
+        if id.hasPrefix("EUSKOTREN") { return .cercanias }
         return .cercanias
     }
 
