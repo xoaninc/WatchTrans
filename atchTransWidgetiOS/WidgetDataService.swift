@@ -11,8 +11,7 @@ import Foundation
 class WidgetDataService {
     static let shared = WidgetDataService()
     
-    // Hardcoded for Widget simplicity, or use shared APIConfiguration if available
-    private let baseURL = "https://api.watch-trans.app/api/gtfs"
+    private let baseURL = WidgetAPIConfig.baseURL
     
     private init() {}
     

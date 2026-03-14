@@ -164,8 +164,7 @@ struct LineDetailView: View {
                                     isFirst: index == 0,
                                     isLast: index == stops.count - 1,
                                     isCircular: line.isCircular,
-                                    dataService: dataService,
-                                    alerts: []
+                                    dataService: dataService
                                 )
                             }
                             .buttonStyle(.plain)
@@ -499,7 +498,6 @@ struct LineStopRowView: View {
     let isLast: Bool
     let isCircular: Bool  // For circular lines (L6, L12)
     let dataService: DataService
-    var alerts: [AlertResponse] = []
 
     // Default colors for connection badges
     private let defaultMetroColor = "#ED1C24"

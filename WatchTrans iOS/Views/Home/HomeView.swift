@@ -196,7 +196,7 @@ struct FavoritesSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: []
+
                         )
                     }
                     .buttonStyle(.plain)
@@ -264,7 +264,7 @@ struct FrequentStopsSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: []
+
                         )
                     }
                     .buttonStyle(.plain)
@@ -283,7 +283,7 @@ struct FrequentStopCardView: View {
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
     let refreshTrigger: UUID
-    var alerts: [AlertResponse] = []
+
 
     @State private var arrivals: [Arrival] = []
     @State private var isLoading = false
@@ -510,7 +510,7 @@ struct NearbyStopsSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: []
+
                         )
                     }
                     .buttonStyle(.plain)
@@ -528,7 +528,7 @@ struct StopCardView: View {
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
     let refreshTrigger: UUID
-    var alerts: [AlertResponse] = []
+
 
     @State private var arrivals: [Arrival] = []
     @State private var isLoading = false
