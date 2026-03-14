@@ -14,5 +14,13 @@
 	<array>
 		<string>juan.WatchTrans.refreshDepartures</string>
 	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>es</string>
 </dict>
 </plist>
