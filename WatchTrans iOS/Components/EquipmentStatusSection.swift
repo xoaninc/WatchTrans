@@ -65,7 +65,6 @@ private struct EquipmentRow: View {
     private var locationText: String {
         device.location ?? (device.isElevator ? "Ascensor" : "Escalera")
     }
-    }
 
     var body: some View {
         HStack(spacing: 8) {
