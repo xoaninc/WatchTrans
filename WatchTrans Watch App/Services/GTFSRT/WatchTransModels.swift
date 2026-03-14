@@ -279,10 +279,17 @@ struct StopResponse: Codable, Identifiable {
         case suspendedSince = "suspended_since"
     }
 
-    /// Parse lineas string into array of line IDs
+    /// Build connection line IDs from cor_* fields (lineas field removed from API)
     var lineIds: [String] {
-        guard let lineas = lineas, !lineas.isEmpty else { return [] }
-        return lineas.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
+        var ids: [String] = []
+        for field in [corMetro, corMl, corTren, corTranvia, corFunicular] {
+            guard let value = field, !value.isEmpty else { continue }
+            let parsed = value.split(separator: ",")
+                .map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
+                .filter { !$0.isEmpty }
+            ids.append(contentsOf: parsed)
+        }
+        return ids
     }
 }
 
