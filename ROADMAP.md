@@ -44,7 +44,7 @@ Apple Watch funciona sin iPhone cerca (WiFi/Cellular propio).
 - **3.5 Predicción de andén** — rellenar plataformas vacías con predicción histórica (badge naranja). Ambos targets.
 - **3.3 Ocupación de estación TMB** — barras de progreso por andén en StopDetailView (paradas `TMB_METRO_*`).
 - **3.8 Búsqueda en rango horario** — toggle "Buscar por franja horaria" en JourneyPlannerView.
-- **3.6 RT completo de parada** — modelo y fetch listos (`StopRealtimeResponse`). Pendiente integrar en DataService como optimización.
+- ~~**3.6 RT completo de parada**~~ — endpoint legacy/debug, no usar. La app ya usa `/stops/{id}/departures` que es el correcto.
 - **Alertas por parada** — badges en Home, inline en LineDetailView, sección completa en StopDetailView.
 
 ### Metro Sevilla RT ✅
