@@ -24,7 +24,7 @@ struct EquipmentStatusSection: View {
             // Header
             HStack {
                 Image(systemName: "figure.roll")
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.blue)
                 Text("Accesibilidad")
                     .font(.headline)
                 Spacer()
