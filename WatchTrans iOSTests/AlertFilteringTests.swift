@@ -288,109 +288,20 @@ struct CrossCityAlertTests {
     }
 }
 
-// MARK: - Pure functions extracted from view/service for testability
+// MARK: - Wrappers calling real production code (AlertFilterHelper)
 
-/// Mirrors LineDetailView.alertsForStop logic
 private func filterAlertsForStop(alerts: [AlertResponse], stopId: String) -> [AlertResponse] {
-    alerts.filter { alert in
-        let entities = alert.informedEntities ?? []
-        return entities.contains { entity in
-            guard let entityStopId = entity.stopId else { return false }
-            return entityStopId == stopId
-                || entityStopId == "RENFE_\(stopId)"
-                || "RENFE_\(entityStopId)" == stopId
-        }
-    }
+    AlertFilterHelper.alertsForStop(alerts: alerts, stopId: stopId)
 }
 
-/// Mirrors LineDetailView.isLineSuspended logic
 private func isLineSuspended(alerts: [AlertResponse]) -> Bool {
-    alerts.contains { alert in
-        guard alert.isFullSuspension else { return false }
-        let entities = alert.informedEntities ?? []
-        let hasStopEntities = entities.contains { $0.stopId != nil }
-        return !hasStopEntities
-    }
+    AlertFilterHelper.isLineSuspended(alerts: alerts)
 }
 
-/// Mirrors DataService.fetchAlertsForLine fallback filtering logic
 private func filterAlertsByRouteId(
     alerts: [AlertResponse],
     lineRouteIds: [String],
     lineName: String
 ) -> [AlertResponse] {
-    let routeIdVariants = Set(lineRouteIds.flatMap { routeIdVariantsFor($0) })
-    let prefixes = routePrefixesFor(lineRouteIds)
-    let normalizedShortName = lineName
-        .folding(options: .diacriticInsensitive, locale: .current)
-        .lowercased()
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    return alerts.filter { alert in
-        let entities = alert.informedEntities ?? []
-        return entities.contains { entity in
-            // First: exact route_id match always wins
-            if let entityRouteId = entity.routeId, routeIdVariants.contains(entityRouteId) {
-                return true
-            }
-            // Short name match requires prefix disambiguation
-            guard let entityShort = entity.routeShortName,
-                  entityShort.folding(options: .diacriticInsensitive, locale: .current)
-                      .lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedShortName
-            else { return false }
-
-            if let entityRouteId = entity.routeId,
-               let entityPrefix = routePrefixFrom(entityRouteId),
-               !prefixes.isEmpty {
-                return prefixes.contains(entityPrefix)
-            }
-            // When we can't disambiguate by prefix, don't match
-            return false
-        }
-    }
-}
-
-/// Mirrors DataService.alertRouteIdVariants
-private func routeIdVariantsFor(_ routeId: String) -> Set<String> {
-    let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return [] }
-    var ids: Set<String> = [trimmed]
-    if trimmed.hasPrefix("RENFE_") {
-        let raw = String(trimmed.dropFirst("RENFE_".count))
-        if !raw.isEmpty { ids.insert(raw) }
-    } else {
-        ids.insert("RENFE_\(trimmed)")
-    }
-    return ids
-}
-
-/// Mirrors DataService.alertRoutePrefixes
-private func routePrefixesFor(_ routeIds: [String]) -> Set<String> {
-    Set(routeIds.compactMap { routePrefixFrom($0) })
-}
-
-/// Mirrors DataService.alertRoutePrefix
-private func routePrefixFrom(_ routeId: String) -> String? {
-    let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-    guard !trimmed.isEmpty else { return nil }
-
-    if trimmed.contains("_C_") {
-        let parts = trimmed.components(separatedBy: "_C_")
-        if parts.count > 1 {
-            let suffix = parts[1]
-            if let tIndex = suffix.firstIndex(of: "T") {
-                return String(suffix[...tIndex])
-            }
-        }
-    }
-
-    let normalized = trimmed.replacingOccurrences(of: "RENFE_", with: "")
-    if let tIndex = normalized.firstIndex(of: "T") {
-        let prefix = String(normalized[...tIndex])
-        if let first = prefix.first, first.isNumber {
-            return prefix
-        }
-    }
-
-    return nil
+    AlertFilterHelper.filterAlertsByRoute(alerts: alerts, lineRouteIds: lineRouteIds, lineName: lineName)
 }

@@ -2114,7 +2114,7 @@ class DataService {
 
             // Fallback: fetch active alerts and filter locally (handles RENFE_ prefixed IDs)
             let allAlerts = try await gtfsRealtimeService.fetchAlerts()
-            let stopIds = alertStopIdVariants(for: stopId)
+            let stopIds = AlertFilterHelper.alertStopIdVariants(for: stopId)
             let filtered = allAlerts.filter { alert in
                 let entities = alert.informedEntities ?? []
                 return entities.contains { entity in
@@ -2145,9 +2145,9 @@ class DataService {
             guard shouldFallback else { return [] }
 
             let allAlerts = try await gtfsRealtimeService.fetchAlerts()
-            let routeIds = alertRouteIdVariants(for: routeId)
-            let routePrefixes = alertRoutePrefixes(for: [routeId])
-            let normalizedShortName = normalizeForMatching(routeShortName ?? "")
+            let routeIds = AlertFilterHelper.alertRouteIdVariants(for: routeId)
+            let routePrefixes = AlertFilterHelper.alertRoutePrefixes(for: [routeId])
+            let normalizedShortName = AlertFilterHelper.normalizeForMatching(routeShortName ?? "")
             let filtered = allAlerts.filter { alert in
                 let entities = alert.informedEntities ?? []
                 return entities.contains { entity in
@@ -2156,10 +2156,10 @@ class DataService {
                     }
                     if !normalizedShortName.isEmpty,
                        let entityShort = entity.routeShortName,
-                       normalizeForMatching(entityShort) == normalizedShortName {
+                       AlertFilterHelper.normalizeForMatching(entityShort) == normalizedShortName {
                         // Require RENFE-style prefix match to avoid cross-city collisions
                         if let entityRouteId = entity.routeId,
-                           let entityPrefix = alertRoutePrefix(from: entityRouteId),
+                           let entityPrefix = AlertFilterHelper.alertRoutePrefix(from: entityRouteId),
                            !routePrefixes.isEmpty {
                             return routePrefixes.contains(entityPrefix)
                         }
@@ -2176,64 +2176,6 @@ class DataService {
         }
     }
 
-    private func alertStopIdVariants(for stopId: String) -> Set<String> {
-        let trimmed = stopId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
-        var ids: Set<String> = [trimmed]
-        if trimmed.hasPrefix("RENFE_") {
-            let raw = String(trimmed.dropFirst("RENFE_".count))
-            if !raw.isEmpty { ids.insert(raw) }
-        } else {
-            ids.insert("RENFE_\(trimmed)")
-        }
-        return ids
-    }
-
-    private func alertRouteIdVariants(for routeId: String) -> Set<String> {
-        let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
-        var ids: Set<String> = [trimmed]
-        if trimmed.hasPrefix("RENFE_") {
-            let raw = String(trimmed.dropFirst("RENFE_".count))
-            if !raw.isEmpty { ids.insert(raw) }
-        } else {
-            ids.insert("RENFE_\(trimmed)")
-        }
-        return ids
-    }
-
-    private func alertRoutePrefixes(for routeIds: [String]) -> Set<String> {
-        Set(routeIds.compactMap { alertRoutePrefix(from: $0) })
-    }
-
-    private func alertRoutePrefix(from routeId: String) -> String? {
-        let trimmed = routeId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard !trimmed.isEmpty else { return nil }
-        
-        // Handle "RENFE_C_30T..." -> extract "30T"
-        if trimmed.contains("_C_") {
-            let parts = trimmed.components(separatedBy: "_C_")
-            if parts.count > 1 {
-                let suffix = parts[1]
-                if let tIndex = suffix.firstIndex(of: "T") {
-                    return String(suffix[...tIndex]) // "30T"
-                }
-            }
-        }
-        
-        // Handle "RENFE_30T..." -> extract "30T"
-        let normalized = trimmed.replacingOccurrences(of: "RENFE_", with: "")
-        if let tIndex = normalized.firstIndex(of: "T") {
-            let prefix = String(normalized[...tIndex])
-            // Ensure prefix starts with digits (e.g. "30T")
-            if let first = prefix.first, first.isNumber {
-                return prefix
-            }
-        }
-        
-        return nil
-    }
-
     /// Fetch alerts for a line using the route-specific endpoint
     func fetchAlertsForLine(_ line: Line) async -> [AlertResponse] {
         guard let routeId = line.routeIds.first else {
@@ -2246,31 +2188,11 @@ class DataService {
 
         // Extra fallback: use route short name + inferred RENFE prefix from line route IDs
         let allAlerts = (try? await gtfsRealtimeService.fetchAlerts()) ?? []
-        let prefixes = alertRoutePrefixes(for: line.routeIds)
-        let lineRouteIds = Set(line.routeIds.flatMap { alertRouteIdVariants(for: $0) })
-        let normalizedShortName = normalizeForMatching(line.name)
-        guard !normalizedShortName.isEmpty else { return [] }
-
-        let filtered = allAlerts.filter { alert in
-            let entities = alert.informedEntities ?? []
-            return entities.contains { entity in
-                // First: exact route_id match always wins
-                if let entityRouteId = entity.routeId, lineRouteIds.contains(entityRouteId) {
-                    return true
-                }
-                // Short name match requires prefix disambiguation to avoid cross-city collisions
-                guard let entityShort = entity.routeShortName,
-                      normalizeForMatching(entityShort) == normalizedShortName else { return false }
-                if let entityRouteId = entity.routeId,
-                   let entityPrefix = alertRoutePrefix(from: entityRouteId),
-                   !prefixes.isEmpty {
-                    return prefixes.contains(entityPrefix)
-                }
-                // When we can't disambiguate by prefix, don't match — avoids T1 Cádiz in T1 Sevilla
-                return false
-            }
-        }
-        return filtered
+        return AlertFilterHelper.filterAlertsByRoute(
+            alerts: allAlerts,
+            lineRouteIds: line.routeIds,
+            lineName: line.name
+        )
     }
 
     // MARK: - Platforms & Correspondences

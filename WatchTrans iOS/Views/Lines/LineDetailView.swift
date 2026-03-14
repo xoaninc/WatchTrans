@@ -31,26 +31,12 @@ struct LineDetailView: View {
     /// Check if line has any full suspension alerts that affect the entire route.
     /// If a suspension alert also has stop-level entities, it only affects a section, not the whole line.
     var isLineSuspended: Bool {
-        alerts.contains { alert in
-            guard alert.isFullSuspension else { return false }
-            // If the alert has stop-level entities, it's a partial suspension (specific stops only)
-            let entities = alert.informedEntities ?? []
-            let hasStopEntities = entities.contains { $0.stopId != nil }
-            return !hasStopEntities
-        }
+        AlertFilterHelper.isLineSuspended(alerts: alerts)
     }
 
     /// Filter line alerts to find those that affect a specific stop
     func alertsForStop(_ stop: Stop) -> [AlertResponse] {
-        alerts.filter { alert in
-            let entities = alert.informedEntities ?? []
-            return entities.contains { entity in
-                guard let entityStopId = entity.stopId else { return false }
-                return entityStopId == stop.id
-                    || entityStopId == "RENFE_\(stop.id)"
-                    || "RENFE_\(entityStopId)" == stop.id
-            }
-        }
+        AlertFilterHelper.alertsForStop(alerts: alerts, stopId: stop.id)
     }
 
     /// Special descriptions for specific lines (hardcoded)

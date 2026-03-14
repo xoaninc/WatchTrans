@@ -24,15 +24,7 @@ struct LineDetailView: View {
 
     /// Filter line alerts to find those that affect a specific stop
     func alertsForStop(_ stop: Stop) -> [AlertResponse] {
-        alerts.filter { alert in
-            let entities = alert.informedEntities ?? []
-            return entities.contains { entity in
-                guard let entityStopId = entity.stopId else { return false }
-                return entityStopId == stop.id
-                    || entityStopId == "RENFE_\(stop.id)"
-                    || "RENFE_\(entityStopId)" == stop.id
-            }
-        }
+        AlertFilterHelper.alertsForStop(alerts: alerts, stopId: stop.id)
     }
 
     /// All line types can potentially have operating hours from API
