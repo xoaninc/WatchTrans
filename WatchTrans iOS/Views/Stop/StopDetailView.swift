@@ -621,6 +621,14 @@ struct StopHeaderView: View {
                         Label("FGC", systemImage: "tram.fill")
                             .font(.caption)
                             .foregroundStyle(.blue)
+                    case .euskotren:
+                        Label("Euskotren", systemImage: "tram.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    case .bus:
+                        Label("Bus", systemImage: "bus.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                     }
 
                     if stop.hasBusConnection {
