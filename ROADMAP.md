@@ -49,10 +49,11 @@ Apple Watch funciona sin iPhone cerca (WiFi/Cellular propio).
 
 ### Metro Sevilla RT ✅
 
-- **Departures** — campo `vehicleLabel` añadido al flujo completo (DepartureResponse → Arrival → vistas).
-- **Equipment status** — ascensores/escaleras en tiempo real en StopDetailView (19 estaciones, ~106 dispositivos). `GET /api/gtfs-rt/equipment-status/{stop_id}`
-- **Air quality** — CO2, temperatura, humedad por tren. Badge en ArrivalRowView + card en TrainDetailView. Solo `METRO_SEV_*`.
-- **Alertas de servicio** — `GET /api/v1/incidenciasmetro/` — schema pendiente, implementar cuando haya incidencia real.
+- **Departures** — vehicleLabel, headsigns limpios (KI #170), composición Simple/Doble desde trip_id
+- **Equipment status** — ascensores/escaleras con iconos AIGA custom (SVG imageset) y colores verde/rojo. 19 estaciones, ~106 dispositivos. `GET /api/gtfs-rt/equipment-status/{stop_id}`
+- **Train position** — `current_stop_name` disponible, recorrido se colorea. Fallback con route stops para trips sintéticos (invertido si headsign = primer stop)
+- **Air quality** — modelo y fetch listos. Sin datos de VPs por ahora (feature futura del servidor)
+- **Alertas de servicio** — entran como alertas estándar via `/gtfs-rt/alerts?operator_id=metro_sevilla`. Schema noticias: `source=metro_sevilla_news`, `ai_summary` para texto limpio
 
 ### Pendiente replicar en Watch
 
