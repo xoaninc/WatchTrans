@@ -250,7 +250,7 @@ struct FrequentStopsSectionView: View {
                         .cornerRadius(4)
                 }
 
-                ForEach(frequentStops, id: \.stop.id) { item in
+                ForEach(frequentStops.prefix(2), id: \.stop.id) { item in
                     NavigationLink(destination: StopDetailView(
                         stop: item.stop,
                         dataService: dataService,
@@ -312,16 +312,7 @@ struct FrequentStopCardView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        // Pattern badge (e.g., "~08:00 L-V")
-                        if let pattern = pattern {
-                            Text(pattern)
-                                .font(.caption2)
-                                .foregroundStyle(.purple)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.purple.opacity(0.1))
-                                .cornerRadius(4)
-                        }
+                        // Pattern badge removed — not useful for users
                     }
                 }
 
