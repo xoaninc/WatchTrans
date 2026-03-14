@@ -16,3 +16,13 @@ The backend API renamed several fields but the app models were not updated, caus
 **Fix:** Updated CodingKeys to map the new API field names (commits `6314089`, `e793039`).
 
 **Lesson:** When renaming fields in the backend API, grep the app codebase for all usages of the old field name across both targets.
+
+## Equipment status de Metro Sevilla mal ubicado
+
+El estado de equipos operativos (ascensores/escaleras mecánicas) de Metro Sevilla está implementado solo en `StopDetailView` (iOS). Hay que:
+
+- Reubicarlo a una sección más visible o accesible (actualmente queda enterrado en los detalles de la parada)
+- Corregir el mapeo de dispositivos a estaciones (los `stop_id` de equipos pueden no coincidir correctamente con las paradas mostradas)
+- Verificar que los datos del endpoint `GET /api/gtfs-rt/equipment-status/{stop_id}` se muestran para la estación correcta
+
+**Solo iOS** — watchOS no tiene esta funcionalidad implementada.
