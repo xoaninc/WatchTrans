@@ -48,6 +48,17 @@ The following networks are currently **Static Only** (No real-time departures):
 
 
 
+### Accesos y equipos no expuestos para Metro Madrid y TMB
+
+**Endpoint:** `GET /api/gtfs/stops/{stop_id}/accesses`
+**Status:** ❌ Devuelve `[]` para Metro Madrid y TMB Metro Barcelona.
+
+**Issue:** El backend tiene datos de accesos (ROADMAP 3.4: TMB 1,065 pathways, Renfe 195 accesos) pero están en `station-interior`, no en `accesses`. El endpoint `/accesses` devuelve vacío para estas redes. Lo mismo con `/equipment-status` — solo Metro Sevilla tiene datos RT.
+
+**Impacto:** La app tiene `EquipmentStatusSection` genérico listo para cualquier red, pero solo Metro Sevilla lo muestra. Cuando el backend exponga accesos/equipos de Madrid y Barcelona a través de estos endpoints, la app los mostrará automáticamente.
+
+**Acción necesaria en backend:** Migrar los datos de `station-interior` a los endpoints `accesses` y/o `equipment-status`, o crear un endpoint unificado que la app pueda consumir.
+
 ---
 
 *Note: All core functionality for Andalusia Metros is now 100% verified.*
