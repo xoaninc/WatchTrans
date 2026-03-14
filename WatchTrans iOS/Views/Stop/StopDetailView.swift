@@ -173,32 +173,19 @@ struct StopDetailView: View {
                         )
                     }
 
-                    // Navigate to nearest access
-                    if !accesses.isEmpty {
+                    // Station interior (accesses, pathways, vestibules, levels)
+                    if let interior = stationInterior,
+                       !(interior.pathways ?? []).isEmpty || !(interior.accesses ?? []).isEmpty || !(interior.vestibules ?? []).isEmpty || !(interior.levels ?? []).isEmpty {
+                        StationInteriorSection(interior: interior)
+                            .padding(.horizontal)
+                    }
+
+                    // Navigate to nearest access (hidden when station-interior has accesses)
+                    if !accesses.isEmpty && (stationInterior?.accesses ?? []).isEmpty {
                         NearestAccessSectionView(
                             accesses: accesses,
                             userLocation: locationService.currentLocation
                         )
-                    }
-
-                    // Station levels
-                    if let levels = stationInterior?.levels, !levels.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Plantas")
-                                .font(.headline)
-                            ForEach(levels.sorted(by: { ($0.index ?? 0) > ($1.index ?? 0) })) { level in
-                                HStack(spacing: 8) {
-                                    Text(level.index == 0 ? "PB" : (level.index ?? 0) > 0 ? "+\(Int(level.index!))" : "\(Int(level.index!))")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .frame(width: 30)
-                                    Text(level.name ?? "")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
                     }
 
                     // Departures section
