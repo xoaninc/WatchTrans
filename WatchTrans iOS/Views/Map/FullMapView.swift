@@ -147,7 +147,7 @@ struct FullMapView: View {
                 Menu {
                     Button(isAllSelected ? "Ocultar todas" : "Mostrar todas") { toggleAllLines() }
                     Divider()
-                    ForEach(linesByTransportType, id: \.nucleo) { group in
+                    ForEach(Array(linesByTransportType.enumerated()), id: \.offset) { _, group in
                         Section {
                             ForEach(group.lines) { line in
                                 Button {
