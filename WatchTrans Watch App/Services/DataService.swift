@@ -493,7 +493,15 @@ class DataService {
 
     /// Initialize data - call this on app launch
     /// Loads stops from cache or API. Lines are loaded lazily when needed.
+    private var lastStopsLoadTime: Date?
+
     func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
+        // Debounce: skip if stops were loaded very recently
+        if let lastLoad = lastStopsLoadTime, Date().timeIntervalSince(lastLoad) < 10, !stops.isEmpty {
+            DebugLog.log("📍 [DataService] Skipping fetchTransportData (loaded \(Int(Date().timeIntervalSince(lastLoad)))s ago)")
+            return
+        }
+
         isLoading = true
         defer { isLoading = false }
 
@@ -518,6 +526,7 @@ class DataService {
             DebugLog.log("📦 [DataService] Using cached stops (\(stops.count) stops)")
             await setLocationContextFromStops()
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE (cached) ==========")
+            lastStopsLoadTime = Date()
             return
         }
 
@@ -594,6 +603,7 @@ class DataService {
             let totalTime = Date().timeIntervalSince(totalStart)
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
             DebugLog.log("⏱️ [DataService] Total: \(stops.count) stops in \(String(format: "%.2f", totalTime))s")
+            lastStopsLoadTime = Date()
 
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to load stops: \(error)")
