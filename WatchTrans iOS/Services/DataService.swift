@@ -1865,27 +1865,10 @@ class DataService {
     func makeStopDisplays(for stop: Stop) -> [StopDisplay] {
         var grouped: [TransportType: Set<String>] = [:]
 
-        // Build from cor_* fields (always available)
-        for line in parseCorLines(stop.corMetro) {
-            grouped[.metro, default: []].insert(line)
-        }
-        for line in parseCorLines(stop.corMl) {
-            grouped[.metroLigero, default: []].insert(line)
-        }
-        for line in parseCorLines(stop.corTren) {
-            grouped[.cercanias, default: []].insert(line)
-        }
-        for line in parseCorLines(stop.corTranvia) {
-            grouped[.tram, default: []].insert(line)
-        }
-
-        if grouped.isEmpty {
-            return [StopDisplay(stop: stop, transportType: stop.transportType, allowedLineIds: [])]
-        }
-
-        return grouped
-            .map { StopDisplay(stop: stop, transportType: $0.key, allowedLineIds: Array($0.value)) }
-            .sorted(by: { $0.transportType.rawValue < $1.transportType.rawValue })
+        // cor_* fields are correspondences (walking connections), not lines at this stop.
+        // Each stop should produce ONE display with its own transport type.
+        // The cor_* badges are shown in the UI but don't create separate displays.
+        return [StopDisplay(stop: stop, transportType: stop.transportType, allowedLineIds: [])]
     }
 
     private func parseCorLines(_ value: String?) -> [String] {
