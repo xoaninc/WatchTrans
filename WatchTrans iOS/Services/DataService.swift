@@ -1597,11 +1597,12 @@ class DataService {
         let platforms = await fetchPlatforms(stopId: stopId)
         DebugLog.log("🚏 [Platforms] Fetched for enrichment \(stopId): \(platforms.count) platforms")
         
-        // Only cache valid data to prevent persisting API outages
+        // Always cache in memory (even empty results) to avoid repeated network calls
+        // for stops that genuinely have no platforms (e.g. Metro Sevilla)
+        platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
+
+        // Only persist non-empty results to disk to prevent persisting API outages
         if !platforms.isEmpty {
-            platformsCache[stopId] = PlatformsCacheEntry(platforms: platforms, timestamp: Date())
-            
-            // Save to disk (background)
             Task(priority: .background) {
                 savePlatformsCache()
             }
@@ -2080,6 +2081,13 @@ class DataService {
             if !alerts.isEmpty {
                 DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
                 return alerts
+            }
+
+            // Only fallback for RENFE stops where ID prefix mismatch is possible
+            let shouldFallback = stopId.hasPrefix("RENFE_") || stopId.allSatisfy({ $0.isNumber })
+            guard shouldFallback else {
+                DebugLog.log("✅ [DataService] No alerts for stop \(stopId) (no fallback needed)")
+                return []
             }
 
             // Fallback: fetch active alerts and filter locally (handles RENFE_ prefixed IDs)

@@ -18,6 +18,7 @@ class NetworkMonitor: ObservableObject {
 
     private var monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.watchtrans.networkmonitor")
+    private var lastStartTime: Date = .distantPast
 
     /// Current connectivity status
     @Published private(set) var isConnected = true
@@ -37,7 +38,12 @@ class NetworkMonitor: ObservableObject {
     }
     
     /// Force restart monitoring (useful when returning from background)
+    /// Debounced: skips restart if monitor was started less than 5 seconds ago
     func restart() {
+        guard Date().timeIntervalSince(lastStartTime) >= 5 else {
+            DebugLog.log("🌐 [Network] Restart skipped (debounce)")
+            return
+        }
         monitor.cancel()
         monitor = NWPathMonitor()
         startMonitoring()
@@ -45,6 +51,7 @@ class NetworkMonitor: ObservableObject {
     }
 
     private func startMonitoring() {
+        lastStartTime = Date()
         monitor.pathUpdateHandler = { [weak self] path in
             let isConnected = path.status == .satisfied
             let connectionType = self?.getConnectionType(path) ?? .unknown
