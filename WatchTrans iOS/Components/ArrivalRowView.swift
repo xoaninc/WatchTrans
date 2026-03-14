@@ -73,9 +73,19 @@ struct ArrivalRowView: View {
 
                 // Composition indicator (Metro Sevilla)
                 if arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
-                    Text(arrival.isDoubleComposition ? "Doble" : "Simple")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 2) {
+                        Text("🚃")
+                            .font(.caption2)
+                        if arrival.isDoubleComposition {
+                            Text("🚃")
+                                .font(.caption2)
+                        }
+                        Text(arrival.isDoubleComposition ? "Doble" : "Simple")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(arrival.isDoubleComposition ? .blue : .white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
 
                 // Train position (if available)
