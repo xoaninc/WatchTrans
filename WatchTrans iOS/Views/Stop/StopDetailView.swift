@@ -422,7 +422,7 @@ struct StopDetailView: View {
         }
 
         // Fetch equipment status and air quality for Metro Sevilla stops
-        if stop.id.hasPrefix("METRO_SEV_") {
+        if stop.id.hasPrefix("METRO_SEVILLA_") {
             equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
             airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
         }
