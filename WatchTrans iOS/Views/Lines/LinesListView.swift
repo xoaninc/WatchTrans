@@ -300,8 +300,8 @@ struct LinesListView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .task {
-                // Lazy load lines when user enters this view
+            .task(id: dataService.stops.isEmpty) {
+                // Retry loading lines when stops become available (provides location)
                 await loadLinesIfNeeded()
                 // Cache line itineraries for offline use when in a province
                 await cacheItinerariesIfNeeded()
