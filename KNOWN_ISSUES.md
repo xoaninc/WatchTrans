@@ -14,3 +14,14 @@ Each view maintains its own `@State var stopAlerts` and `fetchStopAlerts()`, mak
 - Limit to accessibility-only alerts (`ACCESSIBILITY_ISSUE` effect)
 - Remove it entirely
 - Filter out alerts that are shared across all stops in the same network
+
+## API field renames not propagated to app models (FIXED)
+
+The backend API renamed several fields but the app models were not updated, causing silent decoding failures:
+
+- **`networks[].code` → `networks[].id`** — `NetworkInfo` in DataService and `NetworkResponse` in WatchTransModels expected `code`, API now returns `id`. Caused lines to not load at all (`keyNotFound` error).
+- **`correspondences.cercanias` → `correspondences.tren`** — iOS `StopCorrespondences` still used `cercanias`, Watch App was already updated. Caused train correspondences to silently not decode.
+
+**Fix:** Updated CodingKeys to map the new API field names (commits `6314089`, `e793039`).
+
+**Lesson:** When renaming fields in the backend API, grep the app codebase for all usages of the old field name across both targets.
