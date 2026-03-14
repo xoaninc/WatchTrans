@@ -105,9 +105,19 @@ struct PerStopAlertTests {
         #expect(matching.count == 1)
     }
 
-    @Test func routeLevelEntitiesIgnoredForStopFiltering() {
-        // Alert with only route-level entities (no stop_id) should NOT match any specific stop
-        let alert = makeAlert(entities: [
+    @Test func routeLevelSuspensionMatchesAllStops() {
+        // Route-level NO_SERVICE alert (no stop_id) should match ALL stops
+        let alert = makeAlert(effect: "NO_SERVICE", entities: [
+            makeEntity(routeId: "RENFE_C_30T0005C3", stopId: nil)
+        ])
+
+        let matching = filterAlertsForStop(alerts: [alert], stopId: "RENFE_70103")
+        #expect(matching.count == 1)
+    }
+
+    @Test func routeLevelInfoAlertDoesNotMatchStops() {
+        // Route-level NO_EFFECT alert should NOT match stops (not a disruption)
+        let alert = makeAlert(effect: "NO_EFFECT", entities: [
             makeEntity(routeId: "RENFE_C_30T0009C5", stopId: nil)
         ])
 

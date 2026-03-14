@@ -12,15 +12,25 @@ enum AlertFilterHelper {
 
     // MARK: - Per-stop filtering
 
-    /// Filter alerts to find those that affect a specific stop (by stop_id in informed entities)
+    /// Filter alerts to find those that affect a specific stop.
+    /// - Alerts with stop-level entities: match only those specific stops
+    /// - Alerts with only route-level entities (no stop_id): affect ALL stops on the route
     static func alertsForStop(alerts: [AlertResponse], stopId: String) -> [AlertResponse] {
         alerts.filter { alert in
             let entities = alert.informedEntities ?? []
-            return entities.contains { entity in
-                guard let entityStopId = entity.stopId else { return false }
-                return entityStopId == stopId
-                    || entityStopId == "RENFE_\(stopId)"
-                    || "RENFE_\(entityStopId)" == stopId
+            let hasStopEntities = entities.contains { $0.stopId != nil }
+
+            if hasStopEntities {
+                // Match only specific stops
+                return entities.contains { entity in
+                    guard let entityStopId = entity.stopId else { return false }
+                    return entityStopId == stopId
+                        || entityStopId == "RENFE_\(stopId)"
+                        || "RENFE_\(entityStopId)" == stopId
+                }
+            } else {
+                // Route-level alert (no stop_id) → affects all stops on the route
+                return alert.isSuspension
             }
         }
     }
