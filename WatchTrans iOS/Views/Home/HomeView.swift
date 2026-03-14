@@ -157,7 +157,6 @@ struct FavoritesSectionView: View {
     let locationService: LocationService
     let refreshTrigger: UUID
 
-    @State private var stopAlerts: [String: [AlertResponse]] = [:]
 
     var favoriteStops: [Stop] {
         favoritesManager.getFavoriteStops(from: dataService.stops)
@@ -197,29 +196,10 @@ struct FavoritesSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: stopAlerts[stop.id] ?? []
+                            alerts: []
                         )
                     }
                     .buttonStyle(.plain)
-                }
-            }
-        }
-        .task(id: refreshTrigger) {
-            await fetchStopAlerts(for: favoriteStops)
-        }
-    }
-
-    private func fetchStopAlerts(for stops: [Stop]) async {
-        await withTaskGroup(of: (String, [AlertResponse]).self) { group in
-            for stop in stops {
-                group.addTask {
-                    let alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
-                    return (stop.id, alerts)
-                }
-            }
-            for await (stopId, alerts) in group {
-                if !alerts.isEmpty {
-                    stopAlerts[stopId] = alerts
                 }
             }
         }
@@ -235,7 +215,6 @@ struct FrequentStopsSectionView: View {
     let refreshTrigger: UUID
 
     @ObservedObject private var frequentStopsService = FrequentStopsService.shared
-    @State private var stopAlerts: [String: [AlertResponse]] = [:]
 
     /// Get Stop objects for frequent stop IDs
     private var frequentStops: [(stop: Stop, pattern: String?)] {
@@ -285,29 +264,10 @@ struct FrequentStopsSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: stopAlerts[item.stop.id] ?? []
+                            alerts: []
                         )
                     }
                     .buttonStyle(.plain)
-                }
-            }
-            .task(id: refreshTrigger) {
-                await fetchStopAlerts(for: frequentStops.map(\.stop))
-            }
-        }
-    }
-
-    private func fetchStopAlerts(for stops: [Stop]) async {
-        await withTaskGroup(of: (String, [AlertResponse]).self) { group in
-            for stop in stops {
-                group.addTask {
-                    let alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
-                    return (stop.id, alerts)
-                }
-            }
-            for await (stopId, alerts) in group {
-                if !alerts.isEmpty {
-                    stopAlerts[stopId] = alerts
                 }
             }
         }
@@ -343,9 +303,6 @@ struct FrequentStopCardView: View {
                         Text(stop.name)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        if !alerts.isEmpty {
-                            StopAlertBadge(alerts: alerts, mode: .dot)
-                        }
                     }
 
                     HStack(spacing: 8) {
@@ -429,7 +386,6 @@ struct NearbyStopsSectionView: View {
     let favoritesManager: FavoritesManager?
     let refreshTrigger: UUID
 
-    @State private var stopAlerts: [String: [AlertResponse]] = [:]
 
     /// Extract network type from stop ID (e.g., "RENFE_18000" -> "RENFE", "METRO_123" -> "METRO")
     private func networkType(for stop: Stop) -> String {
@@ -554,29 +510,10 @@ struct NearbyStopsSectionView: View {
                             locationService: locationService,
                             favoritesManager: favoritesManager,
                             refreshTrigger: refreshTrigger,
-                            alerts: stopAlerts[stop.id] ?? []
+                            alerts: []
                         )
                     }
                     .buttonStyle(.plain)
-                }
-            }
-        }
-        .task(id: refreshTrigger) {
-            await fetchStopAlerts(for: nearbyStops)
-        }
-    }
-
-    private func fetchStopAlerts(for stops: [Stop]) async {
-        await withTaskGroup(of: (String, [AlertResponse]).self) { group in
-            for stop in stops {
-                group.addTask {
-                    let alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
-                    return (stop.id, alerts)
-                }
-            }
-            for await (stopId, alerts) in group {
-                if !alerts.isEmpty {
-                    stopAlerts[stopId] = alerts
                 }
             }
         }
@@ -613,9 +550,6 @@ struct StopCardView: View {
                         Text(stop.name)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        if !alerts.isEmpty {
-                            StopAlertBadge(alerts: alerts, mode: .dot)
-                        }
                     }
 
                     if let location = locationService.currentLocation {

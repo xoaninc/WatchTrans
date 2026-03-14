@@ -16,7 +16,6 @@ struct LineDetailView: View {
 
     @State private var stops: [Stop] = []
     @State private var alerts: [AlertResponse] = []
-    @State private var stopAlerts: [String: [AlertResponse]] = [:]
     @State private var operatingHoursResult: OperatingHoursResult?
     @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var stopOnShapeCoords: [String: CLLocationCoordinate2D] = [:]  // Stop coordinates projected onto shape
@@ -166,7 +165,7 @@ struct LineDetailView: View {
                                     isLast: index == stops.count - 1,
                                     isCircular: line.isCircular,
                                     dataService: dataService,
-                                    alerts: stopAlerts[stop.id] ?? []
+                                    alerts: []
                                 )
                             }
                             .buttonStyle(.plain)
@@ -208,19 +207,6 @@ struct LineDetailView: View {
             stops = await dataService.fetchStopsForRoute(routeId: routeId)
         } else {
             stops = []
-        }
-
-        // Fetch alerts for all stops in parallel
-        await withTaskGroup(of: (String, [AlertResponse]).self) { group in
-            for stop in stops {
-                group.addTask {
-                    let alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
-                    return (stop.id, alerts)
-                }
-            }
-            for await (stopId, alerts) in group {
-                stopAlerts[stopId] = alerts
-            }
         }
 
         alerts = await dataService.fetchAlertsForLine(line)
@@ -679,9 +665,6 @@ struct LineStopRowView: View {
                     }
                 }
 
-                if !alerts.isEmpty {
-                    StopAlertBadge(alerts: alerts, mode: .inline)
-                }
             }
 
             Spacer()
