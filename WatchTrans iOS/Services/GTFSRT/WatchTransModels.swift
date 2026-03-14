@@ -405,35 +405,46 @@ struct AlertResponse: Codable, Identifiable {
         case estimatedRestorationTime = "estimated_restoration_time"
     }
 
-    /// Map severity string to SwiftUI color
+    /// Color based on GTFS-RT effect type
     var severityColor: Color {
-        // Red for any suspension (full or partial)
-        if isSuspension || effect == "NO_SERVICE" {
+        switch effect {
+        case "NO_SERVICE":
             return .red
+        case "REDUCED_SERVICE", "SIGNIFICANT_DELAYS", "DETOUR", "MODIFIED_SERVICE", "STOP_MOVED":
+            return .orange
+        case "ACCESSIBILITY_ISSUE":
+            return .blue
+        case "ADDITIONAL_SERVICE", "NO_EFFECT":
+            return .blue
+        case "OTHER_EFFECT", "UNKNOWN_EFFECT":
+            // Fallback to AI/GTFS severity
+            let level = (aiSeverity ?? severity)?.lowercased() ?? "warning"
+            switch level {
+            case "error", "critical", "high", "severe": return .red
+            case "warning", "medium": return .orange
+            default: return .blue
+            }
+        default:
+            return .orange
         }
+    }
 
-        // Prefer AI severity if available, fallback to GTFS severity
-        let level = (aiSeverity ?? severity)?.lowercased() ?? "warning"
-        switch level {
-        case "error", "critical", "high": return .red
-        case "warning", "medium": return .orange
-        case "info", "success", "low": return .blue
-        default: return .orange
+    /// Returns true if this alert represents a service disruption (red or orange severity)
+    var isSuspension: Bool {
+        switch effect {
+        case "NO_SERVICE", "REDUCED_SERVICE", "SIGNIFICANT_DELAYS", "DETOUR", "MODIFIED_SERVICE":
+            return true
+        default:
+            return aiStatus == "FULL_SUSPENSION" ||
+                aiCategory?.contains("FULL_SUSPENSION") == true
         }
     }
-    
-    /// Returns true if this is a suspension alert
-    var isSuspension: Bool {
-        aiStatus == "FULL_SUSPENSION" || 
-        aiCategory?.contains("FULL_SUSPENSION") == true ||
-        (headerText?.lowercased().contains("suspendido") ?? false)
-    }
-    
-    /// Check if this is a full suspension alert
+
+    /// Returns true if this is a full service suspension (NO_SERVICE)
     var isFullSuspension: Bool {
+        effect == "NO_SERVICE" ||
         aiStatus == "FULL_SUSPENSION" ||
-        aiCategory?.contains("FULL_SUSPENSION") == true ||
-        effect == "NO_SERVICE"
+        aiCategory?.contains("FULL_SUSPENSION") == true
     }
 }
 
