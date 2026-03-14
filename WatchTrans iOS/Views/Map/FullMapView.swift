@@ -126,6 +126,20 @@ struct FullMapView: View {
         .onDisappear { stopRefreshTimer() }
     }
     
+    /// Lines grouped by transport type for the layer selector
+    private var linesByTransportType: [(type: TransportType, nucleo: String, lines: [Line])] {
+        var groups: [String: (type: TransportType, nucleo: String, lines: [Line])] = [:]
+        for line in availableLines {
+            let key = "\(line.type.rawValue)-\(line.nucleo.lowercased())"
+            if groups[key] != nil {
+                groups[key]!.lines.append(line)
+            } else {
+                groups[key] = (line.type, line.nucleo, [line])
+            }
+        }
+        return groups.values.sorted { $0.type.rawValue < $1.type.rawValue }
+    }
+
     private var layersButton: some View {
         VStack {
             HStack {
@@ -133,14 +147,26 @@ struct FullMapView: View {
                 Menu {
                     Button(isAllSelected ? "Ocultar todas" : "Mostrar todas") { toggleAllLines() }
                     Divider()
-                    ForEach(availableLines) { line in
-                        Button {
-                            toggleLine(line.id)
-                        } label: {
-                            HStack {
-                                Text(line.name)
-                                if isVisible(line.id) { Image(systemName: "checkmark") }
+                    ForEach(linesByTransportType, id: \.nucleo) { group in
+                        Section {
+                            ForEach(group.lines) { line in
+                                Button {
+                                    toggleLine(line.id)
+                                } label: {
+                                    HStack {
+                                        Circle()
+                                            .fill(line.color)
+                                            .frame(width: 10, height: 10)
+                                        Text(line.name)
+                                        Text(line.longName)
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        if isVisible(line.id) { Image(systemName: "checkmark") }
+                                    }
+                                }
                             }
+                        } header: {
+                            Label(networkDisplayName(type: group.type, nucleo: group.nucleo), systemImage: transportIcon(group.type))
                         }
                     }
                 } label: {
@@ -154,6 +180,31 @@ struct FullMapView: View {
                 .padding()
             }
             Spacer()
+        }
+    }
+
+    private func networkDisplayName(type: TransportType, nucleo: String) -> String {
+        let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
+        switch type {
+        case .metro: return "Metro de \(capitalized)"
+        case .metroLigero: return "Metro Ligero de \(capitalized)"
+        case .cercanias: return "Cercanías \(capitalized)"
+        case .tram: return "Tranvía de \(capitalized)"
+        case .fgc: return "FGC"
+        case .euskotren: return "Euskotren"
+        case .bus: return "Bus \(capitalized)"
+        }
+    }
+
+    private func transportIcon(_ type: TransportType) -> String {
+        switch type {
+        case .metro: return "tram.tunnel.fill"
+        case .metroLigero: return "tram.fill"
+        case .cercanias: return "tram.fill"
+        case .tram: return "lightrail.fill"
+        case .fgc: return "tram.fill"
+        case .euskotren: return "tram.fill"
+        case .bus: return "bus.fill"
         }
     }
 
