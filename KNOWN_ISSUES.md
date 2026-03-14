@@ -17,12 +17,12 @@ The backend API renamed several fields but the app models were not updated, caus
 
 **Lesson:** When renaming fields in the backend API, grep the app codebase for all usages of the old field name across both targets.
 
-## Equipment status de Metro Sevilla mal ubicado
+## Equipment status de Metro Sevilla: ubicación y estandarización
 
-El estado de equipos operativos (ascensores/escaleras mecánicas) de Metro Sevilla está implementado solo en `StopDetailView` (iOS). Hay que:
+El estado de equipos (ascensores/escaleras mecánicas) de Metro Sevilla aparece mal colocado en la UI y no sigue un patrón estándar que se pueda reutilizar cuando se añadan ascensores/salidas de otras redes.
 
-- Reubicarlo a una sección más visible o accesible (actualmente queda enterrado en los detalles de la parada)
-- Corregir el mapeo de dispositivos a estaciones (los `stop_id` de equipos pueden no coincidir correctamente con las paradas mostradas)
-- Verificar que los datos del endpoint `GET /api/gtfs-rt/equipment-status/{stop_id}` se muestran para la estación correcta
+- La sección de equipos está metida dentro de `StopDetailView` (iOS) de forma ad-hoc para Metro Sevilla
+- Cuando se añadan datos de equipos de Metro Madrid, TMB, etc., la implementación actual no escala — hay que diseñar una sección genérica de "estado de equipos" que funcione para cualquier red
+- Pendiente definir dónde mostrar esto (sección propia en StopDetailView, o card separada)
 
 **Solo iOS** — watchOS no tiene esta funcionalidad implementada.
