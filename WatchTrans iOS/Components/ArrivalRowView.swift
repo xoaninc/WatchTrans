@@ -154,7 +154,7 @@ struct ArrivalRowView: View {
                     HStack(spacing: 2) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption2)
-                        Text("+\(arrival.delayMinutes)")
+                        Text("+\(arrival.delayMinutes)min")
                     }
                     .font(.caption)
                     .foregroundStyle(.orange)
