@@ -1272,18 +1272,7 @@ class DataService {
             let stopResponses = try await gtfsRealtimeService.fetchRouteStops(routeId: routeId)
             DebugLog.log("🚏 [DataService] Fetched \(stopResponses.count) stops for route \(routeId)")
             return stopResponses.map { response in
-                // DEBUG: Log correspondences - especially branch junction stations
-                let isBranchJunction = response.name.lowercased().contains("metropolitano") ||
-                                       response.name.lowercased().contains("arganda") ||
-                                       response.name.lowercased().contains("tres olivos")
-                if isBranchJunction || (response.corMetro != nil && response.corMetro!.contains("B")) {
-                    DebugLog.log("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
-                    DebugLog.log("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
-                    DebugLog.log("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
-                    DebugLog.log("🔗 [BRANCH]   tren=\(response.corTren ?? "nil")")
-                } else if response.corMetro != nil || response.corTren != nil || response.corTranvia != nil || response.corMl != nil {
-                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), tren=\(response.corTren ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
-                }
+                // Per-stop correspondence logging removed for production
                 
                 // ENRICHMENT: If API response lacks connection info, try to find it in our global stops cache
                 var metro = response.corMetro

@@ -47,7 +47,7 @@ class GTFSRealtimeMapper {
                 .replacingOccurrences(of: "/T. DOBLE", with: "", options: .caseInsensitive)
                 .trimmingCharacters(in: .whitespaces)
 
-            DebugLog.log("🚂 [Mapper] \(departure.routeShortName) - headsign: \"\(rawHeadsign)\" -> \"\(cleanHeadsign)\" (double: \(isDoubleComposition), trip: \(departure.tripId))")
+            // Per-departure logging removed for production (was flooding logs with 40+ lines per stop)
 
             // Skip terminus trains (where cleaned headsign = current stop)
             if !cleanHeadsign.isEmpty,
