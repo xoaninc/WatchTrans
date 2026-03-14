@@ -61,13 +61,10 @@ struct EquipmentStatusSection: View {
 private struct EquipmentRow: View {
     let device: EquipmentStatusResponse
 
-    /// Full descriptive name: "Ascensor - Calle" or "Escalera mecanica - Anden sentido Ciudad Expo"
-    private var fullName: String {
-        let type = device.isElevator ? "Ascensor" : "Escalera mecanica"
-        if let location = device.location, !location.isEmpty {
-            return "\(type) — \(location)"
-        }
-        return type
+    /// Location only — the icon already tells the type (elevator/escalator)
+    private var locationText: String {
+        device.location ?? (device.isElevator ? "Ascensor" : "Escalera")
+    }
     }
 
     var body: some View {
@@ -86,8 +83,8 @@ private struct EquipmentRow: View {
             }
             .frame(width: 30)
 
-            // Full name
-            Text(fullName)
+            // Location
+            Text(locationText)
                 .font(.subheadline)
                 .lineLimit(2)
 
