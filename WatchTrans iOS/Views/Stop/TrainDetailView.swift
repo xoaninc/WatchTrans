@@ -420,8 +420,9 @@ struct TrainDetailView: View {
         .navigationTitle("Detalles del tren")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await loadAlerts()
-            await loadTripDetails()
+            async let alertsTask: () = loadAlerts()
+            async let tripTask: () = loadTripDetails()
+            _ = await (alertsTask, tripTask)
         }
     }
 

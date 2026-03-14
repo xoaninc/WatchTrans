@@ -2118,7 +2118,10 @@ class DataService {
                 return alerts
             }
 
-            // Fallback: fetch active alerts and filter locally (handles RENFE_ prefixed IDs)
+            // Fallback: only for RENFE routes where ID prefix mismatches are possible
+            let shouldFallback = routeId.hasPrefix("RENFE_") || routeId.allSatisfy({ $0.isNumber })
+            guard shouldFallback else { return [] }
+
             let allAlerts = try await gtfsRealtimeService.fetchAlerts()
             let routeIds = alertRouteIdVariants(for: routeId)
             let routePrefixes = alertRoutePrefixes(for: [routeId])
