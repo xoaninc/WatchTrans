@@ -48,16 +48,17 @@ The following networks are currently **Static Only** (No real-time departures):
 
 
 
-### Accesos y equipos no expuestos para Metro Madrid y TMB
+### Datos de equipos RT solo disponibles para Metro Sevilla
 
-**Endpoint:** `GET /api/gtfs/stops/{stop_id}/accesses`
-**Status:** ❌ Devuelve `[]` para Metro Madrid y TMB Metro Barcelona.
+**Endpoint:** `GET /api/gtfs-rt/equipment-status/{stop_id}`
+**Status:** ℹ️ Funciona correctamente, solo Metro Sevilla tiene fuente de datos (TCE).
 
-**Issue:** El backend tiene datos de accesos (ROADMAP 3.4: TMB 1,065 pathways, Renfe 195 accesos) pero están en `station-interior`, no en `accesses`. El endpoint `/accesses` devuelve vacío para estas redes. Lo mismo con `/equipment-status` — solo Metro Sevilla tiene datos RT.
+**Situación:**
+- `equipment-status` → Solo Metro Sevilla tiene datos RT de ascensores/escaleras (fuente: TCE). Funciona correctamente.
+- `accesses` → Devuelve `[]` para Metro Sevilla porque no hay datos GTFS de accesos importados (la web de Metro Sevilla no publica esta info). Correcto.
+- `station-interior` → Tiene pathways para TMB (1,065) y Renfe (195), pero son recorridos internos, no equipos RT. Son datos distintos.
 
-**Impacto:** La app tiene `EquipmentStatusSection` genérico listo para cualquier red, pero solo Metro Sevilla lo muestra. Cuando el backend exponga accesos/equipos de Madrid y Barcelona a través de estos endpoints, la app los mostrará automáticamente.
-
-**Acción necesaria en backend:** Migrar los datos de `station-interior` a los endpoints `accesses` y/o `equipment-status`, o crear un endpoint unificado que la app pueda consumir.
+**No hay acción necesaria en backend.** Cuando otras redes tengan fuente de datos RT de equipos (como el TCE de Metro Sevilla), el endpoint `equipment-status` los expondrá y la app los mostrará automáticamente con `EquipmentStatusSection`.
 
 ---
 
