@@ -17,13 +17,16 @@ The backend API renamed several fields but the app models were not updated, caus
 
 **Lesson:** When renaming fields in the backend API, grep the app codebase for all usages of the old field name across both targets.
 
-## Equipment status de Metro Sevilla: ubicación y estandarización
+## ~~Equipment status de Metro Sevilla: ubicación y estandarización~~ ✅ PARCIALMENTE RESUELTO
 
-El estado de equipos (ascensores/escaleras mecánicas) de Metro Sevilla aparece mal colocado en la UI y no sigue un patrón estándar que se pueda reutilizar cuando se añadan ascensores/salidas de otras redes.
+Extraído a componente genérico `EquipmentStatusSection.swift` que funciona con cualquier red. Cambios realizados:
 
-- La sección de equipos está metida dentro de `StopDetailView` (iOS) de forma ad-hoc para Metro Sevilla
-- Cuando se añadan datos de equipos de Metro Madrid, TMB, etc., la implementación actual no escala — hay que diseñar una sección genérica de "estado de equipos" que funcione para cualquier red
-- Pendiente definir dónde mostrar esto (sección propia en StopDetailView, o card separada)
+- Nombre completo del equipo: "Ascensor — Calle", "Escalera mecanica — Anden sentido Ciudad Expo" (antes solo "Ascensor" truncado)
+- Circulo verde/rojo a la derecha de cada equipo indicando estado operativo (antes usaba flechas up/down que indicaban la dirección de la escalera mecánica, dato del campo `direction` del API — no aportaba nada útil al usuario)
+- Equipos fuera de servicio aparecen primero, los operativos en un disclosure group
+
+**Pendiente:**
 - Comparar con cómo lo muestran las apps de Metro de Madrid y Metro de Barcelona para seguir un patrón familiar para el usuario
+- Replicar en watchOS
 
 **Solo iOS** — watchOS no tiene esta funcionalidad implementada.
