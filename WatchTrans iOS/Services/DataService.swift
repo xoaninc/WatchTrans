@@ -1866,16 +1866,33 @@ class DataService {
 
     /// Build UI stop entries per transport type (no hardcoded logic).
     func makeStopDisplays(for stop: Stop) -> [StopDisplay] {
-        let lineIds = stop.connectionLineIds
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
         var grouped: [TransportType: Set<String>] = [:]
-        for lineId in lineIds {
-            if let line = getLine(by: lineId) {
-                grouped[line.type, default: []].insert(lineId)
-            } else if let inferred = inferTransportType(from: lineId) {
-                grouped[inferred, default: []].insert(lineId)
+
+        // Build from cor_* fields (always available)
+        for line in parseCorLines(stop.corMetro) {
+            grouped[.metro, default: []].insert(line)
+        }
+        for line in parseCorLines(stop.corMl) {
+            grouped[.metroLigero, default: []].insert(line)
+        }
+        for line in parseCorLines(stop.corTren) {
+            grouped[.cercanias, default: []].insert(line)
+        }
+        for line in parseCorLines(stop.corTranvia) {
+            grouped[.tram, default: []].insert(line)
+        }
+
+        // Fallback to connectionLineIds if cor_* fields are empty
+        if grouped.isEmpty {
+            let lineIds = stop.connectionLineIds
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            for lineId in lineIds {
+                if let line = getLine(by: lineId) {
+                    grouped[line.type, default: []].insert(lineId)
+                } else if let inferred = inferTransportType(from: lineId) {
+                    grouped[inferred, default: []].insert(lineId)
+                }
             }
         }
 
@@ -1886,6 +1903,11 @@ class DataService {
         return grouped
             .map { StopDisplay(stop: stop, transportType: $0.key, allowedLineIds: Array($0.value)) }
             .sorted(by: { $0.transportType.rawValue < $1.transportType.rawValue })
+    }
+
+    private func parseCorLines(_ value: String?) -> [String] {
+        guard let value = value, !value.isEmpty else { return [] }
+        return value.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     private func inferTransportType(from lineId: String) -> TransportType? {
