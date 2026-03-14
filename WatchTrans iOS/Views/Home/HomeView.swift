@@ -218,7 +218,6 @@ struct FrequentStopsSectionView: View {
 
     /// Get Stop objects for frequent stop IDs
     private var frequentStops: [(stop: Stop, pattern: String?)] {
-        let favoriteIds = Set(favoritesManager?.favorites.map { $0.stopId } ?? [])
         let suggested = frequentStopsService.getSuggestedStops()
 
         return suggested.compactMap { frequent in
@@ -425,7 +424,6 @@ struct NearbyStopsSectionView: View {
     var nearbyStops: [Stop] {
         var stops: [Stop] = []
         var seenKeys: Set<String> = []  // Deduplicate by name + network type
-        let favoriteIds = favoritesManager?.favorites.map { $0.stopId } ?? []
         let enabledTypes = DataService.getEnabledTransportTypes()
 
         // Sort by distance
