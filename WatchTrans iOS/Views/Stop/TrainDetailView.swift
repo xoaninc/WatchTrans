@@ -439,6 +439,34 @@ struct TrainDetailView: View {
               !arrival.frequencyBased else { return }
         isLoadingTrip = true
         tripDetail = await dataService.fetchTripDetails(tripId: arrival.id)
+
+        // Fallback for synthetic RT trips: build journey from route stops
+        if tripDetail == nil, let routeId = arrival.routeId {
+            let routeStops = await dataService.fetchStopsForRoute(routeId: routeId)
+            if !routeStops.isEmpty {
+                tripDetail = TripDetailResponse(
+                    id: arrival.id,
+                    routeId: routeId,
+                    routeShortName: arrival.lineName,
+                    routeLongName: arrival.destination,
+                    routeColor: arrival.routeColor,
+                    headsign: arrival.destination,
+                    directionId: nil,
+                    stops: routeStops.enumerated().map { index, stop in
+                        TripStopResponse(
+                            stopId: stop.id,
+                            stopName: stop.name,
+                            arrivalTime: "",
+                            departureTime: "",
+                            stopSequence: index,
+                            stopLat: stop.latitude,
+                            stopLon: stop.longitude
+                        )
+                    }
+                )
+            }
+        }
+
         isLoadingTrip = false
     }
 
