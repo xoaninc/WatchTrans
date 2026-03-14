@@ -388,7 +388,6 @@ actor OfflineLineService {
                     name: cached.name,
                     latitude: cached.latitude,
                     longitude: cached.longitude,
-                    connectionLineIds: [],
                     province: cached.province,
                     accesibilidad: nil,
                     hasParking: false,

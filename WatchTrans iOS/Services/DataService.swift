@@ -561,7 +561,6 @@ class DataService {
                         name: response.name,
                         latitude: response.lat,
                         longitude: response.lon,
-                        connectionLineIds: response.lineIds,
                         province: response.province,
                         accesibilidad: response.accesibilidad,
                         hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
@@ -636,7 +635,6 @@ class DataService {
                 name: response.name,
                 latitude: response.lat,
                 longitude: response.lon,
-                connectionLineIds: response.lineIds,
                 province: response.province,
                 accesibilidad: response.accesibilidad,
                 hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
@@ -720,7 +718,7 @@ class DataService {
                 let s = stops[i]
                 stops[i] = Stop(
                     id: s.id, name: s.name, latitude: s.latitude, longitude: s.longitude,
-                    connectionLineIds: s.connectionLineIds, province: province,
+                    province: province,
                     accesibilidad: s.accesibilidad, hasParking: s.hasParking,
                     hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
                     isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
@@ -1314,7 +1312,6 @@ class DataService {
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: response.lineIds,  // Parse from "lineas" field
                     province: response.province,
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",
@@ -1882,20 +1879,6 @@ class DataService {
             grouped[.tram, default: []].insert(line)
         }
 
-        // Fallback to connectionLineIds if cor_* fields are empty
-        if grouped.isEmpty {
-            let lineIds = stop.connectionLineIds
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            for lineId in lineIds {
-                if let line = getLine(by: lineId) {
-                    grouped[line.type, default: []].insert(lineId)
-                } else if let inferred = inferTransportType(from: lineId) {
-                    grouped[inferred, default: []].insert(lineId)
-                }
-            }
-        }
-
         if grouped.isEmpty {
             return [StopDisplay(stop: stop, transportType: stop.transportType, allowedLineIds: [])]
         }
@@ -2030,7 +2013,6 @@ class DataService {
                     name: response.name,
                     latitude: response.lat,
                     longitude: response.lon,
-                    connectionLineIds: response.lineIds,
                     province: response.province,
                     accesibilidad: response.accesibilidad,
                     hasParking: response.parkingBicis != nil && response.parkingBicis != "0",

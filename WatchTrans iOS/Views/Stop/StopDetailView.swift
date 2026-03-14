@@ -333,11 +333,11 @@ struct StopDetailView: View {
 
     private var hasConnections: Bool {
         !transportModes.isEmpty ||
-        !stop.connectionLineIds.isEmpty ||
         !(stop.corMetro?.isEmpty ?? true) ||
         !(stop.corMl?.isEmpty ?? true) ||
         !(stop.corTren?.isEmpty ?? true) ||
-        !(stop.corTranvia?.isEmpty ?? true)
+        !(stop.corTranvia?.isEmpty ?? true) ||
+        !(stop.corFunicular?.isEmpty ?? true)
     }
 
     // MARK: - Auto Refresh
@@ -1160,7 +1160,6 @@ struct CorrespondenceRow: View {
                 name: "Atocha RENFE",
                 latitude: 40.4067,
                 longitude: -3.6893,
-                connectionLineIds: ["c1", "c3", "c4"],
                 province: "Madrid",
                 accesibilidad: "Accesible",
                 hasParking: true,

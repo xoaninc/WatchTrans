@@ -13,7 +13,6 @@ struct Stop: Identifiable, Equatable, Hashable {
     let name: String          // "Sol", "Atocha"
     let latitude: Double
     let longitude: Double
-    let connectionLineIds: [String]   // IDs of other lines at this stop
 
     // Additional fields from API
     let province: String?
@@ -35,7 +34,7 @@ struct Stop: Identifiable, Equatable, Hashable {
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
 
-    init(id: String, name: String, latitude: Double, longitude: Double, connectionLineIds: [String] = [],
+    init(id: String, name: String, latitude: Double, longitude: Double,
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
@@ -47,7 +46,6 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
-        self.connectionLineIds = connectionLineIds
         self.province = province
         self.accesibilidad = accesibilidad
         self.hasParking = hasParking
@@ -83,17 +81,12 @@ struct Stop: Identifiable, Equatable, Hashable {
             return .fgc
         }
 
-        // If the stop ID doesn't encode the mode (e.g., "L1-21" in Sevilla),
-        // infer a reasonable default from the lines that serve this stop.
-        // This is data-driven and avoids city-specific rules.
-        let upperLines = connectionLineIds.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
-        if upperLines.contains(where: { $0.hasPrefix("ML") }) { return .metroLigero }
-        if upperLines.contains(where: { $0.hasPrefix("L") }) { return .metro }
-        // Handle plain numbers as Metro
-        if upperLines.contains(where: { Int($0) != nil }) { return .metro }
-        if upperLines.contains(where: { $0.hasPrefix("T") }) { return .tram }
-        if upperLines.contains(where: { $0.hasPrefix("FGC") }) { return .fgc }
-        if upperLines.contains(where: { $0.hasPrefix("C") }) { return .cercanias }
+        // If the stop ID doesn't encode the mode, infer from cor_* fields.
+        if corMl != nil && !(corMl?.isEmpty ?? true) { return .metroLigero }
+        if corMetro != nil && !(corMetro?.isEmpty ?? true) { return .metro }
+        if corTranvia != nil && !(corTranvia?.isEmpty ?? true) { return .tram }
+        if corTren != nil && !(corTren?.isEmpty ?? true) { return .cercanias }
+        if corFunicular != nil && !(corFunicular?.isEmpty ?? true) { return .cercanias }
 
         return .cercanias
     }
@@ -178,7 +171,6 @@ extension Stop: Codable {
         case id, name
         case latitude = "lat"
         case longitude = "lon"
-        case connectionLineIds = "line_ids" // or check API response
         case province, accesibilidad
         case hasParking = "has_parking"
         case hasBusConnection = "has_bus_connection"
@@ -202,7 +194,6 @@ extension Stop: Codable {
         name = try container.decode(String.self, forKey: .name)
         latitude = try container.decode(Double.self, forKey: .latitude)
         longitude = try container.decode(Double.self, forKey: .longitude)
-        connectionLineIds = try container.decodeIfPresent([String].self, forKey: .connectionLineIds) ?? []
         province = try container.decodeIfPresent(String.self, forKey: .province)
         accesibilidad = try container.decodeIfPresent(String.self, forKey: .accesibilidad)
         hasParking = try container.decodeIfPresent(Bool.self, forKey: .hasParking) ?? false

@@ -250,7 +250,6 @@ struct StopResponse: Codable, Identifiable {
 
     // Additional fields from by-coordinates endpoint
     let province: String?
-    let lineas: String?  // Comma-separated line names: "C1,C10,C2,C3"
     let parkingBicis: String?
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
@@ -266,7 +265,7 @@ struct StopResponse: Codable, Identifiable {
     let suspendedSince: String? // ISO date string when service was suspended
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, sequence, code, province, accesibilidad, lineas, correspondences
+        case id, name, lat, lon, sequence, code, province, accesibilidad, correspondences
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
@@ -283,11 +282,6 @@ struct StopResponse: Codable, Identifiable {
         case suspendedSince = "suspended_since"
     }
 
-    /// Parse lineas string into array of line IDs
-    var lineIds: [String] {
-        guard let lineas = lineas, !lineas.isEmpty else { return [] }
-        return lineas.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
-    }
 }
 
 /// Structured connection data (from JSONB field)
@@ -1162,7 +1156,6 @@ struct StopFullDetailResponse: Codable {
     let lat: Double
     let lon: Double
     let province: String?
-    let lineas: String?
     let locationType: Int?
     let parentStationId: String?
     let isHub: Bool?
@@ -1172,7 +1165,7 @@ struct StopFullDetailResponse: Codable {
     let accesses: [StationAccess]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, province, lineas
+        case id, name, lat, lon, province
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case isHub = "is_hub"
