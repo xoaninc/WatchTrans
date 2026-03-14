@@ -790,6 +790,11 @@ class DataService {
                 struct NetworkInfo: Decodable {
                     let code: String
                     let name: String
+
+                    enum CodingKeys: String, CodingKey {
+                        case code = "id"
+                        case name
+                    }
                 }
             }
             

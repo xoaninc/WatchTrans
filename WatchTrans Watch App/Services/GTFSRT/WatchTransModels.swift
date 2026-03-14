@@ -138,7 +138,8 @@ struct NetworkResponse: Codable, Identifiable {
     var id: String { code }
 
     enum CodingKeys: String, CodingKey {
-        case code, name, city, region, color, description
+        case code = "id"
+        case name, city, region, color, description
         case textColor = "text_color"
         case logoUrl = "logo_url"
         case wikipediaUrl = "wikipedia_url"
