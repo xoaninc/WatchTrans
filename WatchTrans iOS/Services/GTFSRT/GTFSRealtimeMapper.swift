@@ -66,7 +66,7 @@ class GTFSRealtimeMapper {
 
             let destination = cleanHeadsign.isEmpty ? "Unknown" : cleanHeadsign
 
-            if cleanHeadsign.isEmpty && rawHeadsign.isEmpty {
+            if cleanHeadsign.isEmpty {
                 DebugLog.log("⚠️ [Mapper] headsign was nil, using fallback: \"\(destination)\"")
             }
 
