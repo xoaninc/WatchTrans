@@ -559,7 +559,7 @@ struct LineStopRowView: View {
         var badges: [(String, Color, Bool)] = []
 
         // 1. Train connections (Cercanías, FEVE, etc.)
-        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corTren)
+        let cercaniasLines = stop.correspondences?.tren ?? parseLines(stop.corTren)
         for line in cercaniasLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
             badges.append((formatLineName(line, type: "Cercanías"), color, false))

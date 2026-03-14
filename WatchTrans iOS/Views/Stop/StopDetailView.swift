@@ -796,7 +796,7 @@ struct ConnectionsSectionView: View {
         var badges: [(String, String)] = []
 
         // 1. Cercanías
-        let cercaniasLines = stop.correspondences?.cercanias ?? parseLines(stop.corTren)
+        let cercaniasLines = stop.correspondences?.tren ?? parseLines(stop.corTren)
         for line in cercaniasLines {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append((formatBadgeName(line, type: "Cercanías"), color))

@@ -293,7 +293,7 @@ struct StopResponse: Codable, Identifiable {
 /// Structured connection data (from JSONB field)
 struct StopCorrespondences: Codable, Hashable {
     let metro: [String]?
-    let cercanias: [String]?
+    let tren: [String]?
     let ml: [String]?
     let tranvia: [String]?
     let bus: [String]?
