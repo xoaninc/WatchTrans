@@ -1,19 +1,10 @@
 # Known Issues
 
-## StopAlertBadge shows on all Renfe stations
+## ~~StopAlertBadge shows on all Renfe stations~~ ✅ RESUELTO
 
-The `StopAlertBadge` component was intended to show accessibility issues but was implemented as a generic alert badge that displays any alert type (suspensions, delays, modified service, etc.). Since all Renfe stations share the same generic alerts, the orange dot appears on every station and adds no value — it's just visual noise.
+`StopAlertBadge` se eliminó. Las alertas por parada ahora se filtran usando `AlertFilterHelper.alertsForStop()`, que solo muestra alertas con stop-level entities (entidades con `stop_id` específico). Esto evita que alertas genéricas de ruta aparezcan en todas las paradas. Implementado en iOS y watchOS `LineDetailView`.
 
-**Affected views:**
-- `HomeView` — dot mode (`.dot`) on nearby and favorite stop cards (3 sections)
-- `LineDetailView` — inline mode (`.inline`) with icon + text next to each stop
-
-Each view maintains its own `@State var stopAlerts` and `fetchStopAlerts()`, making individual API calls per stop.
-
-**Options:**
-- Limit to accessibility-only alerts (`ACCESSIBILITY_ISSUE` effect)
-- Remove it entirely
-- Filter out alerts that are shared across all stops in the same network
+Además, alertas `FULL_SUSPENSION` con stop-level entities ahora se tratan como suspensión parcial (no marcan toda la línea como cerrada).
 
 ## API field renames not propagated to app models (FIXED)
 
