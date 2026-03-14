@@ -56,7 +56,8 @@ Apple Watch funciona sin iPhone cerca (WiFi/Cellular propio).
 
 ### Pendiente replicar en Watch
 
-- **Metro Sevilla RT** (equipment status, air quality, vehicleLabel) — solo implementado en iOS. Replicar modelos, fetch y UI en watchOS cuando sea prioritario.
+- **Metro Sevilla RT** (equipment status, air quality) — solo implementado en iOS. Replicar modelos, fetch y UI en watchOS cuando sea prioritario. vehicleLabel ya replicado.
+- **Equipment status en otras redes** — `EquipmentStatusSection` ya es genérico, pero solo se usa para Metro Sevilla. Comparar con apps de Metro de Madrid y Metro de Barcelona para validar el diseño antes de expandir.
 - **Ocupación estación TMB** — solo iOS.
 - ~~**Alertas por parada** (badges en Home/LineDetailView) — solo iOS.~~ ✅ Implementado en watchOS LineDetailView.
 - **Búsqueda en rango horario** — solo iOS.
