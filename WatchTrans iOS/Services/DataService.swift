@@ -2083,8 +2083,21 @@ class DataService {
             // Use direct endpoint instead of fetching all + filtering
             let alerts = try await gtfsRealtimeService.fetchAlertsForStop(stopId: stopId)
             if !alerts.isEmpty {
-                DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId)")
-                return alerts
+                // Filter out alerts where stop-level entities exist but don't include this stop
+                // (e.g., partial suspension affecting only Santa Justa → Jardines, not San Jerónimo)
+                let stopVariants = AlertFilterHelper.alertStopIdVariants(for: stopId)
+                let filtered = alerts.filter { alert in
+                    let entities = alert.informedEntities ?? []
+                    let stopEntities = entities.filter { $0.stopId != nil }
+                    // If alert has stop-level entities, only show if this stop is among them
+                    if !stopEntities.isEmpty {
+                        return stopEntities.contains { stopVariants.contains($0.stopId ?? "") }
+                    }
+                    // Route-level only: show for all stops on the route
+                    return true
+                }
+                DebugLog.log("✅ [DataService] Fetched \(alerts.count) alerts for stop \(stopId), \(filtered.count) applicable")
+                return filtered
             }
 
             // Only fallback for RENFE stops where ID prefix mismatch is possible
