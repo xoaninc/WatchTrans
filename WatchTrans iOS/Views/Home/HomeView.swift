@@ -156,27 +156,14 @@ struct FavoritesSectionView: View {
     let dataService: DataService
     let locationService: LocationService
     let refreshTrigger: UUID
-
+    @State private var isExpanded = true
 
     var favoriteStops: [Stop] {
         favoritesManager.getFavoriteStops(from: dataService.stops)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Section header
-            HStack {
-                Image(systemName: "star.fill")
-                    .foregroundStyle(.yellow)
-                Text("Favoritos")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                Spacer()
-                Text("\(favoriteStops.count)/\(favoritesManager.maxFavorites)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
+        DisclosureGroup(isExpanded: $isExpanded) {
             if favoriteStops.isEmpty {
                 Text("No tienes favoritos. Toca la estrella en una parada para agregarla.")
                     .font(.subheadline)
@@ -202,6 +189,18 @@ struct FavoritesSectionView: View {
                     .buttonStyle(.plain)
                 }
             }
+        } label: {
+            HStack {
+                Image(systemName: "star.fill")
+                    .foregroundStyle(.yellow)
+                Text("Favoritos")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Text("\(favoriteStops.count)/\(favoritesManager.maxFavorites)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -213,6 +212,7 @@ struct FrequentStopsSectionView: View {
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
     let refreshTrigger: UUID
+    @State private var isExpanded = true
 
     @ObservedObject private var frequentStopsService = FrequentStopsService.shared
 
@@ -232,24 +232,7 @@ struct FrequentStopsSectionView: View {
 
     var body: some View {
         if !frequentStops.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                // Section header
-                HStack {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .foregroundStyle(.purple)
-                    Text("Frecuentes")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Spacer()
-                    Text("Auto")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.purple.opacity(0.1))
-                        .cornerRadius(4)
-                }
-
+            DisclosureGroup(isExpanded: $isExpanded) {
                 ForEach(frequentStops.prefix(2), id: \.stop.id) { item in
                     NavigationLink(destination: StopDetailView(
                         stop: item.stop,
@@ -268,6 +251,14 @@ struct FrequentStopsSectionView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .foregroundStyle(.purple)
+                    Text("Frecuentes")
+                        .font(.title2)
+                        .fontWeight(.bold)
                 }
             }
         }
