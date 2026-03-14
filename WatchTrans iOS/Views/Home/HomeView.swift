@@ -222,8 +222,6 @@ struct FrequentStopsSectionView: View {
         let suggested = frequentStopsService.getSuggestedStops()
 
         return suggested.compactMap { frequent in
-            // Skip if already a favorite
-            guard !favoriteIds.contains(frequent.id) else { return nil }
             // Find the stop in dataService
             guard let stop = dataService.stops.first(where: { $0.id == frequent.id }) else { return nil }
             return (stop, frequent.patternDescription)
@@ -444,7 +442,6 @@ struct NearbyStopsSectionView: View {
         for stop in sortedByDistance {
             let key = deduplicationKey(for: stop)
             if seenKeys.contains(key) { continue }
-            if favoriteIds.contains(stop.id) { continue }
             // Apply transport type filter
             if !stopMatchesEnabledTypes(stop, enabledTypes: enabledTypes) { continue }
 
