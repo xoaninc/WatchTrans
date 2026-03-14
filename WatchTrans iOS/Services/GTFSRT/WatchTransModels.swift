@@ -1097,6 +1097,7 @@ struct InteriorAccess: Codable, Identifiable {
     let lat: Double?
     let lon: Double?
     let street: String?
+    let streetNumber: String?
     let wheelchair: Bool?
     let level: Int?
     let openingTime: String?
@@ -1106,6 +1107,7 @@ struct InteriorAccess: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case name, lat, lon, street, wheelchair, level
+        case streetNumber = "street_number"
         case openingTime = "opening_time"
         case closingTime = "closing_time"
     }
