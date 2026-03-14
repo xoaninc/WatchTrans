@@ -55,6 +55,11 @@ Apple Watch funciona sin iPhone cerca (WiFi/Cellular propio).
 - **Air quality** — modelo y fetch listos. Sin datos de VPs por ahora (feature futura del servidor)
 - **Alertas de servicio** — entran como alertas estándar via `/gtfs-rt/alerts?operator_id=metro_sevilla`. Schema noticias: `source=metro_sevilla_news`, `ai_summary` para texto limpio
 
+### UI pendiente
+
+- **Selector de líneas del mapa** — cambiar `Menu` por `Sheet`/`Popover` para mostrar logos reales de operador y badges de color por línea (C1, L1, etc.). `Menu` de SwiftUI no permite `Image` custom.
+- **Pathways en route planner** — usar `signposted_as` como texto principal cuando existe (es lo que el usuario ve en la estación real), fallback a `from_stop_name → to_stop_name`.
+
 ### Pendiente replicar en Watch
 
 - **Metro Sevilla RT** (equipment status, air quality) — solo implementado en iOS. Replicar modelos, fetch y UI en watchOS cuando sea prioritario. vehicleLabel ya replicado.
