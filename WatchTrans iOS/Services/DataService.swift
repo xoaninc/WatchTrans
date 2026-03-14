@@ -1863,11 +1863,9 @@ class DataService {
 
     /// Build UI stop entries per transport type (no hardcoded logic).
     func makeStopDisplays(for stop: Stop) -> [StopDisplay] {
-        var grouped: [TransportType: Set<String>] = [:]
-
         // cor_* fields are correspondences (walking connections), not lines at this stop.
-        // Each stop should produce ONE display with its own transport type.
-        // The cor_* badges are shown in the UI but don't create separate displays.
+        // Each stop produces ONE display with its own transport type.
+        // Correspondences are shown as badges in the UI, not as separate displays.
         return [StopDisplay(stop: stop, transportType: stop.transportType, allowedLineIds: [])]
     }
 
