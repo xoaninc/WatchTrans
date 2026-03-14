@@ -21,11 +21,11 @@ struct EquipmentStatusSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Header with count
+            // Header
             HStack {
-                Image(systemName: "arrow.up.arrow.down")
+                Image(systemName: "figure.roll")
                     .foregroundStyle(.primary)
-                Text("Accesos y equipos")
+                Text("Accesibilidad")
                     .font(.headline)
                 Spacer()
                 if !broken.isEmpty {
@@ -61,26 +61,41 @@ struct EquipmentStatusSection: View {
 private struct EquipmentRow: View {
     let device: EquipmentStatusResponse
 
-    /// Location only — the icon already tells the type (elevator/escalator)
+    private var statusColor: Color {
+        device.isBroken ? .red : .green
+    }
+
+    /// Location only — the icon already tells the type
     private var locationText: String {
         device.location ?? (device.isElevator ? "Ascensor" : "Escalera")
     }
 
     var body: some View {
         HStack(spacing: 8) {
-            // Device icon (color matches status, escalator shows direction arrow)
-            HStack(spacing: 2) {
-                Image(systemName: device.isElevator ? "arrow.up.arrow.down" : "stairs")
-                    .font(.subheadline)
-                    .foregroundStyle(device.isBroken ? .red : .green)
-                if device.isEscalator, let dir = device.direction, dir == "up" || dir == "down" {
-                    Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(device.isBroken ? .red : .green)
+            // Device icon with status color
+            if device.isElevator {
+                Image("ElevatorSymbol")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(statusColor)
+            } else {
+                HStack(spacing: 2) {
+                    Image("EscalatorSymbol")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .foregroundStyle(statusColor)
+                    if let dir = device.direction, dir == "up" || dir == "down" {
+                        Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(statusColor)
+                    }
                 }
             }
-            .frame(width: 30)
 
             // Location
             Text(locationText)
@@ -89,9 +104,9 @@ private struct EquipmentRow: View {
 
             Spacer()
 
-            // Status circle: green = operational, red = broken
+            // Status dot
             Circle()
-                .fill(device.isBroken ? Color.red : Color.green)
+                .fill(statusColor)
                 .frame(width: 10, height: 10)
         }
         .padding(.vertical, 2)

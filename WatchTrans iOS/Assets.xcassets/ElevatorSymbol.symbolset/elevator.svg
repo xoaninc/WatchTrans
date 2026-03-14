@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--Generator: Apple SF Symbols (Fallback custom symbol)-->
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 3300 2200" width="3300" height="2200">
+  <g id="Symbols" transform="translate(1100, 400)">
+    <g id="Regular-M">
+      <!-- Elevator box -->
+      <rect x="100" y="0" width="900" height="1400" rx="120" fill="none" stroke="black" stroke-width="80"/>
+      <!-- Center door line -->
+      <line x1="550" y1="120" x2="550" y2="1280" stroke="black" stroke-width="50"/>
+      <!-- Up arrow -->
+      <path d="M350 550 L550 350 L750 550" fill="none" stroke="black" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Down arrow -->
+      <path d="M350 850 L550 1050 L750 850" fill="none" stroke="black" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>
