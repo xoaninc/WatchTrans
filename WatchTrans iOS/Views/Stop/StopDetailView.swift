@@ -144,59 +144,10 @@ struct StopDetailView: View {
                         .padding(.horizontal)
                     }
 
-                    // Equipment status (Metro Sevilla elevators/escalators)
+                    // Equipment status (elevators/escalators)
                     if !equipmentStatus.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Estado de equipos")
-                                .font(.headline)
-
-                            let broken = equipmentStatus.filter { $0.isBroken }
-                            if !broken.isEmpty {
-                                ForEach(broken) { device in
-                                    HStack(spacing: 6) {
-                                        Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
-                                            .foregroundStyle(.red)
-                                        VStack(alignment: .leading) {
-                                            Text(device.isElevator ? "Ascensor" : "Escalera mecánica")
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                            Text("\(device.location ?? "") — Fuera de servicio")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.red)
-                                    }
-                                }
-                            }
-
-                            let working = equipmentStatus.filter { !$0.isBroken }
-                            if !working.isEmpty {
-                                DisclosureGroup("Todos los equipos (\(working.count) operativos)") {
-                                    ForEach(working) { device in
-                                        HStack(spacing: 6) {
-                                            Image(systemName: device.isElevator ? "elevator.fill" : "escalator")
-                                                .foregroundStyle(.green)
-                                                .font(.caption)
-                                            Text(device.isElevator ? "Ascensor" : "Escalera")
-                                                .font(.caption)
-                                            Text(device.location ?? "")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                            Spacer()
-                                            if let dir = device.direction, dir != "disabled" {
-                                                Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                    }
-                                }
-                                .font(.subheadline)
-                            }
-                        }
-                        .padding(.horizontal)
+                        EquipmentStatusSection(equipment: equipmentStatus)
+                            .padding(.horizontal)
                     }
 
                     // Connection badges
