@@ -451,7 +451,7 @@ struct NearbyStopsSectionView: View {
             stops.append(stop)
             seenKeys.insert(key)
 
-            if stops.count >= 5 { break }
+            if stops.count >= 3 { break }
         }
 
         return stops
