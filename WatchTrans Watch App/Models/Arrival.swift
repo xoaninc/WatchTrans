@@ -24,6 +24,8 @@ struct Arrival: Identifiable, Codable {
     let trainLongitude: Double?
     let trainStatus: String?           // "IN_TRANSIT_TO", "STOPPED_AT"
     let trainEstimated: Bool?          // true if position is estimated
+    var trainCurrentStopId: String? = nil
+    var trainPositionTimestamp: String? = nil
     let delaySeconds: Int?
 
     // Route info for detail view
@@ -67,6 +69,8 @@ struct Arrival: Identifiable, Codable {
             trainLongitude: trainLongitude,
             trainStatus: trainStatus,
             trainEstimated: trainEstimated,
+            trainCurrentStopId: trainCurrentStopId,
+            trainPositionTimestamp: trainPositionTimestamp,
             delaySeconds: delaySeconds,
             routeColor: routeColor,
             routeId: routeId,

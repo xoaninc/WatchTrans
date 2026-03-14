@@ -107,13 +107,16 @@ struct TrainPositionResponse: Codable {
     let latitude: Double
     let longitude: Double
     let currentStopName: String?
+    let currentStopId: String?
     let status: String?
     let progressPercent: Double?
     let estimated: Bool?
+    let timestamp: String?
 
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, status, estimated
+        case latitude, longitude, status, estimated, timestamp
         case currentStopName = "current_stop_name"
+        case currentStopId = "current_stop_id"
         case progressPercent = "progress_percent"
     }
 }

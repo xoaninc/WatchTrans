@@ -82,6 +82,8 @@ class GTFSRealtimeMapper {
                 trainLongitude: departure.trainPosition?.longitude,
                 trainStatus: departure.trainPosition?.status,
                 trainEstimated: departure.trainPosition?.estimated,
+                trainCurrentStopId: departure.trainPosition?.currentStopId,
+                trainPositionTimestamp: departure.trainPosition?.timestamp,
                 delaySeconds: departure.delaySeconds,
                 routeColor: departure.routeColor,
                 routeId: departure.routeId,
