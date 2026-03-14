@@ -53,7 +53,7 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 - Filtrado de busqueda de paradas por provincia/region actual
 
 ### Changed
-- Migracion de API de renfeapp.fly.dev a redcercanias.com
+- Migracion de API de renfeapp.fly.dev a api.watchtrans.app
 
 ## [1.0.0] - 2026-01-21
 

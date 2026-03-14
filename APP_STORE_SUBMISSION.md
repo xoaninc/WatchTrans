@@ -340,5 +340,5 @@ Window → Organizer → Distribute App → App Store Connect
 - Usa servicios de ubicación
 
 ### Backend
-- API: https://redcercanias.com/api/v1/gtfs/
+- API: https://api.watch-trans.app/api/gtfs/
 - El servidor debe estar activo durante la revisión

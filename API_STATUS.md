@@ -1,6 +1,6 @@
 # WatchTrans API Status
 
-**Base URL:** `https://redcercanias.com/api/v1/gtfs`
+**Base URL:** `https://api.watch-trans.app/api/gtfs`
 
 **Última verificación:** 27 Enero 2026
 
@@ -13,7 +13,7 @@
 ### Datos de Transporte
 | Endpoint | Método | Estado | Descripción |
 |----------|--------|--------|-------------|
-| `/transport?lat={lat}&lon={lon}` | GET | ✅ | Datos de transporte por ubicación |
+| `/stops/by-coordinates?lat={lat}&lon={lon}` | GET | ✅ | Paradas cercanas por ubicación |
 | `/stops/{stop_id}/departures` | GET | ✅ | Próximas salidas de una parada |
 | `/routes/{route_id}/stops` | GET | ✅ | Paradas de una línea |
 | `/routes/{route_id}/shape` | GET | ✅ | Recorrido de una línea (polyline) |
@@ -39,12 +39,14 @@
 |----------|--------|--------|-------------|
 | `/stops/{stop_id}/platforms` | GET | ✅ | Ubicación de andenes |
 | `/stops/{stop_id}/correspondences` | GET | ✅ | Estaciones cercanas a pie |
+| `/stops/{stop_id}/accesses` | GET | ✅ | Bocas de metro/accesos |
 
-### Alertas y Tiempo Real
+### Alertas y Tiempo Real (GTFS-RT)
 | Endpoint | Método | Estado | Descripción |
 |----------|--------|--------|-------------|
-| `/realtime/alerts` | GET | ✅ | Alertas activas |
-| `/realtime/stops/{stop_id}/alerts` | GET | ✅ | Alertas de una parada |
+| `/api/gtfs-rt/alerts` | GET | ✅ | Alertas activas globales |
+| `/api/gtfs-rt/stats` | GET | ✅ | Estadísticas tiempo real |
+| `/api/gtfs-rt/vehicles` | GET | ✅ | Posiciones de trenes |
 
 ### Admin (Requiere Autenticación)
 | Endpoint | Método | Estado | Descripción |
@@ -209,7 +211,7 @@ MapCamera update - Actualiza marcador y cámara
 - **Metro Madrid**: route planner no encuentra rutas (pendiente API)
 
 ### 26 Enero 2026
-- Migración de `renfeapp.fly.dev` a `redcercanias.com`
+- Migración de `renfeapp.fly.dev` a `api.watch-trans.app`
 - Implementación de sección "Estaciones cercanas a pie"
 - Implementación de sección "Andenes"
 - Implementación de indicador de Bus

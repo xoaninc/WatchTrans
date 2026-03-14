@@ -1,547 +1,95 @@
 # WatchTrans Roadmap
 
-Documento unificado de features pendientes, bugs y mejoras técnicas.
+Features pendientes, bugs y mejoras técnicas.
 
-**Última actualización:** 2026-01-28
-
----
-
-## 1. FEATURES APP (iOS)
-
-### 1.1 Siri Shortcuts
-**Estado:** ✅ COMPLETADO (28 Enero 2026)
-
-**Archivos:**
-- `WatchTrans iOS/Intents/NextTrainIntent.swift`
-- `WatchTrans iOS/Intents/AppShortcuts.swift`
-
-**Frases configuradas:**
-- "Próximo tren en [parada] con WatchTrans"
-- "¿Cuándo pasa el tren en [parada]?"
-- "Salidas de [parada] con WatchTrans"
-- "Horarios de [parada] en WatchTrans"
-- "Next train at [stop] with WatchTrans"
-- "When is the next train at [stop] with WatchTrans?"
-- "Departures from [stop] with WatchTrans"
-
-**Funcionalidades:**
-- Búsqueda de paradas por nombre
-- Sugerencias automáticas (favoritos, hubs, cercanas)
-- Vista snippet con próximas salidas
-- Indicador de tiempo real
-- Soporte español e inglés
+**Última actualización:** 2026-03-14
 
 ---
 
-### 1.2 Widgets iOS
-**Estado:** ⏳ Esperando endpoint `?compact=true` de API
+## 1. BUGS ACTIVOS
 
-**Dependencia API:**
-```
-GET /api/v1/gtfs/stops/{stop_id}/departures?compact=true&limit=3
-```
+### ~~1.1 Route Planner Metro Madrid~~ ✅ RESUELTO
+IDs de Metro Madrid cambiaron con la migración de servidor. Además se añadió `departure_time` automático a todas las llamadas del route planner.
 
-**Response esperada:**
-```json
-{
-  "stop_id": "METRO_SOL",
-  "stop_name": "Sol",
-  "departures": [
-    {"line": "L1", "minutes": 3, "headsign": "Valdecarros"}
-  ],
-  "updated_at": "2026-01-27T15:30:00Z"
-}
-```
-
-**Requisitos:** <5KB, <500ms latencia
+### 1.2 Bug MapKit: Polyline desaparece con rotación
+Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
+**Workaround actual:** Heading fijo a 0.
+**Posible solución:** Usar `suggested_heading` de API para transiciones suaves.
 
 ---
 
-### 1.3 Complicaciones Apple Watch
-**Estado:** ✅ IMPLEMENTADO (28 Enero 2026) - Pendiente testing en dispositivo real
+## 2. FEATURES PENDIENTES
 
-**Archivo:** `WatchTransWidget/WatchTransWidget.swift`
+### 2.1 Integrar compact endpoint en Widgets/Siri
+Endpoint ya disponible: `GET /api/gtfs/stops/{stop_id}/departures?compact=true&limit=10`
+Pendiente usar en Widgets iOS y Siri Shortcuts para respuestas más ligeras.
 
-**Tipos implementados:**
-- `accessoryCircular`: Anillo de progreso + línea + minutos
-- `accessoryRectangular`: Línea + destino + minutos + barra de progreso
-- `accessoryCorner`: Nombre de línea con tiempo en label
-- `accessoryInline`: Texto simple "L1: 5 min"
-
-**Características:**
-- Colores de línea reales (hex desde API)
-- Indicador de retraso (verde=puntual, naranja=retrasado)
-- Metro/ML usa color de línea (sin info de retraso)
-- Selección de parada configurable
-- Recomendaciones basadas en favoritos y hubs
-- Actualización cada 2.5 minutos
-
----
-
-### 1.4 Paradas Frecuentes (Auto-detectar)
-**Estado:** ✅ Implementado
-
-**Archivos creados:**
-- `WatchTrans iOS/Services/FrequentStopsService.swift`
-
-**Funcionalidad:**
-- Registra visitas a paradas automáticamente
-- Detecta patrones (hora, día de semana, L-V vs fines de semana)
-- Muestra sección "Frecuentes" en Home con badge de patrón (ej: "~08:00 L-V")
-- Ordena por relevancia según hora actual
-
----
-
-### 1.5 Abrir en Apple Maps/Google Maps
-**Estado:** ✅ Implementado
-
-**Archivos creados:**
-- `WatchTrans iOS/Services/MapLauncher.swift`
-
-**Apps soportadas:**
-- Apple Maps (siempre disponible)
-- Google Maps
-- Citymapper
-- Waze
-
-**Uso:** Botón en toolbar de StopDetailView → muestra selector de app
-
----
-
-### 1.6 iCloud Sync para Favoritos
-**Estado:** ✅ IMPLEMENTADO (28 Enero 2026) - Pendiente activar capability en Xcode
-
-**Archivo:** `WatchTrans iOS/Services/iCloudSyncService.swift`
-
-**Arquitectura:**
-```
-iCloud (NSUbiquitousKeyValueStore) ←→ SharedStorage ←→ Widget/Siri
-```
-
-**Datos sincronizados:**
-- ✅ Favoritos (push automático al modificar)
-- ✅ Hub stops
-- ❌ Ubicación (sensible, no se sincroniza)
-- ❌ Cache (local only)
-
-**Características:**
-- Sync automático al añadir/eliminar favoritos
-- Merge inteligente: union de favoritos locales y remotos
-- Detección de cambios externos (otros dispositivos)
-- Límites respetados: 64KB máx por clave
-
-**SETUP REQUERIDO EN XCODE:**
-1. Target WatchTrans iOS → Signing & Capabilities
-2. + Capability → iCloud
-3. Marcar "Key-value storage"
-
----
-
-## 2. CAMBIOS API PENDIENTES
-
-### 2.1 RAPTOR Routing Engine
-**Estado:** ✅ IMPLEMENTADO (27 Enero 2026)
-
-Endpoint: `GET /route-planner?from=X&to=Y&departure_time=HH:MM`
-
-Parámetros:
-- `max_transfers` (default: 3)
-- `max_alternatives` (default: 3)
-
-Response incluye: `journeys[]`, `departure`, `arrival`, `suggested_heading`, `alerts[]`
-
----
-
-### 2.2 Route Planner v2
-**Estado:** ✅ IMPLEMENTADO (App actualizada 28 Enero 2026)
-
-**Modelos Swift actualizados:**
-- `RoutePlanResponse` ahora acepta `journeys[]` (array) y mantiene compatibilidad con `journey` (singular)
-- `RoutePlanJourney` incluye `departure` y `arrival` (ISO8601)
-- `RoutePlanSegment` incluye `suggestedHeading` (0-360)
-- Nuevo modelo `RouteAlert` para alertas
-
-**UI actualizada:**
-- `JourneyPlannerView` muestra la mejor ruta arriba
-- Sección colapsable "X alternativas" para rutas Pareto-óptimas
-- Usuario puede seleccionar cualquier alternativa
-
-**Endpoint:**
-```
-GET /api/v1/gtfs/route-planner?from=STOP_ID&to=STOP_ID&departure_time=08:30
-```
-
-**Cambios en response:**
-
-| Campo | Antes | Después |
-|-------|-------|---------|
-| journey | objeto singular | `journeys[]` array 1-3 |
-| departure/arrival | no existía | timestamps ISO8601 |
-| alerts | no existía | array de alertas |
-| suggested_heading | no existía | float 0-360 por segmento |
-
-**Response v2:**
-```json
-{
-  "success": true,
-  "journeys": [
-    {
-      "departure": "2026-01-28T08:32:00",
-      "arrival": "2026-01-28T09:07:00",
-      "duration_minutes": 35,
-      "transfers": 2,
-      "walking_minutes": 5,
-      "segments": [...]
-    }
-  ],
-  "alerts": [
-    {"line_id": "L1", "message": "Frecuencia reducida", "severity": "warning"}
-  ]
-}
-```
-
----
-
-### 2.3 Departures Compact Endpoint
-**Estado:** ⏳ Pendiente (responsable: API)
-
-**Para:** Widgets iOS, Siri Shortcuts, Apple Watch
-
-**Requisitos:**
-- Tamaño: <5KB
-- Latencia: <500ms
-
-Ver sección 1.2 para detalles.
-
----
-
-### 2.4 Suggested Heading
-**Estado:** ✅ IMPLEMENTADO (27 Enero 2026)
-
-Incluido en cada segmento del route planner response:
-```json
-{
-  "segments": [
-    {
-      "suggested_heading": 45.5
-    }
-  ]
-}
-```
-
-Tipo: `float` (0-360 grados, 0=norte)
-
----
-
-## 3. BUGS CONOCIDOS
-
-### 3.1 C10 Madrid incluye parada de Zaragoza
-**Estado:** ✅ ARREGLADO (27 Enero 2026)
-
----
-
-### 3.2 Correspondencias Barcelona incompletas
-**Estado:** ✅ ARREGLADO (27 Enero 2026)
-
-- Espanya: ✅ conecta con L1, L3
-- Diagonal: ✅ conecta con L3, L5, FGC
-
----
-
-### 3.3 Metro Sevilla sin horarios
-**Estado:** ✅ ARREGLADO
-
-Metro Sevilla funciona correctamente con horarios.
-
----
-
-### 3.4 Route Planner Metro Madrid
-**Estado:** ❌ PENDIENTE
-
-**Problema:** No encuentra rutas entre paradas de Metro Madrid.
-Ejemplo: `METRO_12` (Sol) → `METRO_14` (Gran Vía) devuelve "No route found"
-
----
-
-### 3.3 Bug MapKit: Polyline desaparece con rotación
-**Descripción:** Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline
-
-**Workaround actual:** Heading fijo a 0
-
-**Posible solución:** Usar `suggested_heading` de API para transiciones suaves
-
----
-
-## 4. MODELOS SWIFT A ACTUALIZAR (cuando API v2 esté lista)
-
-### RenfeServerModels.swift
-```swift
-// ACTUALIZAR
-struct RoutePlanResponse: Codable {
-    let success: Bool
-    let message: String?
-    let journeys: [RoutePlanJourney]  // era journey singular
-    let alerts: [RouteAlert]?         // NUEVO
-}
-
-struct RoutePlanJourney: Codable {
-    let departure: String             // NUEVO
-    let arrival: String               // NUEVO
-    let durationMinutes: Int
-    let walkingMinutes: Int
-    let transfers: Int
-    let segments: [RoutePlanSegment]
-}
-
-struct RoutePlanSegment: Codable {
-    // ... campos existentes ...
-    let suggestedHeading: Double?     // NUEVO
-}
-
-// NUEVOS
-struct RouteAlert: Codable {
-    let lineId: String
-    let message: String
-    let severity: String  // "info", "warning", "error"
-}
-
-struct CompactDeparturesResponse: Codable {
-    let stopId: String
-    let stopName: String
-    let departures: [CompactDeparture]
-    let updatedAt: String
-}
-```
-
----
-
-## 5. COORDINACIÓN DE DEPLOY
-
-| Paso | Responsable | Estado |
-|------|-------------|--------|
-| 1. Implementar RAPTOR | API | ⏳ |
-| 2. Deploy a staging | API | ⏳ |
-| 3. Actualizar modelos Swift | App | ⏳ |
-| 4. Testing conjunto | Ambos | ⏳ |
-| 5. Deploy producción | API | ⏳ |
-| 6. Submit App Store | App | ⏳ |
-
----
-
-## 6. FEATURES FUTURAS (v2+)
-
-### 6.0 Próximas Prioridades (Enero 2026)
-
-#### 6.0.1 Modo Offline Básico
-**Estado:** ✅ IMPLEMENTADO (28 Enero 2026)
-
-**Descripción:** Cachear horarios GTFS para funcionar sin conexión.
-
-**Archivos creados:**
-- `WatchTrans iOS/Services/NetworkMonitor.swift` - Detecta conectividad
-- `WatchTrans iOS/Services/OfflineScheduleService.swift` - Gestiona cache de horarios
-
-**Funcionalidad implementada:**
-- ✅ Cachea horarios de paradas favoritas automáticamente al iniciar app
-- ✅ Detecta cuando no hay conexión (NWPathMonitor)
-- ✅ Muestra horarios programados como fallback cuando offline
-- ✅ Indicador visual "offline" en ArrivalRowView
-- ✅ Cache persiste en disco (JSON en cachesDirectory)
-- ✅ Cache válido por 1 día (validForDate)
-
-**Flujo:**
-1. App inicia → Si online, cachea horarios de favoritos
-2. Usuario sin conexión → Detecta via NetworkMonitor
-3. Fetch arrivals falla → Usa OfflineScheduleService.getCachedDepartures()
-4. UI muestra icono "icloud.slash" + "offline"
-
-**Prioridad:** ~~Alta~~ Completado
-
----
-
-#### 6.0.2 Push Notifications para Alertas
-**Estado:** ⏳ Pendiente
-
-**Descripción:** Notificar cuando una línea favorita tiene incidencias.
-
-**Funcionalidad:**
+### 2.2 Push Notifications para Alertas
+Notificar cuando una línea favorita tiene incidencias.
 - Suscribirse a alertas de líneas favoritas
 - Push notification cuando hay incidencia/avería
-- Integración con sistema de alertas existente
+- Requiere APNs + servidor de notificaciones
 
-**Requisitos:**
-- APNs (Apple Push Notification service)
-- Servidor de notificaciones o Firebase Cloud Messaging
-
-**Prioridad:** Media
-
----
-
-#### 6.0.3 Watch Independiente
-**Estado:** ⏳ Pendiente
-
-**Descripción:** Apple Watch funciona sin iPhone cerca.
-
-**Funcionalidad:**
-- App Watch con conectividad propia (WiFi/Cellular)
-- No requiere iPhone para consultar salidas
+### 2.3 Watch Independiente
+Apple Watch funciona sin iPhone cerca (WiFi/Cellular propio).
+- watchOS independiente con URLSession
 - Sincronización de favoritos vía iCloud
 
-**Requisitos:**
-- watchOS independiente con URLSession
-- WatchConnectivity solo para sync opcional
+---
 
-**Prioridad:** Media
+## 3. ENDPOINTS NUEVOS DISPONIBLES (api.watch-trans.app)
+
+### Implementados ✅
+
+- **3.5 Predicción de andén** — rellenar plataformas vacías con predicción histórica (badge naranja). Ambos targets.
+- **3.3 Ocupación de estación TMB** — barras de progreso por andén en StopDetailView (paradas `TMB_METRO_*`).
+- **3.8 Búsqueda en rango horario** — toggle "Buscar por franja horaria" en JourneyPlannerView.
+- **3.6 RT completo de parada** — modelo y fetch listos (`StopRealtimeResponse`). Pendiente integrar en DataService como optimización.
+- **Alertas por parada** — badges en Home, inline en LineDetailView, sección completa en StopDetailView.
+
+### Metro Sevilla RT ✅
+
+- **Departures** — campo `vehicleLabel` añadido al flujo completo (DepartureResponse → Arrival → vistas).
+- **Equipment status** — ascensores/escaleras en tiempo real en StopDetailView (19 estaciones, ~106 dispositivos). `GET /api/gtfs-rt/equipment-status/{stop_id}`
+- **Air quality** — CO2, temperatura, humedad por tren. Badge en ArrivalRowView + card en TrainDetailView. Solo `METRO_SEV_*`.
+- **Alertas de servicio** — `GET /api/v1/incidenciasmetro/` — schema pendiente, implementar cuando haya incidencia real.
+
+### Pendiente replicar en Watch
+
+- **Metro Sevilla RT** (equipment status, air quality, vehicleLabel) — solo implementado en iOS. Replicar modelos, fetch y UI en watchOS cuando sea prioritario.
+- **Ocupación estación TMB** — solo iOS.
+- **Alertas por parada** (badges en Home/LineDetailView) — solo iOS.
+- **Búsqueda en rango horario** — solo iOS.
+
+### Pendientes
+
+#### 3.1 Tarifas
+`GET /api/gtfs/routes/{route_id}/fares`
+**Cobertura:** Euskotren (122), Metro Bilbao (25), Metro Sevilla (54), Metro Granada (1). Resto sin datos.
+Pendiente arreglar formato en la API.
+
+#### 3.4 Interior de estaciones
+`GET /api/gtfs/stops/{stop_id}/station-interior`
+**Cobertura:** TMB (1,065 pathways), Euskotren (686), SFM Mallorca (30), Renfe Cercanías (195 accesos), Metro Valencia (186). Metro Madrid y ML tienen problemas de resolución.
+Aparcado — backend arreglando datos.
+
+### Sin datos / No prioritarios
+
+- **3.2 Ocupación por vagón** — ningún operador envía datos per-car.
+- **3.7 Stop-time updates** — duplica funcionalidad de departures.
+- **3.9 Mapa isócrono** — requiere UI de mapa nueva.
+- **3.10 Líneas por coordenadas** — uso interno.
+- **3.11 Agencias** — uso interno.
+- **3.12 Detalle de ruta individual** — uso interno.
 
 ---
 
-#### 6.0.4 Indicador de Ocupación
-**Estado:** ✅ IMPLEMENTADO (28 Enero 2026)
+## 4. FEATURES FUTURAS (v2+)
 
-**Descripción:** Mostrar verde/amarillo/rojo según ocupación del tren.
-
-**Archivos modificados:**
-- `RenfeServerModels.swift` - campos `occupancy_status`, `occupancy_percentage`, `occupancy_per_car`
-- `Arrival.swift` - nuevos campos + enum `OccupancyLevel`
-- `ArrivalRowView.swift` - nuevo componente `OccupancyIndicator`
-
-**UI implementada:**
-- 🟢 Verde: vacío/muchos asientos (0-1)
-- 🟡 Amarillo: pocos asientos/de pie (2-3)
-- 🔴 Rojo: lleno (4-6)
-- ⚫ Gris: sin datos (7-8)
-
-**Operadores con datos:** Solo TMB Metro Barcelona por ahora
-
----
-
-### 6.1 Ticketing / Payment
-**Inspiración:** Masabi JustRide SDK
-
-**Features:**
-- Compra de billetes in-app
-- QR para validación
-- Wallet integration
-
-**Prioridad:** Baja (requiere acuerdos con operadores)
-
----
-
-### 6.2 Bike-share Integration
-**Inspiración:** OpenTripPlanner
-
-**Sistemas españoles:**
-- BiciMAD (Madrid)
-- Bicing (Barcelona)
-
-**API:** GBFS (General Bikeshare Feed Specification)
-
-**Prioridad:** Baja
-
----
-
-### 6.3 CarPlay
-**Inspiración:** Citymapper
-
-**Prioridad:** Baja (complejidad alta)
-
----
-
-### 6.4 Mapas Offline
-**Inspiración:** Moovit (vector tiles)
-
-**Tecnología:** MapLibre + vector tiles
-
-**Prioridad:** Baja
-
----
-
-### 6.5 Reportar Incidencias
-**Inspiración:** OneBusAway (Open311)
-
-**Prioridad:** Baja
-
----
-
-## 7. DECISIONES TÉCNICAS
-
-### 7.1 Storage: SharedStorage + iCloud
-
-**Arquitectura:**
-```
-┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
-│   iCloud    │ ←→  │  SharedStorage  │ ←→  │ Widget/Siri │
-│  (backup)   │     │  (fuente local) │     │    (UI)     │
-└─────────────┘     └─────────────────┘     └─────────────┘
-```
-
-**Implementación:**
-```swift
-let iCloudStore = NSUbiquitousKeyValueStore.default
-
-NotificationCenter.default.addObserver(
-    forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-    object: iCloudStore,
-    queue: .main
-) { _ in
-    let favorites = iCloudStore.array(forKey: "favorites")
-    SharedStorage.shared.saveFavorites(favorites)
-}
-```
-
-**Límites:** 1MB total, 1KB por clave
-
----
-
-### 7.2 Real-time: Polling Inteligente
-
-**Decisión:** No WebSockets por ahora
-
-**Estrategia:**
-- App activa: polling cada 30s
-- App background: polling cada 5min
-- Widget: refresh según sistema
-
----
-
-### 7.3 Routing: RAPTOR (API)
-
-**Decisión:** Migrar de Dijkstra a RAPTOR en servidor
-
-**App no hace routing local** - eliminado RoutingService.swift
-
----
-
-### 7.4 Cache en App
-
-| Dato | Cachear | TTL |
-|------|---------|-----|
-| Paradas | ✅ | 1 semana |
-| Info líneas | ✅ | 1 semana |
-| Rutas buscadas | ✅ | Indefinido |
-| Favoritos | ✅ | Indefinido |
-| Departures | ❌ | Siempre fresh |
-| Route planner | ❌ | Siempre fresh |
-
----
-
-## 8. REFERENCIAS
-
-### Apps analizadas
-- OneBusAway (features)
-- Citymapper (CMMapLauncher)
-- Moovit (vector tiles, Caishen)
-
-### Librerías útiles
-- TripKit (Swift) - proveedores de transporte
-- GraphHopper (Java) - routing multimodal
-- OpenTripPlanner (Java) - RAPTOR
-
-### Recursos
-- GTFS spec: https://gtfs.org
-- Transitous (150+ feeds españoles): https://transitous.org
-- awesome-transit: https://github.com/CUTR-at-USF/awesome-transit
-
----
-
-*Documento de planificación WatchTrans*
+| Feature | Prioridad | Notas |
+|---------|-----------|-------|
+| Ticketing / Payment | Baja | Requiere acuerdos con operadores (Masabi JustRide SDK) |
+| Bike-share (BiciMAD, Bicing) | Baja | GBFS spec |
+| CarPlay | Baja | Complejidad alta |
+| Mapas Offline | Baja | MapLibre + vector tiles |
+| Reportar Incidencias | Baja | Open311 |

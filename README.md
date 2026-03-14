@@ -68,17 +68,17 @@ WatchTrans/
 
 ## API
 
-La app consume la API de [redcercanias.com](https://redcercanias.com):
+La app consume la API de [api.watch-trans.app](https://api.watch-trans.app):
 
 ### Endpoints principales
 
 | Endpoint | Descripción |
 |----------|-------------|
-| `GET /api/v1/gtfs/networks` | Lista de redes de transporte |
-| `GET /api/v1/gtfs/routes` | Lista de líneas |
-| `GET /api/v1/gtfs/stops/{stop_id}/departures` | Salidas de una parada |
-| `GET /api/v1/gtfs/routes/{route_id}/operating-hours` | Horarios de operación |
-| `GET /api/v1/gtfs/realtime/routes/{route_id}/alerts` | Alertas de una línea |
+| `GET /api/gtfs/networks` | Lista de redes de transporte |
+| `GET /api/gtfs/routes` | Lista de líneas |
+| `GET /api/gtfs/stops/{stop_id}/departures` | Salidas de una parada |
+| `GET /api/gtfs/routes/{route_id}/operating-hours` | Horarios de operación |
+| `GET /api/gtfs/realtime/routes/{route_id}/alerts` | Alertas de una línea |
 
 ### Detección de servicio suspendido
 

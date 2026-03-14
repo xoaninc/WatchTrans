@@ -46,3 +46,6 @@ playground.xcworkspace
 *.xcconfig
 Secrets/
 **/Secrets.swift
+
+# AI tool configs
+.gemini/

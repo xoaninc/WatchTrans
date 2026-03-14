@@ -42,7 +42,7 @@ Your location is used solely to:
 ### Third-Party Services
 
 WatchTrans uses the following backend service:
-- **RedCercanías API** (redcercanias.com): Provides real-time transit data. This service receives your coordinates to return nearby stops but does NOT store or track this information.
+- **WatchTrans API** (api.watch-trans.app): Provides real-time transit data. This service receives your coordinates to return nearby stops but does NOT store or track this information.
 
 ### Your Rights
 
@@ -105,7 +105,7 @@ Tu ubicación se usa únicamente para:
 ### Servicios de Terceros
 
 WatchTrans usa el siguiente servicio backend:
-- **API de RedCercanías** (redcercanias.com): Proporciona datos de transporte en tiempo real. Este servicio recibe tus coordenadas para devolver paradas cercanas pero NO almacena ni rastrea esta información.
+- **WatchTrans API** (api.watch-trans.app): Proporciona datos de transporte en tiempo real. Este servicio recibe tus coordenadas para devolver paradas cercanas pero NO almacena ni rastrea esta información.
 
 ### Tus Derechos
 

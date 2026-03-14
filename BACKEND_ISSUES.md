@@ -28,10 +28,11 @@ The following networks are currently **Static Only** (No real-time departures):
 ### Metro Madrid Route Planner
 **Endpoint:** `GET /api/gtfs/route-planner`
 **Status:** ❌ PENDIENTE
-**Issue:** The RAPTOR engine does not return routes between Metro Madrid stations.
-**Example:** Sol -> Gran Vía returns "No route found".
+**Issue:** The RAPTOR engine returns "No journeys found" for all Metro Madrid stations (e.g., Sol `METRO_12` -> Gran Vía `METRO_87`).
+**Hypothesis:** The backend has not loaded `stop_times.txt` or transfer data for the Metro Madrid network into the routing engine.
+**Verification:** Verified that Cercanías Sevilla (e.g., Dos Hermanas to Santa Justa) routing works correctly.
 
-### Duplicate Trips due to Calendar Overlaps
+### Sevilla C4 Route Shape
 
 
 
