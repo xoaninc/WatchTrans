@@ -69,17 +69,13 @@ struct ArrivalRowView: View {
                         .font(.body)
                         .lineLimit(1)
 
-                    // Double composition badge
-                    if arrival.isDoubleComposition {
-                        Text("2x")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.blue.opacity(0.7))
-                            .cornerRadius(3)
-                    }
+                }
+
+                // Composition indicator (Metro Sevilla)
+                if arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
+                    Text(arrival.isDoubleComposition ? "Doble" : "Simple")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Train position (if available)
@@ -141,7 +137,7 @@ struct ArrivalRowView: View {
                     OccupancyIndicator(level: arrival.occupancyLevel, percentage: arrival.occupancyPercentage)
                 }
 
-                // Platform badge or direction fallback
+                // Platform badge (direction already shown in headsign above)
                 if let platform = arrival.platform, !platform.isEmpty {
                     Text("Vía \(platform)")
                         .font(.caption)
@@ -153,10 +149,6 @@ struct ArrivalRowView: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(arrival.platformEstimated ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
                         )
-                } else if !arrival.destination.isEmpty && arrival.destination != "Unknown" {
-                    Text("Dir. \(arrival.destination)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 // Delay indicator
