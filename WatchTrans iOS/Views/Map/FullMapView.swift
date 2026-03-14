@@ -285,10 +285,15 @@ struct FullMapView: View {
     }
     
     private func toggleLine(_ id: String) {
-        var current = visibleIds
+        // If empty (all visible), initialize with all line IDs first
+        var current: Set<String>
+        if visibleRouteIdsString.isEmpty {
+            current = Set(availableLines.map { $0.id })
+        } else {
+            current = visibleIds
+        }
         if current.contains(id) { current.remove(id) } else { current.insert(id) }
         visibleRouteIdsString = current.isEmpty ? "NONE" : Array(current).joined(separator: ",")
-        // Recargar shapes al cambiar filtro
         Task { await processAndLoadShapes(dataService.lines) }
     }
     
