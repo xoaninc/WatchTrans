@@ -72,15 +72,25 @@ Pendiente arreglar formato en la API.
 
 #### 3.4 Interior de estaciones
 `GET /api/gtfs/stops/{stop_id}/station-interior`
-**Cobertura:** TMB (1,065 pathways), Euskotren (686), SFM Mallorca (30), Renfe Cercanías (195 accesos), Metro Valencia (186). Metro Madrid y ML tienen problemas de resolución.
-Aparcado — backend arreglando datos.
+**Cobertura:** TMB (1,065 pathways), Euskotren (686), SFM Mallorca (30), Renfe Cercanías (195 accesos), Metro Valencia (186), Metro Madrid (pathways), CRTM (accesos).
+Ya funciona en producción. Modelos listos en la app (`StationInteriorResponse`). Pendiente crear vista.
+
+#### 3.13 Equipment status bulk por red
+`GET /api/gtfs-rt/equipment-status/?operator_id=metro_sevilla`
+Devuelve todos los dispositivos de una red en una sola llamada. Útil para vista "estado de todos los ascensores de Metro Sevilla" sin consultar parada por parada.
+
+#### 3.14 Líneas por coordenadas
+`GET /api/gtfs/coordinates/lines?lat={lat}&lon={lon}`
+Líneas cerca de unas coordenadas. Diferente de `/coordinates/routes` (que devuelve rutas) y `/stops/by-coordinates` (que devuelve paradas). Posible uso: mostrar líneas cercanas en el mapa.
+
+#### 3.15 Mapa isócrono
+`GET /api/gtfs/journey/isochrone`
+Mapa de alcance: "a dónde puedo llegar en X minutos desde este punto". Requiere UI de mapa nueva.
 
 ### Sin datos / No prioritarios
 
 - **3.2 Ocupación por vagón** — ningún operador envía datos per-car.
 - **3.7 Stop-time updates** — duplica funcionalidad de departures.
-- **3.9 Mapa isócrono** — requiere UI de mapa nueva.
-- **3.10 Líneas por coordenadas** — uso interno.
 - **3.11 Agencias** — uso interno.
 - **3.12 Detalle de ruta individual** — uso interno.
 
