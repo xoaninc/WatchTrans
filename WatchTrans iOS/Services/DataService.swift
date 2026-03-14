@@ -493,7 +493,16 @@ class DataService {
 
     /// Initialize data - call this on app launch
     /// Loads stops from cache or API. Lines are loaded lazily when needed.
+    private var isFetchingStops = false
+
     func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
+        guard !isFetchingStops else {
+            DebugLog.log("📍 [DataService] Skipping duplicate fetchTransportData (already in progress)")
+            return
+        }
+        isFetchingStops = true
+        defer { isFetchingStops = false }
+
         isLoading = true
         defer { isLoading = false }
 
@@ -2034,8 +2043,15 @@ class DataService {
         return Set([province])
     }
 
-    /// Get trip details
+    /// Get trip details (skips synthetic RT trips that have no server-side detail)
+    private static let syntheticTripPrefixes = ["MSEV_RT_", "ZGZ_RT_", "TMB_METRO_"]
+
     func fetchTripDetails(tripId: String) async -> TripDetailResponse? {
+        // Synthetic RT trips don't exist in /trips/ — info is already in the departure
+        if Self.syntheticTripPrefixes.contains(where: { tripId.hasPrefix($0) }) {
+            DebugLog.log("ℹ️ [DataService] Skipping trip fetch for synthetic RT trip: \(tripId)")
+            return nil
+        }
         do {
             return try await gtfsRealtimeService.fetchTrip(tripId: tripId)
         } catch {
