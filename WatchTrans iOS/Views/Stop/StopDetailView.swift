@@ -762,6 +762,33 @@ struct AlertsSectionView: View {
                             .foregroundStyle(alert.severityColor)
                             .padding(.top, 2)
                         }
+
+                        // Alternative transport
+                        if let alternatives = alert.alternativeTransport, !alternatives.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Transporte alternativo")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.green)
+                                ForEach(alternatives) { alt in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: alt.icon)
+                                            .font(.caption)
+                                            .foregroundStyle(.green)
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(alt.description)
+                                                .font(.caption)
+                                            if let from = alt.fromStation, let to = alt.toStation {
+                                                Text("\(from) → \(to)")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)

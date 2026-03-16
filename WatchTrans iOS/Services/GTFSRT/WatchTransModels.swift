@@ -385,6 +385,9 @@ struct AlertResponse: Codable, Identifiable {
     // Service restoration
     let estimatedRestorationTime: String?  // "14:30" - when service resumes
 
+    // Alternative transport (bus replacement, reroute via other line)
+    let alternativeTransport: [AlternativeTransport]?
+
     var id: String { alertId }
 
     enum CodingKeys: String, CodingKey {
@@ -403,6 +406,7 @@ struct AlertResponse: Codable, Identifiable {
         case aiStatus = "ai_status"
         case aiIsVerified = "ai_is_verified"
         case estimatedRestorationTime = "estimated_restoration_time"
+        case alternativeTransport = "alternative_transport"
     }
 
     /// Color based on GTFS-RT effect type
@@ -445,6 +449,34 @@ struct AlertResponse: Codable, Identifiable {
         effect == "NO_SERVICE" ||
         aiStatus == "FULL_SUSPENSION" ||
         aiCategory?.contains("FULL_SUSPENSION") == true
+    }
+}
+
+/// Alternative transport option during service disruption
+struct AlternativeTransport: Codable, Identifiable {
+    let type: String              // "bus_replacement", "reroute_via_line", "other"
+    let line: String?             // Alternative line (e.g., "C1"). Only for reroute_via_line
+    let fromStation: String?
+    let toStation: String?
+    let description: String
+
+    var id: String { "\(type)-\(fromStation ?? "")-\(toStation ?? "")" }
+
+    enum CodingKeys: String, CodingKey {
+        case type, line, description
+        case fromStation = "from_station"
+        case toStation = "to_station"
+    }
+
+    var isBusReplacement: Bool { type == "bus_replacement" }
+    var isReroute: Bool { type == "reroute_via_line" }
+
+    var icon: String {
+        switch type {
+        case "bus_replacement": return "bus.fill"
+        case "reroute_via_line": return "arrow.triangle.branch"
+        default: return "info.circle"
+        }
     }
 }
 

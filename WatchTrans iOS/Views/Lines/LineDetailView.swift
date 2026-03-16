@@ -510,6 +510,20 @@ struct AlertBannerView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                // Alternative transport
+                if let alternatives = alert.alternativeTransport, !alternatives.isEmpty {
+                    ForEach(alternatives) { alt in
+                        HStack(spacing: 4) {
+                            Image(systemName: alt.icon)
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                            Text(alt.description)
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                }
             }
 
             Spacer()
