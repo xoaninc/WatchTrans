@@ -296,23 +296,30 @@ struct FullMapView: View {
     }
     
     private func toggleLine(_ id: String) {
+        DebugLog.log("🗺️ [Map] toggleLine(\(id)) — before: \(visibleRouteIdsString.prefix(50))...")
         // If empty (all visible), initialize with all line IDs first
         var current: Set<String>
         if visibleRouteIdsString.isEmpty {
             current = Set(availableLines.map { $0.id })
+            DebugLog.log("🗺️ [Map] Initialized with \(current.count) lines (was empty)")
         } else {
             current = visibleIds
         }
-        if current.contains(id) { current.remove(id) } else { current.insert(id) }
+        let wasVisible = current.contains(id)
+        if wasVisible { current.remove(id) } else { current.insert(id) }
         visibleRouteIdsString = current.isEmpty ? "NONE" : Array(current).joined(separator: ",")
+        DebugLog.log("🗺️ [Map] toggleLine result: \(id) \(wasVisible ? "REMOVED" : "ADDED"), visible: \(current.count) lines")
         Task { await processAndLoadShapes(dataService.lines) }
     }
     
     private func toggleAllLines() {
+        DebugLog.log("🗺️ [Map] toggleAllLines — isAllSelected: \(isAllSelected)")
         if isAllSelected {
-            visibleRouteIdsString = "NONE" 
+            visibleRouteIdsString = "NONE"
+            DebugLog.log("🗺️ [Map] Set to NONE (all hidden)")
         } else {
             visibleRouteIdsString = availableLines.map { $0.id }.joined(separator: ",")
+            DebugLog.log("🗺️ [Map] Set to ALL (\(availableLines.count) lines)")
         }
         Task { await processAndLoadShapes(dataService.lines) }
     }
@@ -388,7 +395,10 @@ struct LineFilterSheet: View {
                     .background(.regularMaterial)
                     .cornerRadius(20)
                     .contentShape(Rectangle())
-                    .onTapGesture { toggleAll() }
+                    .onTapGesture {
+                        DebugLog.log("🗺️ [LineSheet] Toggle all tapped")
+                        toggleAll()
+                    }
                     .padding(.horizontal)
 
                     // Groups by transport type
@@ -422,7 +432,9 @@ struct LineFilterSheet: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { } // Claim empty-area taps before sheet's resize gesture
+        .onTapGesture {
+            DebugLog.log("🗺️ [LineSheet] Empty area tapped")
+        }
     }
 
     private func networkName(type: TransportType, nucleo: String) -> String {
@@ -466,7 +478,10 @@ struct LineChip: View {
                 .frame(maxWidth: 100)
         }
         .contentShape(Rectangle())
-        .onTapGesture { onTap() }
+        .onTapGesture {
+            DebugLog.log("🗺️ [LineSheet] Chip tapped: \(line.name) (id: \(line.id), selected: \(isSelected))")
+            onTap()
+        }
     }
 }
 
