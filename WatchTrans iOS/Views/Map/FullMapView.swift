@@ -238,15 +238,34 @@ struct FullMapView: View {
     
     func processAndLoadShapes(_ lines: [Line]) async {
         guard !lines.isEmpty else { return }
-        
+
+        // Capture visibility state NOW to avoid race conditions with @AppStorage
+        let currentVisibleString = visibleRouteIdsString
+        let currentVisibleIds: Set<String>
+        if currentVisibleString.isEmpty {
+            currentVisibleIds = Set(lines.map { $0.id }) // all visible
+        } else if currentVisibleString == "NONE" {
+            currentVisibleIds = []
+        } else {
+            currentVisibleIds = Set(currentVisibleString.split(separator: ",").map(String.init))
+        }
+
+        if currentVisibleIds.isEmpty {
+            await MainActor.run {
+                self.visibleShapes = []
+                self.debugInfo = ""
+            }
+            return
+        }
+
         await MainActor.run { debugInfo = "Descargando mapas de líneas..." }
-        
+
         var newShapes: [MapShape] = []
-        
+
         // Descarga secuencial o por bloques para no saturar
         for line in lines {
             // Solo procesamos si la línea es visible
-            guard isVisible(line.id) else { continue }
+            guard currentVisibleIds.contains(line.id) else { continue }
             
             for rId in line.routeIds {
                 let points = await dataService.fetchRouteShape(routeId: rId)
