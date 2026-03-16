@@ -170,6 +170,7 @@ struct FullMapView: View {
                 nucleo: dataService.currentLocation?.provinceName ?? ""
             )
             .presentationDetents([.medium, .large])
+            .presentationContentInteraction(.scrolls)
             .presentationDragIndicator(.visible)
         }
     }
@@ -420,6 +421,8 @@ struct LineFilterSheet: View {
                 .padding(.vertical)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { } // Claim empty-area taps before sheet's resize gesture
     }
 
     private func networkName(type: TransportType, nucleo: String) -> String {
