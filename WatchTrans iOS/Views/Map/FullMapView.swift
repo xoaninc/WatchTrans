@@ -445,29 +445,26 @@ struct LineChip: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 3) {
-                // Line badge with color
-                Text(line.name)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(isSelected ? .white : .primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? line.color : line.color.opacity(0.2))
-                    )
+        VStack(spacing: 3) {
+            Text(line.name)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundStyle(isSelected ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? line.color : line.color.opacity(0.2))
+                )
 
-                // Long name below
-                Text(line.longName)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: 100)
-            }
+            Text(line.longName)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 100)
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
     }
 }
 
