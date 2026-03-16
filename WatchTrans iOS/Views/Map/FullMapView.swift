@@ -140,35 +140,14 @@ struct FullMapView: View {
         return groups.values.sorted { $0.type.rawValue < $1.type.rawValue }
     }
 
+    @State private var showLineSheet = false
+
     private var layersButton: some View {
         VStack {
             HStack {
                 Spacer()
-                Menu {
-                    Button(isAllSelected ? "Ocultar todas" : "Mostrar todas") { toggleAllLines() }
-                    Divider()
-                    ForEach(Array(linesByTransportType.enumerated()), id: \.offset) { _, group in
-                        Section {
-                            ForEach(group.lines) { line in
-                                Button {
-                                    toggleLine(line.id)
-                                } label: {
-                                    HStack {
-                                        Circle()
-                                            .fill(line.color)
-                                            .frame(width: 10, height: 10)
-                                        Text(line.name)
-                                        Text(line.longName)
-                                            .foregroundStyle(.secondary)
-                                        Spacer()
-                                        if isVisible(line.id) { Image(systemName: "checkmark") }
-                                    }
-                                }
-                            }
-                        } header: {
-                            Label(networkDisplayName(type: group.type, nucleo: group.nucleo), systemImage: transportIcon(group.type))
-                        }
-                    }
+                Button {
+                    showLineSheet = true
                 } label: {
                     Image(systemName: "square.2.layers.3d")
                         .font(.title2)
@@ -180,6 +159,18 @@ struct FullMapView: View {
                 .padding()
             }
             Spacer()
+        }
+        .sheet(isPresented: $showLineSheet) {
+            LineFilterSheet(
+                linesByTransportType: linesByTransportType,
+                isVisible: { isVisible($0) },
+                toggleLine: { toggleLine($0) },
+                toggleAll: { toggleAllLines() },
+                isAllSelected: isAllSelected,
+                nucleo: dataService.currentLocation?.provinceName ?? ""
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -364,3 +355,120 @@ struct FullMapView: View {
     
     func stopRefreshTimer() { timer?.invalidate(); timer = nil }
 }
+
+// MARK: - Line Filter Bottom Sheet
+
+struct LineFilterSheet: View {
+    let linesByTransportType: [(type: TransportType, nucleo: String, lines: [Line])]
+    let isVisible: (String) -> Bool
+    let toggleLine: (String) -> Void
+    let toggleAll: () -> Void
+    let isAllSelected: Bool
+    let nucleo: String
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Toggle all button
+                    Button {
+                        toggleAll()
+                    } label: {
+                        HStack {
+                            Image(systemName: isAllSelected ? "eye.slash" : "eye")
+                            Text(isAllSelected ? "Ocultar todas" : "Mostrar todas")
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial)
+                        .cornerRadius(20)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+
+                    // Groups by transport type
+                    ForEach(Array(linesByTransportType.enumerated()), id: \.offset) { _, group in
+                        VStack(alignment: .leading, spacing: 10) {
+                            // Network header with logo
+                            HStack(spacing: 8) {
+                                LogoImageView(
+                                    type: group.type,
+                                    nucleo: group.nucleo,
+                                    height: 22
+                                )
+                                Text(networkName(type: group.type, nucleo: group.nucleo))
+                                    .font(.headline)
+                            }
+                            .padding(.horizontal)
+
+                            // Line chips (horizontal wrap)
+                            FlowLayout(spacing: 8) {
+                                ForEach(group.lines) { line in
+                                    LineChip(
+                                        line: line,
+                                        isSelected: isVisible(line.id),
+                                        onTap: { toggleLine(line.id) }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                .padding(.vertical)
+            }
+            .navigationTitle("Líneas")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func networkName(type: TransportType, nucleo: String) -> String {
+        let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
+        switch type {
+        case .metro: return "Metro de \(capitalized)"
+        case .metroLigero: return "Metro Ligero de \(capitalized)"
+        case .cercanias: return "Cercanías \(capitalized)"
+        case .tram: return "Tranvía de \(capitalized)"
+        case .fgc: return "FGC"
+        case .euskotren: return "Euskotren"
+        case .bus: return "Bus \(capitalized)"
+        }
+    }
+}
+
+// MARK: - Line Chip
+
+struct LineChip: View {
+    let line: Line
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 3) {
+                // Line badge with color
+                Text(line.name)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(isSelected ? .white : .primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isSelected ? line.color : line.color.opacity(0.2))
+                    )
+
+                // Long name below
+                Text(line.longName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: 100)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// FlowLayout is defined in StopDetailView.swift
