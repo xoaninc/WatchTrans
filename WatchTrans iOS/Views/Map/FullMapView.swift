@@ -367,30 +367,32 @@ struct LineFilterSheet: View {
     let nucleo: String
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // Header
+            Text("Líneas")
+                .font(.headline)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Toggle all button
-                    Button {
-                        toggleAll()
-                    } label: {
-                        HStack {
-                            Image(systemName: isAllSelected ? "eye.slash" : "eye")
-                            Text(isAllSelected ? "Ocultar todas" : "Mostrar todas")
-                        }
-                        .font(.subheadline)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(.regularMaterial)
-                        .cornerRadius(20)
+                    // Toggle all
+                    HStack {
+                        Image(systemName: isAllSelected ? "eye.slash" : "eye")
+                        Text(isAllSelected ? "Ocultar todas" : "Mostrar todas")
                     }
-                    .buttonStyle(.plain)
+                    .font(.subheadline)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial)
+                    .cornerRadius(20)
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleAll() }
                     .padding(.horizontal)
 
                     // Groups by transport type
                     ForEach(Array(linesByTransportType.enumerated()), id: \.offset) { _, group in
                         VStack(alignment: .leading, spacing: 10) {
-                            // Network header with logo
                             HStack(spacing: 8) {
                                 LogoImageView(
                                     type: group.type,
@@ -402,7 +404,6 @@ struct LineFilterSheet: View {
                             }
                             .padding(.horizontal)
 
-                            // Line chips (horizontal wrap)
                             FlowLayout(spacing: 8) {
                                 ForEach(group.lines) { line in
                                     LineChip(
@@ -418,8 +419,6 @@ struct LineFilterSheet: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Líneas")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
