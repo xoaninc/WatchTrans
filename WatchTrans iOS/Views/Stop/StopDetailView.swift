@@ -108,12 +108,13 @@ struct StopDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                if showMap {
-                    stopMapHeader
-                } else {
-                    Color(.systemGray6)
-                        .frame(height: 200)
-                }
+                // Map temporarily disabled to diagnose SIGABRT crash
+                // if showMap {
+                //     stopMapHeader
+                // } else {
+                //     Color(.systemGray6)
+                //         .frame(height: 200)
+                // }
 
                 VStack(spacing: 16) {
                     // Offline banner
