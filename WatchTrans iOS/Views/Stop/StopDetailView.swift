@@ -629,13 +629,76 @@ struct StopHeaderView: View {
                             .font(.caption)
                             .foregroundStyle(.green)
                     }
-                }
 
-                if let accesibilidad = stop.accesibilidad, !accesibilidad.isEmpty {
-                    Label(accesibilidad, systemImage: "figure.roll")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if stop.wheelchairBoarding == 1 {
+                        Label("Accesible", systemImage: "figure.roll")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    } else if stop.wheelchairBoarding == 2 {
+                        Label("No accesible", systemImage: "figure.roll")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
+            }
+
+            // Servicio Acerca PMR (48 Renfe stations)
+            if let acerca = stop.acercaService {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "figure.roll")
+                            .foregroundStyle(.blue)
+                        Text("Servicio Acerca PMR")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+
+                    if let meetingPoint = acerca.meetingPoint, !meetingPoint.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.circle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("Punto de encuentro: \(meetingPoint)")
+                                .font(.caption)
+                        }
+                    }
+
+                    if let noticeTime = acerca.noticeTime, !noticeTime.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("Aviso previo: \(noticeTime)")
+                                .font(.caption)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        if acerca.parking == true {
+                            Label("Parking", systemImage: "p.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                        }
+                        if acerca.anden == true {
+                            Label("Anden", systemImage: "train.side.front.car")
+                                .font(.caption2)
+                                .foregroundStyle(.blue)
+                        }
+                        if acerca.aseos == true {
+                            Label("Aseos", systemImage: "toilet")
+                                .font(.caption2)
+                                .foregroundStyle(.blue)
+                        }
+                        if acerca.vestibulo == true {
+                            Label("Vestibulo", systemImage: "door.left.hand.open")
+                                .font(.caption2)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.blue.opacity(0.08))
+                .cornerRadius(10)
             }
 
             Spacer()

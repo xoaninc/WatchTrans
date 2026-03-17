@@ -74,6 +74,13 @@ struct ArrivalRowView: View {
                             .font(.body)
                             .foregroundStyle(.blue)
                     }
+
+                    // Wheelchair accessible train
+                    if arrival.wheelchairAccessible {
+                        Image(systemName: "figure.roll")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    }
                 }
 
                 // Train position (if available)
