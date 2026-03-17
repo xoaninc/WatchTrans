@@ -35,6 +35,7 @@ struct StopDetailView: View {
     @State private var stationOccupancy: [StationOccupancyResponse] = []
     @State private var equipmentStatus: [EquipmentStatusResponse] = []
     @State private var airQualityData: [String: TrainAirQuality] = [:]
+    @State private var showMap = false
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -106,8 +107,13 @@ struct StopDetailView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                stopMapHeader
+            VStack(spacing: 0) {
+                if showMap {
+                    stopMapHeader
+                } else {
+                    Color(.systemGray6)
+                        .frame(height: 200)
+                }
 
                 VStack(spacing: 16) {
                     // Offline banner
@@ -270,6 +276,9 @@ struct StopDetailView: View {
             dataService.clearArrivalCache()
         }
         .task {
+            // Defer map rendering until after navigation transition completes
+            try? await Task.sleep(for: .milliseconds(300))
+            showMap = true
             await loadData()
         }
         .onAppear {
