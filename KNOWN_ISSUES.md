@@ -28,3 +28,7 @@ Extraído a componente genérico `EquipmentStatusSection.swift` que funciona con
 ## ~~Líneas no cargadas hasta entrar en sección Líneas (afecta Mapa y correspondencias)~~ ✅ RESUELTO
 
 `fetchTransportData` ahora llama `fetchLinesIfNeeded` automáticamente después de cargar stops (tanto desde cache como desde API). Las líneas se cargan al arrancar sin necesidad de que el usuario visite la sección de Líneas. Cacheo 24h, sin impacto de red.
+
+## parkingBicis se usa como parking genérico
+
+El campo `parkingBicis` de la API se mapea a `hasParking` en el modelo `Stop`, que muestra un badge "Parking" genérico con icono `p.circle.fill`. No distingue entre parking de coches y parking de bicis — trata el campo de bicis como si fuera parking general. No hay badge ni indicador específico de parking de bicis en la app.
