@@ -31,6 +31,7 @@ struct Stop: Identifiable, Equatable, Hashable {
     let corFunicular: String?  // Funicular connections
     let correspondences: StopCorrespondences?
     let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
+    let acercaService: AcercaService? // Adif PMR service (48 Renfe stations)
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
 
@@ -41,6 +42,7 @@ struct Stop: Identifiable, Equatable, Hashable {
          corMetro: String? = nil, corMl: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
          correspondences: StopCorrespondences? = nil, wheelchairBoarding: Int? = nil,
+         acercaService: AcercaService? = nil,
          serviceStatus: String? = nil, suspendedSince: String? = nil) {
         self.id = id
         self.name = name
@@ -60,6 +62,7 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.corFunicular = corFunicular
         self.correspondences = correspondences
         self.wheelchairBoarding = wheelchairBoarding
+        self.acercaService = acercaService
         self.serviceStatus = serviceStatus
         self.suspendedSince = suspendedSince
     }
@@ -173,6 +176,7 @@ extension Stop: Codable {
         case corFunicular = "cor_funicular"
         case correspondences
         case wheelchairBoarding = "wheelchair_boarding"
+        case acercaService = "acerca_service"
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
     }
@@ -197,6 +201,7 @@ extension Stop: Codable {
         corFunicular = try container.decodeIfPresent(String.self, forKey: .corFunicular)
         correspondences = try container.decodeIfPresent(StopCorrespondences.self, forKey: .correspondences)
         wheelchairBoarding = try container.decodeIfPresent(Int.self, forKey: .wheelchairBoarding)
+        acercaService = try container.decodeIfPresent(AcercaService.self, forKey: .acercaService)
         serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
         suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
     }

@@ -577,6 +577,7 @@ class DataService {
                         corFunicular: response.corFunicular,
                         correspondences: response.correspondences,
                         wheelchairBoarding: response.wheelchairBoarding,
+                        acercaService: response.acercaService,
                         serviceStatus: response.serviceStatus,
                         suspendedSince: response.suspendedSince
                     )
@@ -653,6 +654,7 @@ class DataService {
                 corBus: response.corBus,
                 corFunicular: response.corFunicular,
                 wheelchairBoarding: response.wheelchairBoarding,
+                acercaService: response.acercaService,
                 serviceStatus: response.serviceStatus,
                 suspendedSince: response.suspendedSince
             )
@@ -1329,6 +1331,7 @@ class DataService {
                     corFunicular: funicular,
                     correspondences: response.correspondences,
                     wheelchairBoarding: response.wheelchairBoarding,
+                    acercaService: response.acercaService,
                     serviceStatus: response.serviceStatus,
                     suspendedSince: response.suspendedSince
                 )

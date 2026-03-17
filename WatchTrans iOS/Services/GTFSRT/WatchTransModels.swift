@@ -237,6 +237,24 @@ struct RouteResponse: Codable, Identifiable {
     }
 }
 
+// MARK: - Acerca PMR Service
+
+/// Adif accessibility service data (available at ~48 Renfe stations)
+struct AcercaService: Codable, Hashable {
+    let noticeTime: String?
+    let meetingPoint: String?
+    let parking: Bool?
+    let anden: Bool?
+    let aseos: Bool?
+    let vestibulo: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case parking, anden, aseos, vestibulo
+        case noticeTime = "notice_time"
+        case meetingPoint = "meeting_point"
+    }
+}
+
 // MARK: - Stop Response
 
 /// Response from GET /api/gtfs/stops and /api/gtfs/stops/by-coordinates
@@ -266,6 +284,7 @@ struct StopResponse: Codable, Identifiable {
     let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
+    let acercaService: AcercaService? // Adif PMR service (48 Renfe stations)
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, sequence, code, province, accesibilidad, correspondences
@@ -283,6 +302,7 @@ struct StopResponse: Codable, Identifiable {
         case wheelchairBoarding = "wheelchair_boarding"
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
+        case acercaService = "acerca_service"
     }
 
 }
