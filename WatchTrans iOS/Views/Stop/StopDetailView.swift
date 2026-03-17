@@ -647,13 +647,11 @@ struct StopHeaderView: View {
                             .foregroundStyle(.blue)
                     } else if stop.wheelchairBoarding == 2 {
                         HStack(spacing: 2) {
-                            Image(systemName: "figure.roll")
-                                .overlay(
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 8, weight: .bold))
-                                        .foregroundStyle(.red)
-                                        .offset(x: 4, y: -4)
-                                )
+                            ZStack {
+                                Image(systemName: "figure.roll")
+                                Image(systemName: "line.diagonal")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
                             Text("No accesible")
                         }
                         .font(.caption)

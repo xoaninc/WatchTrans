@@ -138,13 +138,11 @@ private struct AccessRow: View {
                     .cornerRadius(8)
             } else if access.wheelchair == false {
                 HStack(spacing: 2) {
-                    Image(systemName: "figure.roll")
-                        .overlay(
-                            Image(systemName: "xmark")
-                                .font(.system(size: 6, weight: .bold))
-                                .foregroundStyle(.red)
-                                .offset(x: 3, y: -3)
-                        )
+                    ZStack {
+                        Image(systemName: "figure.roll")
+                        Image(systemName: "line.diagonal")
+                            .font(.system(size: 14, weight: .bold))
+                    }
                     Text("No accesible")
                 }
                 .font(.caption2)
