@@ -108,13 +108,12 @@ struct StopDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Map temporarily disabled to diagnose SIGABRT crash
-                // if showMap {
-                //     stopMapHeader
-                // } else {
-                //     Color(.systemGray6)
-                //         .frame(height: 200)
-                // }
+                if showMap {
+                    stopMapHeader
+                } else {
+                    Color(.systemGray6)
+                        .frame(height: 200)
+                }
 
                 VStack(spacing: 16) {
                     // Offline banner
@@ -344,11 +343,9 @@ struct StopDetailView: View {
             isLoading = true
         }
 
-        // Week 3 Optimization: Load full details + arrivals in parallel
-        async let fullDetailsTask = dataService.fetchStopDetails(stopId: stop.id)
-        async let arrivalsTask = dataService.fetchArrivals(for: stop.id)
-        
-        let (fullDetails, rawDepartures) = await (fullDetailsTask, arrivalsTask)
+        // Load full details and arrivals sequentially (async let causes swift_task_dealloc crash)
+        let fullDetails = await dataService.fetchStopDetails(stopId: stop.id)
+        let rawDepartures = await dataService.fetchArrivals(for: stop.id)
         
         // Update UI with full details
         if fullDetails != nil {
