@@ -103,7 +103,7 @@ struct StopDetailView: View {
                     }
                 }
                 .frame(height: 200)
-                .mapStyle(.standard(elevation: .flat))
+                .mapStyle(.standard(pointsOfInterest: .excludingAll, elevation: .flat))
                 .allowsHitTesting(false)
 
                 VStack(spacing: 16) {
