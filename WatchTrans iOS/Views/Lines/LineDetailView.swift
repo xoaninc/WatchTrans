@@ -19,6 +19,7 @@ struct LineDetailView: View {
     @State private var operatingHoursResult: OperatingHoursResult?
     @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var stopOnShapeCoords: [String: CLLocationCoordinate2D] = [:]  // Stop coordinates projected onto shape
+    @State private var routeDetail: RouteResponse?
     @State private var isLoading = true
     @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
@@ -86,6 +87,45 @@ struct LineDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background((alert == "Servicio interrumpido" ? Color.red : Color.orange).opacity(0.1))
                     .cornerRadius(10)
+                }
+
+                // Service status from route detail (suspended / alternative service)
+                if let detail = routeDetail {
+                    if detail.serviceStatus == "suspended" {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.octagon.fill")
+                                .foregroundStyle(.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Servicio suspendido")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.red)
+                                if let since = detail.suspendedSince {
+                                    Text("Desde \(since)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(10)
+                    }
+                    if detail.isAlternativeService == true {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.swap")
+                                .foregroundStyle(.blue)
+                            Text("Servicio alternativo")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.blue)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(10)
+                    }
                 }
 
                 // Special line description (hardcoded for specific lines)
@@ -232,6 +272,11 @@ struct LineDetailView: View {
         }
 
         alerts = await dataService.fetchAlertsForLine(line)
+
+        // Fetch route detail for service status
+        if let routeId = line.routeIds.first {
+            routeDetail = await dataService.fetchRouteDetail(routeId: routeId)
+        }
 
         if let routeId = line.routeIds.first {
             operatingHoursResult = await dataService.fetchOperatingHours(routeId: routeId)

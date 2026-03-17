@@ -1342,6 +1342,16 @@ class DataService {
         }
     }
 
+    /// Fetch route detail to get service_status, suspended_since, is_alternative_service
+    func fetchRouteDetail(routeId: String) async -> RouteResponse? {
+        do {
+            return try await gtfsRealtimeService.fetchRouteDetail(routeId: routeId)
+        } catch {
+            DebugLog.log("⚠️ [DataService] Failed to fetch route detail for \(routeId): \(error)")
+            return nil
+        }
+    }
+
     /// Fetch operating hours for a route (calculated from stop_times)
     func fetchOperatingHours(routeId: String) async -> OperatingHoursResult {
         // Determine current day type (weekday=L-J, friday=V, saturday=S, sunday=D)

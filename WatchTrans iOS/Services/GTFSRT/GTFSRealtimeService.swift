@@ -67,6 +67,14 @@ class GTFSRealtimeService {
 
     // MARK: - Routes & Stops
 
+    /// Fetch route detail (service_status, suspended_since, is_alternative_service)
+    func fetchRouteDetail(routeId: String) async throws -> RouteResponse {
+        guard let url = URL(string: "\(baseURL)/routes/\(routeId)") else {
+            throw NetworkError.badResponse
+        }
+        return try await networkService.fetch(url)
+    }
+
     /// Fetch stops for a route
     func fetchRouteStops(routeId: String) async throws -> [StopResponse] {
         guard let url = URL(string: "\(baseURL)/routes/\(routeId)/stops") else {
