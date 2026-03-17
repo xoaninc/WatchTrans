@@ -97,12 +97,24 @@ private struct AccessRow: View {
         return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
+    private var isAccessible: Bool { access.wheelchair == true }
+
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "door.left.hand.open")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            if isAccessible {
+                Image("ElevatorSymbol")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(.green)
+                    .frame(width: 20)
+            } else {
+                Image(systemName: "door.left.hand.open")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+            }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(access.name ?? "Acceso")
@@ -116,13 +128,21 @@ private struct AccessRow: View {
 
             Spacer()
 
-            if access.wheelchair == true {
+            if isAccessible {
                 Text("Accesible")
                     .font(.caption2)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.green)
+                    .cornerRadius(8)
+            } else if access.wheelchair == false {
+                Text("No accesible")
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.red.opacity(0.8))
                     .cornerRadius(8)
             }
         }

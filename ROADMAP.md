@@ -2,7 +2,7 @@
 
 Features pendientes, bugs y mejoras técnicas.
 
-**Última actualización:** 2026-03-14
+**Última actualización:** 2026-03-17
 
 ---
 
@@ -79,12 +79,32 @@ Pendiente arreglar formato en la API.
 `StationInteriorSection` muestra accesos, recorridos, vestíbulos y niveles. Reemplaza NearestAccessSectionView cuando hay datos de interior.
 
 
+#### 3.13 Retrasos de trenes (trip-updates)
+`GET /api/gtfs-rt/trip-updates`
+**Datos disponibles:** Renfe (~140 registros con `delay` en segundos, `trip_id`, `route_id`).
+**Uso:** Dentro de la vista de detalle de trip (al pinchar en un viaje concreto), mostrar retraso con precisión de segundos además de los minutos ya mostrados. Solo en trip detail, no en departures.
+
+#### 3.14 Ocupación de vehículos
+`GET /api/gtfs-rt/occupancy`
+**Datos disponibles:** FGC envía `occupancy_status` por vehículo (2=FEW_SEATS_AVAILABLE, 7=STANDING_ROOM_ONLY, etc.).
+**Uso:** Icono de ocupación en departures/mapa (estilo Google Maps). Mismo concepto que ocupación TMB Metro (station-occupancy) pero a nivel vehículo. Diferente de 3.2 (per-car).
+
+#### 3.19 Estado de servicio de rutas
+`GET /api/gtfs/routes/{route_id}` (campos `service_status`, `suspended_since`, `is_alternative_service`)
+**Datos disponibles:** La app ya usa sub-endpoints (/stops, /shape, /frequencies) pero no el detalle raíz que contiene estado de servicio.
+**Uso:** Badge en LineDetailView si línea suspendida o servicio alternativo.
+
 ### Sin datos / No prioritarios
 
 - **3.2 Ocupación por vagón** — ningún operador envía datos per-car.
 - **3.7 Stop-time updates** — duplica funcionalidad de departures.
+- **3.8b Operators fares** — `GET /api/gtfs/operators/{operator_id}/fares` — sin datos útiles aún (vacío para todos los operadores probados).
 - **3.11 Agencias** — uso interno.
-- **3.12 Detalle de ruta individual** — uso interno.
+- **3.12 Detalle de ruta individual** — parcialmente útil, ver 3.19 para campos específicos.
+- **3.15 Equipment status global** — `GET /api/gtfs-rt/equipment-status/` (sin stop_id). Todos los dispositivos de golpe. El per-stop ya se usa. No prioritario.
+- **3.16 Líneas por provincia** — `GET /api/gtfs/province/{province}/lines`. No prioritario.
+- **3.17 Líneas cercanas por GPS** — `GET /api/gtfs/coordinates/lines`. No prioritario.
+- **3.18 Isócrona** — `GET /api/gtfs/journey/isochrone`. No prioritario.
 
 ---
 
