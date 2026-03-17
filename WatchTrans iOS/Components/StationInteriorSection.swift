@@ -136,6 +136,19 @@ private struct AccessRow: View {
                     .padding(.vertical, 2)
                     .background(Color.green)
                     .cornerRadius(8)
+            } else if access.wheelchair == false {
+                HStack(spacing: 2) {
+                    Image(systemName: "figure.roll")
+                        .overlay(
+                            Image(systemName: "xmark")
+                                .font(.system(size: 6, weight: .bold))
+                                .foregroundStyle(.red)
+                                .offset(x: 3, y: -3)
+                        )
+                    Text("No accesible")
+                }
+                .font(.caption2)
+                .foregroundStyle(.red)
             }
         }
         .padding(.vertical, 2)
