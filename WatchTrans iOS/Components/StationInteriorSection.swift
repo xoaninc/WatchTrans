@@ -136,14 +136,6 @@ private struct AccessRow: View {
                     .padding(.vertical, 2)
                     .background(Color.green)
                     .cornerRadius(8)
-            } else if access.wheelchair == false {
-                Text("No accesible")
-                    .font(.caption2)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.red.opacity(0.8))
-                    .cornerRadius(8)
             }
         }
         .padding(.vertical, 2)

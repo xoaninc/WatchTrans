@@ -645,10 +645,6 @@ struct StopHeaderView: View {
                         Label("Accesible", systemImage: "figure.roll")
                             .font(.caption)
                             .foregroundStyle(.blue)
-                    } else if stop.wheelchairBoarding == 2 {
-                        Label("No accesible", systemImage: "figure.roll")
-                            .font(.caption)
-                            .foregroundStyle(.red)
                     }
                 }
             }
