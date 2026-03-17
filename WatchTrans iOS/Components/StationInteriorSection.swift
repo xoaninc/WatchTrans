@@ -140,8 +140,8 @@ private struct AccessRow: View {
                 HStack(spacing: 2) {
                     ZStack {
                         Image(systemName: "figure.roll")
-                        Image(systemName: "line.diagonal")
-                            .font(.system(size: 14, weight: .bold))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .heavy))
                     }
                     Text("No accesible")
                 }

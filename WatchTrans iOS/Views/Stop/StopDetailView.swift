@@ -649,8 +649,8 @@ struct StopHeaderView: View {
                         HStack(spacing: 2) {
                             ZStack {
                                 Image(systemName: "figure.roll")
-                                Image(systemName: "line.diagonal")
-                                    .font(.system(size: 16, weight: .bold))
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .heavy))
                             }
                             Text("No accesible")
                         }
