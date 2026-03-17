@@ -62,49 +62,52 @@ struct StopDetailView: View {
         )))
     }
 
+    private var stopMapHeader: some View {
+        Map(position: $mapPosition) {
+            // Station marker
+            Annotation(stop.name, coordinate: CLLocationCoordinate2D(
+                latitude: stop.latitude,
+                longitude: stop.longitude
+            )) {
+                VStack(spacing: 2) {
+                    Image(systemName: "tram.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(Circle().fill(Color.blue))
+                    Text(stop.name)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(4)
+                }
+            }
+
+            // Access markers (entrances)
+            ForEach(accesses) { access in
+                Annotation("", coordinate: CLLocationCoordinate2D(
+                    latitude: access.lat,
+                    longitude: access.lon
+                )) {
+                    Image(systemName: access.wheelchair == true ? "figure.roll" : "door.left.hand.open")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(4)
+                        .background(Circle().fill(Color.green))
+                }
+            }
+        }
+        .frame(height: 200)
+        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+        .allowsHitTesting(false)
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // Map header with accesses
-                Map(position: $mapPosition) {
-                    // Station marker
-                    Annotation(stop.name, coordinate: CLLocationCoordinate2D(
-                        latitude: stop.latitude,
-                        longitude: stop.longitude
-                    )) {
-                        VStack(spacing: 2) {
-                            Image(systemName: "tram.fill")
-                                .font(.title2)
-                                .foregroundStyle(.white)
-                                .padding(8)
-                                .background(Circle().fill(Color.blue))
-                            Text(stop.name)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color(.systemBackground))
-                                .cornerRadius(4)
-                        }
-                    }
-
-                    // Access markers (entrances)
-                    ForEach(accesses) { access in
-                        Annotation("", coordinate: CLLocationCoordinate2D(
-                            latitude: access.lat,
-                            longitude: access.lon
-                        )) {
-                            Image(systemName: access.wheelchair == true ? "figure.roll" : "door.left.hand.open")
-                                .font(.caption)
-                                .foregroundStyle(.white)
-                                .padding(4)
-                                .background(Circle().fill(Color.green))
-                        }
-                    }
-                }
-                .frame(height: 200)
-                .mapStyle(.standard(pointsOfInterest: .excludingAll, elevation: .flat))
-                .allowsHitTesting(false)
+                stopMapHeader
 
                 VStack(spacing: 16) {
                     // Offline banner
