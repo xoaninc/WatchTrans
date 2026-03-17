@@ -650,7 +650,7 @@ struct StopHeaderView: View {
                             ZStack {
                                 Image(systemName: "figure.roll")
                                 Image(systemName: "xmark")
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.system(size: 18, weight: .light))
                             }
                             Text("No accesible")
                         }

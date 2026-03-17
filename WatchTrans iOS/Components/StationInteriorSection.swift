@@ -141,7 +141,7 @@ private struct AccessRow: View {
                     ZStack {
                         Image(systemName: "figure.roll")
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 16, weight: .light))
                     }
                     Text("No accesible")
                 }
