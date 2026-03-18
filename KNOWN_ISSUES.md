@@ -65,6 +65,30 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 - **Aviso servicio alternativo** — `alternativeServiceWarning` — investigando, problema pendiente
 - **Platform confidence** — deferred al ROADMAP
 
+### StopFullDetailResponse: faltan campos
+
+`/stops/{id}/full` devuelve `acerca_service`, `service_status`, `suspended_since` pero nuestro modelo `StopFullDetailResponse` no los tiene.
+
+### route-planner: parámetros nuevos no usados
+
+El endpoint acepta `arrive_by` (hora de llegada, mutuamente exclusivo con `departure_time`), `travel_date` (fecha distinta de hoy), y `compact`. La app no los usa.
+
+### /stops/by-coordinates: param `route_types` no usado
+
+Se puede filtrar paradas por tipo de transporte (`route_types=1` para solo metro, `2` para solo tren, etc.). Útil para búsqueda filtrada.
+
+### StationInteriorSection: faltan pathway modes 3-6
+
+Solo hay iconos para walkway (1) y stairs (2). Faltan: moving_sidewalk (3), escalator (4), elevator (5), fare_gate (6). Cuando la API devuelva estos modos, la vista mostrará el icono genérico de walkway.
+
+### is_skipped departures no se filtran
+
+Cuando `is_skipped == true`, el tren salta esa parada y no para. La app decodifica el campo pero no filtra estos departures — los muestra como salidas válidas. El usuario vería un tren que no va a parar en su estación.
+
+### is_alternative_service: sin icono diferente
+
+Cuando una ruta tiene `is_alternative_service == true` (servicio de sustitución por bus), la app no lo indica. Debería mostrar icono de bus en vez de tren.
+
 ### ~~Express CIVIS badge~~ ✅ IMPLEMENTADO
 
 Badge con `expressName` ("CIVIS") y `expressColor` en ArrivalRowView.
