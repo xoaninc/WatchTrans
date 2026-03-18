@@ -185,8 +185,9 @@ struct LineResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case lineCode = "line_code"
-        case color, routes
-        case textColor = "text_color"
+        case color = "route_color"
+        case routes
+        case textColor = "route_text_color"
         case sortOrder = "sort_order"
         case routeCount = "route_count"
     }
@@ -199,7 +200,8 @@ struct LineRouteInfo: Codable {
     let agencyId: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, color
+        case id
+        case color = "route_color"
         case longName = "long_name"
         case agencyId = "agency_id"
     }
