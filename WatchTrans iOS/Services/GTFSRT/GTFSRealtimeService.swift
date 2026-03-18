@@ -783,6 +783,9 @@ class GTFSRealtimeService {
 
         let response: [EquipmentStatusResponse] = try await networkService.fetch(url)
         DebugLog.log("🛗 [RT] Fetched \(response.count) equipment devices for \(stopId)")
+        for device in response {
+            DebugLog.log("🛗 [RT]   \(device.deviceId ?? "?") \(device.deviceType ?? "?") operational=\(device.isOperational.map { String($0) } ?? "nil") direction=\(device.direction ?? "nil") isBroken=\(device.isBroken)")
+        }
         return response
     }
 
