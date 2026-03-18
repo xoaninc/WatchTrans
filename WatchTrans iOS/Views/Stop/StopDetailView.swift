@@ -1075,6 +1075,8 @@ struct DeparturesSectionView: View {
                         arrival: departure,
                         lineColor: lineColor,
                         dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager,
                         airQuality: departure.vehicleLabel.flatMap { airQualityData[$0] }
                     )) {
                         ArrivalRowView(

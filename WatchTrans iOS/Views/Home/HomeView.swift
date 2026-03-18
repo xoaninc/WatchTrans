@@ -593,7 +593,7 @@ struct StopCardView: View {
                             return dataService.getLine(by: arrival.lineId)?.color ?? .blue
                         }()
 
-                        NavigationLink(destination: TrainDetailView(arrival: arrival, lineColor: lineColor, dataService: dataService)) {
+                        NavigationLink(destination: TrainDetailView(arrival: arrival, lineColor: lineColor, dataService: dataService, locationService: locationService, favoritesManager: favoritesManager)) {
                             ArrivalRowView(arrival: arrival, dataService: dataService)
                         }
                         .buttonStyle(.plain)

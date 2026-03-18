@@ -11,6 +11,8 @@ struct TrainDetailView: View {
     let arrival: Arrival
     let lineColor: Color
     var dataService: DataService?
+    var locationService: LocationService?
+    var favoritesManager: FavoritesManager?
     var airQuality: TrainAirQuality? = nil
 
     @State private var alerts: [AlertResponse] = []
@@ -348,7 +350,10 @@ struct TrainDetailView: View {
                         isLoading: isLoadingTrip,
                         isExpanded: $isJourneyExpanded,
                         currentStopName: arrival.trainCurrentStop,
-                        lineColor: lineColor
+                        lineColor: lineColor,
+                        dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager
                     )
                 }
 
@@ -503,6 +508,9 @@ struct JourneySectionView: View {
     @Binding var isExpanded: Bool
     let currentStopName: String?
     let lineColor: Color
+    var dataService: DataService?
+    var locationService: LocationService?
+    var favoritesManager: FavoritesManager?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -547,7 +555,10 @@ struct JourneySectionView: View {
                 JourneyStopsListView(
                     stops: trip.stops,
                     currentStopName: currentStopName,
-                    lineColor: lineColor
+                    lineColor: lineColor,
+                    dataService: dataService,
+                    locationService: locationService,
+                    favoritesManager: favoritesManager
                 )
             } else if tripDetail == nil && !isLoading {
                 HStack {
@@ -574,85 +585,129 @@ struct JourneyStopsListView: View {
     let stops: [TripStopResponse]
     let currentStopName: String?
     let lineColor: Color
+    var dataService: DataService?
+    var locationService: LocationService?
+    var favoritesManager: FavoritesManager?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(stops.enumerated()), id: \.element.stopId) { index, stop in
-                let status = stopStatus(for: stop, at: index)
+            ForEach(Array(stops.enumerated()), id: \.element.stopId) { index, tripStop in
+                let status = stopStatus(for: tripStop, at: index)
+                let canNavigate = dataService != nil && locationService != nil
 
-                HStack(alignment: .top, spacing: 12) {
-                    // Timeline indicator
-                    VStack(spacing: 0) {
-                        // Top line (not for first stop)
-                        if index > 0 {
-                            Rectangle()
-                                .fill(status == .passed ? lineColor : Color.gray.opacity(0.3))
-                                .frame(width: 3, height: 12)
-                        } else {
-                            Spacer().frame(height: 12)
+                Group {
+                    if canNavigate {
+                        NavigationLink(destination: stopDetailDestination(for: tripStop)) {
+                            journeyStopRow(tripStop: tripStop, index: index, status: status)
                         }
-
-                        // Stop indicator
-                        ZStack {
-                            Circle()
-                                .fill(stopIndicatorColor(for: status))
-                                .frame(width: 24, height: 24)
-
-                            if status == .current {
-                                Image(systemName: "tram.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.white)
-                            } else if status == .passed {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.white)
-                            } else if index == stops.count - 1 {
-                                // Destination
-                                Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-
-                        // Bottom line (not for last stop)
-                        if index < stops.count - 1 {
-                            Rectangle()
-                                .fill(status == .passed || status == .current ? lineColor : Color.gray.opacity(0.3))
-                                .frame(width: 3, height: 20)
-                        } else {
-                            Spacer().frame(height: 20)
-                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        journeyStopRow(tripStop: tripStop, index: index, status: status)
                     }
-
-                    // Stop info
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text(stop.stopName)
-                                .font(status == .current ? .subheadline.bold() : .subheadline)
-                                .foregroundStyle(status == .passed ? .secondary : .primary)
-
-                            if status == .current {
-                                Text("← Aqui")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(lineColor)
-                                    .cornerRadius(4)
-                            }
-                        }
-
-                        Text(formatTime(stop.arrivalTime))
-                            .font(.caption)
-                            .foregroundStyle(status == .passed ? .tertiary : .secondary)
-                    }
-                    .padding(.vertical, 4)
-
-                    Spacer()
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func journeyStopRow(tripStop: TripStopResponse, index: Int, status: StopStatus) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Timeline indicator
+            VStack(spacing: 0) {
+                // Top line (not for first stop)
+                if index > 0 {
+                    Rectangle()
+                        .fill(status == .passed ? lineColor : Color.gray.opacity(0.3))
+                        .frame(width: 3, height: 12)
+                } else {
+                    Spacer().frame(height: 12)
+                }
+
+                // Stop indicator
+                ZStack {
+                    Circle()
+                        .fill(stopIndicatorColor(for: status))
+                        .frame(width: 24, height: 24)
+
+                    if status == .current {
+                        Image(systemName: "tram.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                    } else if status == .passed {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else if index == stops.count - 1 {
+                        // Destination
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+
+                // Bottom line (not for last stop)
+                if index < stops.count - 1 {
+                    Rectangle()
+                        .fill(status == .passed || status == .current ? lineColor : Color.gray.opacity(0.3))
+                        .frame(width: 3, height: 20)
+                } else {
+                    Spacer().frame(height: 20)
+                }
+            }
+
+            // Stop info
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(tripStop.stopName)
+                        .font(status == .current ? .subheadline.bold() : .subheadline)
+                        .foregroundStyle(status == .passed ? .secondary : .primary)
+
+                    if status == .current {
+                        Text("← Aqui")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(lineColor)
+                            .cornerRadius(4)
+                    }
+
+                    if canNavigate {
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Text(formatTime(tripStop.arrivalTime))
+                    .font(.caption)
+                    .foregroundStyle(status == .passed ? .tertiary : .secondary)
+            }
+            .padding(.vertical, 4)
+
+            if !canNavigate {
+                Spacer()
+            }
+        }
+    }
+
+    private func stopDetailDestination(for tripStop: TripStopResponse) -> StopDetailView {
+        // Try to find the full stop in DataService cache first
+        let stop = dataService?.getStop(by: tripStop.stopId) ?? Stop(
+            id: tripStop.stopId,
+            name: tripStop.stopName,
+            latitude: tripStop.stopLat ?? 0,
+            longitude: tripStop.stopLon ?? 0
+        )
+        return StopDetailView(
+            stop: stop,
+            display: nil,
+            dataService: dataService!,
+            locationService: locationService!,
+            favoritesManager: favoritesManager
+        )
     }
 
     // MARK: - Helpers
