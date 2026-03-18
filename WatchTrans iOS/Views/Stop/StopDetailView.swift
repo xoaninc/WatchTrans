@@ -384,6 +384,20 @@ struct StopDetailView: View {
         // Process arrivals
         departures = dataService.filterArrivals(rawDepartures, for: display)
 
+        // Enrich FGC departures with vehicle occupancy
+        if stop.id.hasPrefix("FGC_") {
+            let occupancy = (try? await dataService.gtfsRealtimeService.fetchVehicleOccupancy(operatorId: "fgc")) ?? []
+            let occByTrip = Dictionary(uniqueKeysWithValues: occupancy.compactMap { occ -> (String, Int)? in
+                guard let tripId = occ.tripId else { return nil }
+                return (tripId, occ.occupancyStatus)
+            })
+            for i in departures.indices {
+                if let status = occByTrip[departures[i].id] {
+                    departures[i].vehicleOccupancyStatus = status
+                }
+            }
+        }
+
         // If no accesses found and this stop has Metro correspondence,
         // try to load accesses from the corresponding Metro station
         if accesses.isEmpty, let corMetro = stop.corMetro, !corMetro.isEmpty {

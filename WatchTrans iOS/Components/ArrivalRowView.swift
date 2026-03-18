@@ -167,9 +167,17 @@ struct ArrivalRowView: View {
                     }
                 }
 
-                // Occupancy indicator (currently only TMB Metro Barcelona)
+                // Occupancy indicator (TMB station occupancy or FGC vehicle occupancy)
                 if arrival.hasOccupancyData {
                     OccupancyIndicator(level: arrival.occupancyLevel, percentage: arrival.occupancyPercentage)
+                } else if let vehOcc = arrival.vehicleOccupancyStatus, vehOcc != 7, vehOcc != 8 {
+                    let level: OccupancyLevel = switch vehOcc {
+                    case 0, 1: .low
+                    case 2, 3: .medium
+                    case 4, 5, 6: .high
+                    default: .unknown
+                    }
+                    OccupancyIndicator(level: level, percentage: nil)
                 }
 
                 // Platform badge (direction already shown in headsign above)

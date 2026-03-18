@@ -64,6 +64,9 @@ struct Arrival: Identifiable, Codable {
     var pmrWarning: Bool = false
     var isAlternativeService: Bool = false
 
+    // Vehicle occupancy (FGC)
+    var vehicleOccupancyStatus: Int? = nil
+
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
             id: id,
@@ -102,7 +105,8 @@ struct Arrival: Identifiable, Codable {
             expressName: expressName,
             expressColor: expressColor,
             pmrWarning: pmrWarning,
-            isAlternativeService: isAlternativeService
+            isAlternativeService: isAlternativeService,
+            vehicleOccupancyStatus: vehicleOccupancyStatus
         )
     }
 
