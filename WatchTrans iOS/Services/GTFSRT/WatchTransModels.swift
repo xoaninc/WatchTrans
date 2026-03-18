@@ -1364,7 +1364,7 @@ struct EquipmentStatusResponse: Codable, Identifiable {
 
     var isElevator: Bool { deviceType == "elevator" }
     var isEscalator: Bool { deviceType == "escalator" }
-    var isBroken: Bool { direction == "stopped" || isOperational == false }
+    var isBroken: Bool { direction == "stopped" || direction == "disabled" || isOperational == false }
 }
 
 // MARK: - Air Quality Data
