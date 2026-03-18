@@ -1404,6 +1404,9 @@ struct StopFullDetailResponse: Codable {
     let locationType: Int?
     let parentStationId: String?
     let isHub: Bool?
+    let serviceStatus: String?
+    let suspendedSince: String?
+    let acercaService: AcercaService?
     let routes: [RouteResponse]?
     let correspondences: [CorrespondenceInfo]?
     let platforms: [PlatformInfo]?
@@ -1414,6 +1417,9 @@ struct StopFullDetailResponse: Codable {
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case isHub = "is_hub"
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
+        case acercaService = "acerca_service"
         case routes, correspondences, platforms, accesses
     }
 }
