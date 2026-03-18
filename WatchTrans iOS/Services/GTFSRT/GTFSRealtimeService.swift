@@ -821,4 +821,40 @@ class GTFSRealtimeService {
         DebugLog.log("🏢 [RT] ✅ Got full details for \(response.name) (Hub: \(response.isHub ?? false))")
         return response
     }
+
+    // MARK: - Fares
+
+    /// Fetch fares for a route
+    func fetchFares(routeId: String) async throws -> RouteFaresResponse {
+        guard let encodedId = routeId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "\(baseURL)/routes/\(encodedId)/fares") else {
+            throw NetworkError.badResponse
+        }
+        return try await networkService.fetch(url)
+    }
+
+    // MARK: - Typed Trip Updates
+
+    /// Fetch trip updates and find one matching a specific trip_id
+    func fetchTripUpdateForTrip(tripId: String) async throws -> TripUpdateResponse? {
+        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/trip-updates") else {
+            throw NetworkError.badResponse
+        }
+        components.queryItems = [URLQueryItem(name: "limit", value: "50")]
+        guard let url = components.url else { throw NetworkError.badResponse }
+        let updates: [TripUpdateResponse] = try await networkService.fetch(url)
+        return updates.first { $0.tripId == tripId }
+    }
+
+    // MARK: - Vehicle Occupancy
+
+    /// Fetch vehicle occupancy for an operator
+    func fetchVehicleOccupancy(operatorId: String) async throws -> [VehicleOccupancyResponse] {
+        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/occupancy") else {
+            throw NetworkError.badResponse
+        }
+        components.queryItems = [URLQueryItem(name: "operator_id", value: operatorId)]
+        guard let url = components.url else { throw NetworkError.badResponse }
+        return try await networkService.fetch(url)
+    }
 }

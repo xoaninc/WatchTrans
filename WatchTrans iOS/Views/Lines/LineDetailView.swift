@@ -20,6 +20,7 @@ struct LineDetailView: View {
     @State private var shapePoints: [CLLocationCoordinate2D] = []
     @State private var stopOnShapeCoords: [String: CLLocationCoordinate2D] = [:]  // Stop coordinates projected onto shape
     @State private var routeDetail: RouteResponse?
+    @State private var fares: [FareEntry] = []
     @State private var isLoading = true
     @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
@@ -187,6 +188,36 @@ struct LineDetailView: View {
                     }
                 }
 
+                // Fares section
+                if !fares.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "eurosign.circle")
+                                .foregroundStyle(.green)
+                            Text("Tarifas")
+                                .font(.headline)
+                        }
+                        ForEach(fares.prefix(10)) { fare in
+                            HStack {
+                                Text("\(fare.originZone) → \(fare.destinationZone)")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(String(format: "%.2f €", fare.price))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        if fares.count > 10 {
+                            Text("\(fares.count - 10) tarifas mas...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                }
+
                 // Route map
                 if !stops.isEmpty {
                     RouteMapView(
@@ -284,6 +315,13 @@ struct LineDetailView: View {
             operatingHoursResult = await dataService.fetchOperatingHours(routeId: routeId)
         } else {
             operatingHoursResult = nil
+        }
+
+        // Fetch fares
+        if let routeId = line.routeIds.first {
+            if let faresResponse = try? await dataService.gtfsRealtimeService.fetchFares(routeId: routeId), !faresResponse.fares.isEmpty {
+                fares = faresResponse.fares
+            }
         }
 
         let shapeResult: DataService.ShapeWithStops

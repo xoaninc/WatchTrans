@@ -1438,3 +1438,89 @@ struct StopFullDetailResponse: Codable {
         case routes, platforms, accesses
     }
 }
+
+// MARK: - Route Fares Response
+
+struct RouteFaresResponse: Codable {
+    let routeId: String
+    let currency: String
+    let paymentMethod: Int?
+    let transfersAllowed: Int?
+    let fares: [FareEntry]
+
+    enum CodingKeys: String, CodingKey {
+        case routeId = "route_id"
+        case currency
+        case paymentMethod = "payment_method"
+        case transfersAllowed = "transfers_allowed"
+        case fares
+    }
+}
+
+struct FareEntry: Codable, Identifiable {
+    let price: Double
+    let originZone: String
+    let destinationZone: String
+
+    var id: String { "\(originZone)-\(destinationZone)-\(price)" }
+
+    enum CodingKeys: String, CodingKey {
+        case price
+        case originZone = "origin_zone"
+        case destinationZone = "destination_zone"
+    }
+}
+
+// MARK: - Trip Update Response
+
+struct TripUpdateResponse: Codable, Identifiable {
+    let id: String
+    let operatorId: String
+    let tripId: String
+    let routeId: String
+    let delay: Int
+    let vehicleId: String?
+    let timestamp: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, delay, timestamp
+        case operatorId = "operator_id"
+        case tripId = "trip_id"
+        case routeId = "route_id"
+        case vehicleId = "vehicle_id"
+    }
+}
+
+// MARK: - Vehicle Occupancy Response
+
+struct VehicleOccupancyResponse: Codable, Identifiable {
+    let vehicleId: String
+    let operatorId: String
+    let tripId: String?
+    let routeId: String?
+    let routeShortName: String?
+    let headsign: String?
+    let occupancyStatus: Int
+    let occupancyStatusLabel: String?
+    let occupancyPercentage: Int?
+    let latitude: Double?
+    let longitude: Double?
+    let currentStopId: String?
+    let timestamp: String
+
+    var id: String { vehicleId }
+
+    enum CodingKeys: String, CodingKey {
+        case vehicleId = "vehicle_id"
+        case operatorId = "operator_id"
+        case tripId = "trip_id"
+        case routeId = "route_id"
+        case routeShortName = "route_short_name"
+        case headsign
+        case occupancyStatus = "occupancy_status"
+        case occupancyStatusLabel = "occupancy_status_label"
+        case occupancyPercentage = "occupancy_percentage"
+        case latitude, longitude, timestamp
+        case currentStopId = "current_stop_id"
+    }
+}
