@@ -617,11 +617,12 @@ struct RouteOperatingHoursResponse: Codable {
     let sunday: DayOperatingHours?
     let isSuspended: Bool?
     let suspensionMessage: String?
+    let source: String?
 
     enum CodingKeys: String, CodingKey {
         case routeId = "route_id"
         case routeShortName = "route_short_name"
-        case weekday, friday, saturday, sunday
+        case weekday, friday, saturday, sunday, source
         case isSuspended = "is_suspended"
         case suspensionMessage = "suspension_message"
     }
@@ -764,6 +765,8 @@ struct PlatformPredictionResponse: Codable {
     let predictedPlatform: String
     let confidence: Double
     let sampleSize: Int?
+    let observationCount: Int?
+    let lastObserved: String?
 
     enum CodingKeys: String, CodingKey {
         case stopId = "stop_id"
@@ -772,6 +775,8 @@ struct PlatformPredictionResponse: Codable {
         case predictedPlatform = "predicted_platform"
         case confidence
         case sampleSize = "sample_size"
+        case observationCount = "observation_count"
+        case lastObserved = "last_observed"
     }
 }
 
@@ -888,12 +893,14 @@ struct CorrespondenceInfo: Codable, Identifiable {
 struct RouteShapeResponse: Codable {
     let routeId: String
     let routeShortName: String?
+    let isCircular: Bool?
     let shape: [ShapePoint]
     let stops: [ShapeStop]?  // Only present with ?include_stops=true
 
     enum CodingKeys: String, CodingKey {
         case routeId = "route_id"
         case routeShortName = "route_short_name"
+        case isCircular = "is_circular"
         case shape
         case stops
     }
