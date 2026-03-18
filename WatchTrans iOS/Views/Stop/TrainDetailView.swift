@@ -22,6 +22,7 @@ struct TrainDetailView: View {
     // Trip journey (recorrido completo)
     @State private var tripDetail: TripDetailResponse?
     @State private var isLoadingTrip = false
+    @State private var tripUpdate: TripUpdateResponse?
     @State private var isJourneyExpanded = true
 
     var body: some View {
@@ -110,9 +111,17 @@ struct TrainDetailView: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.title2)
-                                Text("+\(arrival.delayMinutes) min")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
+                                if let update = tripUpdate {
+                                    let mins = update.delay / 60
+                                    let secs = update.delay % 60
+                                    Text("+\(mins) min \(secs) seg")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                } else {
+                                    Text("+\(arrival.delayMinutes) min")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                }
                             }
                             .foregroundStyle(.white)
                             .padding(.horizontal, 16)
@@ -484,6 +493,9 @@ struct TrainDetailView: View {
                 )
             }
         }
+
+        // Fetch precise delay from trip-updates
+        tripUpdate = try? await dataService.gtfsRealtimeService.fetchTripUpdateForTrip(tripId: arrival.id)
 
         isLoadingTrip = false
     }
