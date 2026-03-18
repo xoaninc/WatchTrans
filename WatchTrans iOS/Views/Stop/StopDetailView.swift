@@ -1055,7 +1055,7 @@ struct ConnectionsSectionView: View {
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
         case .metroLigero: prefixes = ["ML_"]  // ML_29_STATION etc.
         case .tram: prefixes = ["TRAM_", "TRANVIA_"]  // TRAM_SEV_, TRAM_BCN_, TRANVIA_ZARAGOZA_
-        case .funicular: prefixes = ["TMB_METRO_"]  // Funicular has no own stops, shares TMB Metro stops
+        case .funicular: prefixes = ["TMB_METRO_", "FGC_"]  // TMB FM uses TMB_METRO_, FGC FV uses FGC_
         case .bus: prefixes = ["BUS_"]
         }
 
