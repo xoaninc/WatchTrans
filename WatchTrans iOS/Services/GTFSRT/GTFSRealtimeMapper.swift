@@ -102,7 +102,11 @@ class GTFSRealtimeMapper {
                 vehicleLat: departure.vehicleLat,
                 vehicleLon: departure.vehicleLon,
                 vehicleLabel: departure.vehicleLabel,
-                isDoubleComposition: isDoubleComposition
+                isDoubleComposition: isDoubleComposition,
+                isExpress: departure.isExpress ?? false,
+                expressName: departure.expressName,
+                expressColor: departure.expressColor,
+                pmrWarning: departure.pmrWarning ?? false
             )
 
             arrivals.append(arrival)

@@ -75,11 +75,34 @@ struct ArrivalRowView: View {
                             .foregroundStyle(.blue)
                     }
 
+                    // Express badge (CIVIS)
+                    if arrival.isExpress, let name = arrival.expressName {
+                        Text(name)
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
+                            .cornerRadius(4)
+                    }
+
                     // Wheelchair accessible train
                     if arrival.wheelchairAccessible {
                         Image(systemName: "figure.roll")
                             .font(.caption)
                             .foregroundStyle(.blue)
+                    }
+
+                    // PMR warning (accessibility issue on route)
+                    if arrival.pmrWarning {
+                        HStack(spacing: 1) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 8))
+                            Image(systemName: "figure.roll")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundStyle(.orange)
                     }
                 }
 

@@ -636,7 +636,7 @@ struct StopHeaderView: View {
                     }
 
                     if stop.hasParking {
-                        Label("Parking", systemImage: "p.circle.fill")
+                        Label("Parking Bici", systemImage: "bicycle")
                             .font(.caption)
                             .foregroundStyle(.green)
                     }

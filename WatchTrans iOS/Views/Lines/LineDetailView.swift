@@ -572,6 +572,33 @@ struct AlertBannerView: View {
                         }
                     }
                 }
+
+                // Alert phases (temporal evolution)
+                if let periods = alert.activePeriods, periods.count > 1 {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Fases")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(periods.enumerated()), id: \.offset) { _, period in
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(phaseColor(period.effect))
+                                    .frame(width: 6, height: 6)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    if let desc = period.phaseDescription, !desc.isEmpty {
+                                        Text(desc)
+                                            .font(.caption)
+                                    }
+                                    Text(phaseDate(period))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
             }
 
             Spacer()
@@ -579,6 +606,33 @@ struct AlertBannerView: View {
         .padding()
         .background(alert.severityColor.opacity(0.15))
         .cornerRadius(10)
+    }
+
+    private func phaseColor(_ effect: String?) -> Color {
+        switch effect {
+        case "NO_SERVICE": return .red
+        case "REDUCED_SERVICE", "MODIFIED_SERVICE", "SIGNIFICANT_DELAYS": return .orange
+        default: return .blue
+        }
+    }
+
+    private func phaseDate(_ period: AlertActivePeriod) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "d MMM"
+        displayFormatter.locale = Locale(identifier: "es_ES")
+
+        var parts: [String] = []
+        if let start = period.startTime, let date = formatter.date(from: start) {
+            parts.append("Desde \(displayFormatter.string(from: date))")
+        }
+        if let end = period.endTime, let date = formatter.date(from: end) {
+            parts.append("hasta \(displayFormatter.string(from: date))")
+        }
+        return parts.isEmpty ? "" : parts.joined(separator: " ")
     }
 }
 

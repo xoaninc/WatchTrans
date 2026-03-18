@@ -55,6 +55,14 @@ struct Arrival: Identifiable, Codable {
     let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07" for Metro Sevilla)
     var isDoubleComposition: Bool = false
 
+    // Express service (CIVIS)
+    var isExpress: Bool = false
+    var expressName: String? = nil
+    var expressColor: String? = nil
+
+    // Accessibility/service warnings
+    var pmrWarning: Bool = false
+
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
             id: id,
@@ -88,7 +96,11 @@ struct Arrival: Identifiable, Codable {
             vehicleLat: vehicleLat,
             vehicleLon: vehicleLon,
             vehicleLabel: vehicleLabel,
-            isDoubleComposition: isDoubleComposition
+            isDoubleComposition: isDoubleComposition,
+            isExpress: isExpress,
+            expressName: expressName,
+            expressColor: expressColor,
+            pmrWarning: pmrWarning
         )
     }
 

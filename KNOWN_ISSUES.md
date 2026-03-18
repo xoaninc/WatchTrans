@@ -62,9 +62,21 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 
 ### UI pendiente para campos ya decodificados
 
-Los modelos decodifican los campos pero la UI no los muestra todavía:
-- **Express CIVIS badge** — `isExpress` + `expressName` en ArrivalRowView
-- **Aviso PMR** — `pmrWarning` en ArrivalRowView/StopDetailView
-- **Aviso servicio alternativo** — `alternativeServiceWarning`
-- **Fases de alertas** — `AlertActivePeriod.effect`/`phaseDescription` en AlertBannerView
-- **Platform confidence** — mostrar confianza junto al badge de andén estimado
+- **Aviso servicio alternativo** — `alternativeServiceWarning` — investigando, problema pendiente
+- **Platform confidence** — deferred al ROADMAP
+
+### ~~Express CIVIS badge~~ ✅ IMPLEMENTADO
+
+Badge con `expressName` ("CIVIS") y `expressColor` en ArrivalRowView.
+
+### ~~PMR warning per-departure~~ ✅ IMPLEMENTADO
+
+Icono ⚠️♿ naranja en ArrivalRowView cuando `pmrWarning == true`.
+
+### ~~parkingBicis como parking genérico~~ ✅ RESUELTO
+
+Badge cambiado de "Parking" con icono P a "Parking Bici" con icono 🚲.
+
+### ~~Fases de alertas~~ ✅ IMPLEMENTADO
+
+`AlertBannerView` muestra fases temporales con fechas y colores por efecto cuando hay >1 active_period.
