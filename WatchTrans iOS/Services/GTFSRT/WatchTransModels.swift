@@ -160,43 +160,28 @@ struct NetworkResponse: Codable, Identifiable {
     let code: String
     let name: String
     let city: String?
-    let region: String
     let color: String
     let textColor: String
-    let logoUrl: String?
-    let wikipediaUrl: String?
-    let description: String?
-    let nucleoIdRenfe: Int?  // Legacy Renfe nucleo ID for compatibility
     let routeCount: Int?
-    let transportType: String?  // "cercanias", "metro", "metro_ligero", "tranvia", "fgc", "euskotren", "other"
+    let transportType: String?
 
     var id: String { code }
 
     enum CodingKeys: String, CodingKey {
         case code = "id"
-        case name, city, region, color, description
+        case name, city, color
         case textColor = "text_color"
-        case logoUrl = "logo_url"
-        case wikipediaUrl = "wikipedia_url"
-        case nucleoIdRenfe = "nucleo_id_renfe"
         case routeCount = "route_count"
         case transportType = "transport_type"
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        // Be tolerant to API evolution: if a field disappears temporarily, don't fail the whole decode.
         code = (try? container.decode(String.self, forKey: .code)) ?? ""
         name = (try? container.decode(String.self, forKey: .name)) ?? ""
         city = try? container.decodeIfPresent(String.self, forKey: .city)
-        region = (try? container.decode(String.self, forKey: .region)) ?? ""
         color = (try? container.decode(String.self, forKey: .color)) ?? ""
         textColor = (try? container.decode(String.self, forKey: .textColor)) ?? ""
-        logoUrl = try? container.decodeIfPresent(String.self, forKey: .logoUrl)
-        wikipediaUrl = try? container.decodeIfPresent(String.self, forKey: .wikipediaUrl)
-        description = try? container.decodeIfPresent(String.self, forKey: .description)
-        nucleoIdRenfe = try? container.decodeIfPresent(Int.self, forKey: .nucleoIdRenfe)
         routeCount = try? container.decodeIfPresent(Int.self, forKey: .routeCount)
         transportType = try? container.decodeIfPresent(String.self, forKey: .transportType)
     }
