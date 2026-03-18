@@ -56,7 +56,7 @@ struct EquipmentStatusSection: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         if let hours = operatingHours {
-                            Text("Horario: \(hours.displayString)")
+                            Text("Horario \(currentDayName): \(hours.displayString)")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -91,6 +91,13 @@ struct EquipmentStatusSection: View {
                 }
             }
         }
+    }
+
+    private var currentDayName: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: Date()).capitalized
     }
 
     /// Check if current time falls within operating hours (handles overnight like 06:30-02:38)
