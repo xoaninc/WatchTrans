@@ -15,8 +15,7 @@ Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
 **Workaround actual:** Heading fijo a 0.
 **Posible solución:** Usar `suggested_heading` de API para transiciones suaves.
 
-### 1.3 LineResponse CodingKeys desactualizados
-API manda `route_color` / `route_text_color`, modelo usa `color` / `textColor`. Ver KNOWN_ISSUES.
+### ~~1.3 LineResponse CodingKeys desactualizados~~ ✅ RESUELTO
 
 ---
 
@@ -32,11 +31,11 @@ Notificar cuando una línea favorita tiene incidencias. Requiere APNs + servidor
 ### 2.3 Watch Independiente
 watchOS independiente con URLSession + sincronización de favoritos vía iCloud.
 
-### 2.4 Campos nuevos de DepartureResponse
-Añadir a los modelos iOS y Watch: `platform_confidence`, `delay_estimated`, `is_express`, `express_name`, `express_color`, `wheelchair_accessible_now`, `pmr_warning`, `alternative_service_warning`, `station_occupancy_pct`, `station_occupancy_status`, `bearing`/`speed` en train_position. Ver KNOWN_ISSUES para detalle.
+### ~~2.4 Campos nuevos de DepartureResponse~~ ✅ RESUELTO
+Modelos sync + UI para express CIVIS y PMR warning.
 
-### 2.5 Alertas multi-fase (active_periods con effect/phase_description)
-Mostrar evolución temporal de alertas (ej. "reducido hasta abril, corte total después"). Campos `effect` y `phase_description` en cada `active_period`.
+### ~~2.5 Alertas multi-fase~~ ✅ RESUELTO
+`AlertActivePeriod` con fases temporales en `AlertBannerView`.
 
 ---
 
@@ -52,7 +51,10 @@ Mostrar evolución temporal de alertas (ej. "reducido hasta abril, corte total d
 - **Alertas por parada** — badges en Home, inline en LineDetailView, sección en StopDetailView. iOS + Watch.
 - **Interior de estaciones** — `/stops/{id}/station-interior` — `StationInteriorSection` con accesos, recorridos, vestíbulos, niveles. Solo iOS.
 - **Equipment status** — `/gtfs-rt/equipment-status/{stop_id}` — `EquipmentStatusSection` con iconos AIGA. Solo Metro Sevilla tiene datos. Solo iOS.
-- **Accesibilidad** — `wheelchairBoarding` badge, `wheelchairAccessible` per-tren, `AcercaService` PMR. Solo iOS.
+- **Accesibilidad** — `wheelchairBoarding` badge, `wheelchairAccessible` per-tren, `AcercaService` PMR, `pmrWarning` per-departure. Solo iOS.
+- **Express CIVIS** — badge con `expressName` + `expressColor` en departures. Solo iOS.
+- **Fases de alertas** — `AlertActivePeriod` con fechas y colores por efecto en `AlertBannerView`. Solo iOS.
+- **Parking Bici** — badge 🚲 "Parking Bici" en StopDetailView. Solo iOS.
 - **Vehicle positions** — `/gtfs-rt/vehicles` — mapa de trenes
 - **Route planner** — `/route-planner` — RAPTOR journey planning
 - **Route shapes** — `/routes/{id}/shape` — polylines para mapa
@@ -82,14 +84,8 @@ Mostrar evolución temporal de alertas (ej. "reducido hasta abril, corte total d
 
 ### Pendientes de integrar
 
-#### Modelos desactualizados (ver KNOWN_ISSUES para detalle)
-- **LineResponse** CodingKeys: `color` → `route_color`, `textColor` → `route_text_color`
-- **DepartureResponse** campos nuevos: `is_express`, `express_name`, `pmr_warning`, `alternative_service_warning`, `wheelchair_accessible_now`, `platform_confidence`, `delay_estimated`, `bearing`/`speed`
-- **CompactDepartureResponse** modelo nuevo necesario para Widgets/Siri
-- **AlertResponse active_periods** con `effect` y `phase_description` por fase
-- **AcercaService** falta `source`
-- **RouteShapeResponse** falta `is_circular`
-- **PlatformPredictionResponse** verificar `sample_size` vs `observation_count`
+#### ~~Modelos desactualizados~~ ✅ RESUELTO (Plan A + B)
+Todos los modelos sync con la API. Único pendiente: **CompactDepartureResponse** (modelo nuevo para Widgets/Siri, ver 2.1).
 
 #### 3.1 Tarifas
 `GET /api/gtfs/routes/{route_id}/fares` — GTFS fares (Euskotren 122, Metro Bilbao 25, Metro Sevilla 54). Campos: `route_id`, `currency`, `payment_method`, `transfers_allowed`, `fares[{price, origin_zone, destination_zone}]`.
