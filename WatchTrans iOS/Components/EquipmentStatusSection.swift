@@ -35,18 +35,26 @@ struct EquipmentStatusSection: View {
                 }
             }
 
-            // Broken equipment first (always visible)
-            ForEach(broken) { device in
-                EquipmentRow(device: device)
-            }
-
-            // Working equipment in disclosure
-            if !working.isEmpty {
-                DisclosureGroup {
-                    ForEach(working) { device in
-                        EquipmentRow(device: device)
-                    }
-                } label: {
+            // All equipment in a single disclosure group
+            DisclosureGroup {
+                // Broken first (red)
+                ForEach(broken) { device in
+                    EquipmentRow(device: device)
+                }
+                // Working after (green)
+                ForEach(working) { device in
+                    EquipmentRow(device: device)
+                }
+            } label: {
+                if !broken.isEmpty && !working.isEmpty {
+                    Text("\(broken.count) sin servicio · \(working.count) operativo\(working.count == 1 ? "" : "s")")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else if !broken.isEmpty {
+                    Text("\(broken.count) sin servicio")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
                     Text("\(working.count) operativo\(working.count == 1 ? "" : "s")")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
