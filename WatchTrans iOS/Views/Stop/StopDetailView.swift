@@ -1053,9 +1053,9 @@ struct ConnectionsSectionView: View {
         switch badge.kind {
         case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_"]
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
-        case .metroLigero: prefixes = ["METRO_", "TMB_METRO_"]  // ML uses METRO_MAD_ in API
-        case .tram: prefixes = ["TRAM_", "TRANVIA_"]
-        case .funicular: prefixes = ["FUN_", "TMB_FUN_"]
+        case .metroLigero: prefixes = ["ML_"]  // ML_29_STATION etc.
+        case .tram: prefixes = ["TRAM_", "TRANVIA_"]  // TRAM_SEV_, TRAM_BCN_, TRANVIA_ZARAGOZA_
+        case .funicular: prefixes = ["TMB_METRO_"]  // Funicular has no own stops, shares TMB Metro stops
         case .bus: prefixes = ["BUS_"]
         }
 
