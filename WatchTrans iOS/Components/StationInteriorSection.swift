@@ -201,9 +201,12 @@ private struct PathwayRow: View {
 
     private var modeIcon: String {
         switch pathway.pathwayModeName {
+        case "walkway": return "figure.walk"
         case "stairs": return "figure.stairs"
-        case "elevator": return "arrow.up.arrow.down"
+        case "moving_sidewalk": return "arrow.left.arrow.right"
         case "escalator": return "arrow.up.right"
+        case "elevator": return "arrow.up.arrow.down"
+        case "fare_gate": return "creditcard"
         default: return "figure.walk"
         }
     }
