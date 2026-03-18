@@ -94,6 +94,13 @@ struct ArrivalRowView: View {
                             .foregroundStyle(.blue)
                     }
 
+                    // Alternative service (bus replacement)
+                    if arrival.isAlternativeService {
+                        Image(systemName: "bus.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+
                     // PMR warning (accessibility issue on route)
                     if arrival.pmrWarning {
                         HStack(spacing: 1) {

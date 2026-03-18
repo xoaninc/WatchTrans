@@ -62,6 +62,7 @@ struct Arrival: Identifiable, Codable {
 
     // Accessibility/service warnings
     var pmrWarning: Bool = false
+    var isAlternativeService: Bool = false
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
@@ -100,7 +101,8 @@ struct Arrival: Identifiable, Codable {
             isExpress: isExpress,
             expressName: expressName,
             expressColor: expressColor,
-            pmrWarning: pmrWarning
+            pmrWarning: pmrWarning,
+            isAlternativeService: isAlternativeService
         )
     }
 
