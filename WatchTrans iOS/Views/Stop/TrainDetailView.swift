@@ -62,6 +62,12 @@ struct TrainDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+
+                            if let trainNumber = arrival.tripShortName, !trainNumber.isEmpty {
+                                Text("Tren \(trainNumber)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
 
                         Spacer()

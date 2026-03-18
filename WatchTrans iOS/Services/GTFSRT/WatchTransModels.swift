@@ -72,6 +72,11 @@ struct DepartureResponse: Codable, Identifiable {
     let stationOccupancyPct: Int?
     let stationOccupancyStatus: Int?
 
+    // Train identification and accessibility
+    let tripShortName: String?
+    let wheelchairAccessibleStatic: Int?
+    let bikesAllowed: Int?
+
     var id: String { tripId }
 
     /// Returns headway in minutes (for frequency-based services like Metro)
@@ -129,6 +134,9 @@ struct DepartureResponse: Codable, Identifiable {
         case delayEstimated = "delay_estimated"
         case stationOccupancyPct = "station_occupancy_pct"
         case stationOccupancyStatus = "station_occupancy_status"
+        case tripShortName = "trip_short_name"
+        case wheelchairAccessibleStatic = "wheelchair_accessible_static"
+        case bikesAllowed = "bikes_allowed"
     }
 }
 

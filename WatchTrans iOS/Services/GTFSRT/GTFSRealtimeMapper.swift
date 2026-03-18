@@ -110,7 +110,10 @@ class GTFSRealtimeMapper {
                 expressName: departure.expressName,
                 expressColor: departure.expressColor,
                 pmrWarning: departure.pmrWarning ?? false,
-                isAlternativeService: departure.alternativeServiceWarning ?? false
+                isAlternativeService: departure.alternativeServiceWarning ?? false,
+                tripShortName: departure.tripShortName,
+                wheelchairAccessibleStatic: departure.wheelchairAccessibleStatic,
+                bikesAllowed: departure.bikesAllowed
             )
 
             arrivals.append(arrival)

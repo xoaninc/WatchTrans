@@ -87,11 +87,18 @@ struct ArrivalRowView: View {
                             .cornerRadius(4)
                     }
 
-                    // Wheelchair accessible train
-                    if arrival.wheelchairAccessible {
+                    // Wheelchair accessible train (RT or static fallback)
+                    if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
                         Image(systemName: "figure.roll")
                             .font(.caption)
                             .foregroundStyle(.blue)
+                    }
+
+                    // Bikes allowed
+                    if arrival.bikesAllowed == 1 {
+                        Image(systemName: "bicycle")
+                            .font(.caption)
+                            .foregroundStyle(.green)
                     }
 
                     // Alternative service (bus replacement)

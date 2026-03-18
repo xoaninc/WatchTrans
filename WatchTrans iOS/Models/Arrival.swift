@@ -67,6 +67,11 @@ struct Arrival: Identifiable, Codable {
     // Vehicle occupancy (FGC)
     var vehicleOccupancyStatus: Int? = nil
 
+    // Train identification
+    var tripShortName: String? = nil
+    var wheelchairAccessibleStatic: Int? = nil
+    var bikesAllowed: Int? = nil
+
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
             id: id,
@@ -106,7 +111,10 @@ struct Arrival: Identifiable, Codable {
             expressColor: expressColor,
             pmrWarning: pmrWarning,
             isAlternativeService: isAlternativeService,
-            vehicleOccupancyStatus: vehicleOccupancyStatus
+            vehicleOccupancyStatus: vehicleOccupancyStatus,
+            tripShortName: tripShortName,
+            wheelchairAccessibleStatic: wheelchairAccessibleStatic,
+            bikesAllowed: bikesAllowed
         )
     }
 
