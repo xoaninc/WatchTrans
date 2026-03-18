@@ -1051,9 +1051,9 @@ struct ConnectionsSectionView: View {
         let stopName = stop.name.lowercased()
         let prefixes: [String]
         switch badge.kind {
-        case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_"]
+        case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_"]
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
-        case .metroLigero: prefixes = ["ML_", "METRO_LIGERO", "METRO_L_"]
+        case .metroLigero: prefixes = ["METRO_", "TMB_METRO_"]  // ML uses METRO_MAD_ in API
         case .tram: prefixes = ["TRAM_", "TRANVIA_"]
         case .funicular: prefixes = ["FUN_", "TMB_FUN_"]
         case .bus: prefixes = ["BUS_"]
