@@ -111,3 +111,4 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 **En routes:**
 - `alternative_for_short_name` — nombre de ruta sustituida (solo cuando `is_alternative_service=true`)
+- `route_url` — URL de la página del operador para esta ruta
