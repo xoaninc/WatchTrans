@@ -434,6 +434,22 @@ struct NetworkInfo: Codable, Identifiable {
     }
 }
 
+// MARK: - Alert Active Period
+
+struct AlertActivePeriod: Codable {
+    let startTime: String?
+    let endTime: String?
+    let effect: String?
+    let phaseDescription: String?
+
+    enum CodingKeys: String, CodingKey {
+        case startTime = "start_time"
+        case endTime = "end_time"
+        case effect
+        case phaseDescription = "phase_description"
+    }
+}
+
 // MARK: - Alert Response
 
 /// Response from GET /api/gtfs/realtime/alerts
@@ -462,11 +478,15 @@ struct AlertResponse: Codable, Identifiable {
     // Service restoration
     let estimatedRestorationTime: String?  // "14:30" - when service resumes
 
+    // Active periods with phases
+    let activePeriods: [AlertActivePeriod]?
+
     var id: String { alertId }
 
     enum CodingKeys: String, CodingKey {
         case alertId = "alert_id"
-        case cause, effect, url, timestamp, severity
+        case cause, effect, url, timestamp
+        case severity = "severity_level"
         case headerText = "header_text"
         case descriptionText = "description_text"
         case activePeriodStart = "active_period_start"
@@ -480,6 +500,7 @@ struct AlertResponse: Codable, Identifiable {
         case aiStatus = "ai_status"
         case aiIsVerified = "ai_is_verified"
         case estimatedRestorationTime = "estimated_restoration_time"
+        case activePeriods = "active_periods"
     }
 
     /// Color based on GTFS-RT effect type
