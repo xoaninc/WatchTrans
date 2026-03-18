@@ -589,11 +589,14 @@ struct JourneyStopsListView: View {
     var locationService: LocationService?
     var favoritesManager: FavoritesManager?
 
+    private var canNavigate: Bool {
+        dataService != nil && locationService != nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(stops.enumerated()), id: \.element.stopId) { index, tripStop in
                 let status = stopStatus(for: tripStop, at: index)
-                let canNavigate = dataService != nil && locationService != nil
 
                 Group {
                     if canNavigate {
@@ -698,8 +701,8 @@ struct JourneyStopsListView: View {
         let stop = dataService?.getStop(by: tripStop.stopId) ?? Stop(
             id: tripStop.stopId,
             name: tripStop.stopName,
-            latitude: tripStop.stopLat ?? 0,
-            longitude: tripStop.stopLon ?? 0
+            latitude: tripStop.stopLat,
+            longitude: tripStop.stopLon
         )
         return StopDetailView(
             stop: stop,
