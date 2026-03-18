@@ -24,6 +24,7 @@ struct LineDetailView: View {
     @State private var isShapeLoading = true
     @State private var isAlertsExpanded = false
     @State private var isOfflineData = false
+    @State private var hasLoadedOnce = false
 
     var lineColor: Color {
         Color(hex: line.colorHex) ?? .blue
@@ -245,6 +246,7 @@ struct LineDetailView: View {
     }
 
     private func loadData() async {
+        guard !hasLoadedOnce else { return }
         isLoading = true
         isShapeLoading = true
         isOfflineData = false
@@ -305,6 +307,7 @@ struct LineDetailView: View {
 
         DebugLog.log("📋 [LineDetail] ✅ Loaded: \(stops.count) stops, \(shapePoints.count) shape coords, \(alerts.count) alerts")
         isLoading = false
+        hasLoadedOnce = true
     }
 }
 

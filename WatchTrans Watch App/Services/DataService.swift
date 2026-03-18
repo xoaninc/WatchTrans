@@ -477,6 +477,9 @@ class DataService {
     private var arrivalCache: [String: CacheEntry] = [:]
     private let cacheLock = NSLock()
 
+    /// In-flight arrival requests to deduplicate concurrent fetches for the same stop
+    private var inFlightArrivals: [String: Task<[Arrival], Never>] = [:]
+
     // MARK: - Network Transport Types Cache
 
     /// Cache of network code -> transport type (fetched from /networks endpoint)
@@ -1464,74 +1467,85 @@ class DataService {
             return enriched
         }
 
-        // 2. Check if we're offline - use offline schedule cache
-        if !NetworkMonitor.shared.isConnected {
-            DebugLog.log("📴 [DataService] Offline - checking offline schedule cache...")
-            if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
-                let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
-                DebugLog.log("📦 [DataService] Returning \(arrivals.count) offline arrivals")
-                return arrivals
-            }
+        // 2. Deduplicate: if there's already an in-flight request for this stop, await it
+        if let existingTask = inFlightArrivals[stopId] {
+            DebugLog.log("🔄 [DataService] In-flight request exists for \(stopId), awaiting...")
+            return await existingTask.value
         }
 
-        // 3. Fetch from WatchTrans API (api.watch-trans.app)
-        do {
-            DebugLog.log("📡 [DataService] Cache miss, calling WatchTrans API...")
-            var departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
-            
-            // Fallback: If empty and ID is numeric, try prefixes (Legacy & Future support)
-            if departures.isEmpty && stopId.allSatisfy({ $0.isNumber }) {
-                // Try all standardized prefixes in order of probability
-                let prefixes = ["RENFE_C_", "RENFE_CERCANIAS_", "RENFE_F_", "RENFE_P_"]
-                for prefix in prefixes {
-                    let altId = "\(prefix)\(stopId)"
-                    DebugLog.log("📡 [DataService] Retry with: \(altId)")
-                    let retryDeps = try await gtfsRealtimeService.fetchDepartures(stopId: altId, limit: 40)
-                    if !retryDeps.isEmpty {
-                        departures = retryDeps
-                        break
-                    }
+        // 3. Create and track the fetch task
+        let task = Task<[Arrival], Never> { [self] in
+            defer { inFlightArrivals[stopId] = nil }
+
+            // Check if we're offline - use offline schedule cache
+            if !NetworkMonitor.shared.isConnected {
+                DebugLog.log("📴 [DataService] Offline - checking offline schedule cache...")
+                if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
+                    let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
+                    DebugLog.log("📦 [DataService] Returning \(arrivals.count) offline arrivals")
+                    return arrivals
                 }
             }
-            
-            DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
-            var arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
-            DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
+            // Fetch from WatchTrans API (api.watch-trans.app)
+            do {
+                DebugLog.log("📡 [DataService] Cache miss, calling WatchTrans API...")
+                var departures = try await gtfsRealtimeService.fetchDepartures(stopId: stopId, limit: 40)
 
-            arrivals = await enrichArrivalsWithPlatforms(arrivals, stopId: stopId)
-            arrivals = await enrichWithPlatformPredictions(arrivals, stopId: stopId)
+                // Fallback: If empty and ID is numeric, try prefixes (Legacy & Future support)
+                if departures.isEmpty && stopId.allSatisfy({ $0.isNumber }) {
+                    let prefixes = ["RENFE_C_", "RENFE_CERCANIAS_", "RENFE_F_", "RENFE_P_"]
+                    for prefix in prefixes {
+                        let altId = "\(prefix)\(stopId)"
+                        DebugLog.log("📡 [DataService] Retry with: \(altId)")
+                        let retryDeps = try await gtfsRealtimeService.fetchDepartures(stopId: altId, limit: 40)
+                        if !retryDeps.isEmpty {
+                            departures = retryDeps
+                            break
+                        }
+                    }
+                }
 
-            // 4. Cache results
-            cacheArrivals(arrivals, for: stopId)
+                DebugLog.log("📊 [DataService] API returned \(departures.count) departures for stop \(stopId)")
 
-            // 5. Also cache for offline use (if this is a favorite stop)
-            let stopName = getStop(by: stopId)?.name ?? stopId
-            await OfflineScheduleService.shared.cacheSchedules(for: stopId, stopName: stopName, departures: departures)
+                var arrivals = gtfsMapper.mapToArrivals(departures: departures, stopId: stopId)
+                DebugLog.log("✅ [DataService] Mapped to \(arrivals.count) arrivals")
 
-            return arrivals
-        } catch {
-            // 6. Handle errors gracefully
-            DebugLog.log("⚠️ [DataService] WatchTrans API Error: \(error)")
+                arrivals = await enrichArrivalsWithPlatforms(arrivals, stopId: stopId)
+                arrivals = await enrichWithPlatformPredictions(arrivals, stopId: stopId)
 
-            // Try offline schedule cache as fallback
-            if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
-                let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
-                DebugLog.log("📦 [DataService] API failed, returning \(arrivals.count) offline arrivals")
+                // Cache results
+                cacheArrivals(arrivals, for: stopId)
+
+                // Also cache for offline use
+                let stopName = getStop(by: stopId)?.name ?? stopId
+                await OfflineScheduleService.shared.cacheSchedules(for: stopId, stopName: stopName, departures: departures)
+
                 return arrivals
-            }
+            } catch {
+                DebugLog.log("⚠️ [DataService] WatchTrans API Error: \(error)")
 
-            // Try stale cache as fallback
-            if let stale = getStaleCachedArrivals(for: stopId) {
-                DebugLog.log("ℹ️ [DataService] Using stale cached data for stop \(stopId)")
-                return stale
-            }
+                // Try offline schedule cache as fallback
+                if let offlineDepartures = await OfflineScheduleService.shared.getCachedDepartures(for: stopId) {
+                    let arrivals = mapOfflineDeparturesToArrivals(offlineDepartures, stopId: stopId)
+                    DebugLog.log("📦 [DataService] API failed, returning \(arrivals.count) offline arrivals")
+                    return arrivals
+                }
 
-            // Return empty array instead of mock data
-            DebugLog.log("ℹ️ [DataService] No data available for stop \(stopId)")
-            self.error = error
-            return []
+                // Try stale cache as fallback
+                if let stale = getStaleCachedArrivals(for: stopId) {
+                    DebugLog.log("ℹ️ [DataService] Using stale cached data for stop \(stopId)")
+                    return stale
+                }
+
+                DebugLog.log("ℹ️ [DataService] No data available for stop \(stopId)")
+                self.error = error
+                return []
+            }
         }
+
+        inFlightArrivals[stopId] = task
+        return await task.value
     }
 
     private func enrichArrivalsWithPlatforms(_ arrivals: [Arrival], stopId: String) async -> [Arrival] {
