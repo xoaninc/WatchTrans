@@ -38,6 +38,9 @@ class GTFSRealtimeMapper {
             let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
             guard effectiveMinutes >= 0 else { continue }
 
+            // Skip departures where the train doesn't stop at this station
+            if departure.isSkipped == true { continue }
+
             // Detect double composition from trip_id (e.g., "MSEV_RT_111,116_d0" has comma)
             let isDoubleComposition = departure.tripId.contains(",")
             let cleanHeadsign = (departure.headsign ?? "").trimmingCharacters(in: .whitespaces)

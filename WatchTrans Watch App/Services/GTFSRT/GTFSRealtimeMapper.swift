@@ -38,6 +38,9 @@ class GTFSRealtimeMapper {
             let effectiveMinutes = departure.realtimeMinutesUntil ?? departure.minutesUntil
             guard effectiveMinutes >= 0 else { continue }
 
+            // Skip departures where the train doesn't stop at this station
+            if departure.isSkipped == true { continue }
+
             // Extract and clean headsign (strip /T.DOBLE suffix from Metro Sevilla double compositions)
             let rawHeadsign = departure.headsign ?? ""
             let isDoubleComposition = departure.vehicleLabel?.contains(",") == true
