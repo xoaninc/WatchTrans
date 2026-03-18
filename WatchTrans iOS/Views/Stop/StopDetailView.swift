@@ -35,6 +35,7 @@ struct StopDetailView: View {
     @State private var stationOccupancy: [StationOccupancyResponse] = []
     @State private var equipmentStatus: [EquipmentStatusResponse] = []
     @State private var airQualityData: [String: TrainAirQuality] = [:]
+    @State private var metroOperatingHours: DayOperatingHours?
     @State private var showMap = false
     @State private var detailedStop: Stop?
 
@@ -158,7 +159,7 @@ struct StopDetailView: View {
 
                     // Equipment status (elevators/escalators)
                     if !equipmentStatus.isEmpty {
-                        EquipmentStatusSection(equipment: equipmentStatus)
+                        EquipmentStatusSection(equipment: equipmentStatus, operatingHours: metroOperatingHours)
                             .padding(.horizontal)
                     }
 
@@ -402,6 +403,18 @@ struct StopDetailView: View {
         if stop.id.hasPrefix("METRO_SEVILLA_") {
             equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
             airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
+
+            // Fetch operating hours for nightly shutdown detection
+            if let response = try? await dataService.gtfsRealtimeService.fetchRouteOperatingHours(routeId: "METRO_SEVILLA_L1-CE-OQ") {
+                let calendar = Calendar.current
+                let weekday = calendar.component(.weekday, from: Date())
+                switch weekday {
+                case 1: metroOperatingHours = response.sunday
+                case 7: metroOperatingHours = response.saturday
+                case 6: metroOperatingHours = response.friday
+                default: metroOperatingHours = response.weekday
+                }
+            }
         }
 
         hasLoadedOnce = true
