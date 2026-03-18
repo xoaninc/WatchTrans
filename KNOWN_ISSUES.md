@@ -6,29 +6,51 @@
 
 Además, alertas `FULL_SUSPENSION` con stop-level entities ahora se tratan como suspensión parcial (no marcan toda la línea como cerrada).
 
-## API field renames not propagated to app models (FIXED)
+## ~~API field renames not propagated to app models~~ ✅ RESUELTO
 
-The backend API renamed several fields but the app models were not updated, causing silent decoding failures:
-
-- **`networks[].code` → `networks[].id`** — `NetworkInfo` in DataService and `NetworkResponse` in WatchTransModels expected `code`, API now returns `id`. Caused lines to not load at all (`keyNotFound` error).
-- **`correspondences.cercanias` → `correspondences.tren`** — iOS `StopCorrespondences` still used `cercanias`, Watch App was already updated. Caused train correspondences to silently not decode.
-
-**Fix:** Updated CodingKeys to map the new API field names (commits `6314089`, `e793039`).
-
-**Lesson:** When renaming fields in the backend API, grep the app codebase for all usages of the old field name across both targets.
+Updated CodingKeys to map the new API field names (commits `6314089`, `e793039`).
 
 ## ~~Equipment status de Metro Sevilla: ubicación y estandarización~~ ✅ RESUELTO
 
-Extraído a componente genérico `EquipmentStatusSection.swift` que funciona con cualquier red. Cambios realizados:
+Extraído a componente genérico `EquipmentStatusSection.swift` con iconos AIGA, círculos verde/rojo, equipos fuera de servicio primero.
 
-- Nombre completo del equipo: "Ascensor — Calle", "Escalera mecanica — Anden sentido Ciudad Expo" (antes solo "Ascensor" truncado)
-- Circulo verde/rojo a la derecha de cada equipo indicando estado operativo (antes usaba flechas up/down que indicaban la dirección de la escalera mecánica, dato del campo `direction` del API — no aportaba nada útil al usuario)
-- Equipos fuera de servicio aparecen primero, los operativos en un disclosure group
+## ~~Líneas no cargadas hasta entrar en sección Líneas~~ ✅ RESUELTO
 
-## ~~Líneas no cargadas hasta entrar en sección Líneas (afecta Mapa y correspondencias)~~ ✅ RESUELTO
-
-`fetchTransportData` ahora llama `fetchLinesIfNeeded` automáticamente después de cargar stops (tanto desde cache como desde API). Las líneas se cargan al arrancar sin necesidad de que el usuario visite la sección de Líneas. Cacheo 24h, sin impacto de red.
+`fetchTransportData` ahora llama `fetchLinesIfNeeded` automáticamente al arrancar.
 
 ## parkingBicis se usa como parking genérico
 
-El campo `parkingBicis` de la API se mapea a `hasParking` en el modelo `Stop`, que muestra un badge "Parking" genérico con icono `p.circle.fill`. No distingue entre parking de coches y parking de bicis — trata el campo de bicis como si fuera parking general. No hay badge ni indicador específico de parking de bicis en la app.
+El campo `parkingBicis` de la API se mapea a `hasParking` en el modelo `Stop`, que muestra un badge "Parking" genérico con icono `p.circle.fill`. No distingue entre parking de coches y parking de bicis. No hay badge específico de parking de bicis.
+
+## LineResponse: CodingKeys desactualizados
+
+La API ahora manda `route_color` y `route_text_color` en `LineResponse`, pero nuestro modelo usa `color` y `textColor` como CodingKeys. Puede causar que los colores de línea no se decodifiquen.
+
+**Archivos afectados:** `WatchTransModels.swift` (ambos targets), struct `LineResponse`.
+
+## DepartureResponse: campos nuevos no consumidos
+
+La API ahora envía campos que la app no decodifica. No causan errores (se ignoran silenciosamente) pero perdemos información útil:
+
+| Campo | Para qué sirve |
+|---|---|
+| `platform_confidence` | Confianza de predicción de plataforma (0.0-1.0) |
+| `delay_estimated` | Si el retraso es estimado vs confirmado |
+| `is_express` / `express_name` / `express_color` | Trenes express |
+| `wheelchair_accessible_now` | Accesibilidad RT del tren (no solo estática) |
+| `pmr_warning` | Aviso PMR (tren no accesible en esa parada) |
+| `alternative_service_warning` | Aviso de servicio alternativo activo |
+| `station_occupancy_pct` / `station_occupancy_status` | Ocupación de estación inline |
+| `bearing` / `speed` (en train_position) | Rumbo y velocidad del tren |
+
+**Prioridad:** `pmr_warning` y `is_express` son los más visibles para el usuario.
+
+## AcercaService: falta campo `source`
+
+El modelo `AcercaService` no decodifica `source` (ej. `"csv_renfe"`). No afecta la UI pero perdemos la trazabilidad del dato.
+
+## Alertas: active_periods con fases temporales
+
+La API ahora manda `effect` y `phase_description` dentro de cada `active_period`, permitiendo alertas multi-fase (ej. "servicio reducido hasta abril, luego corte total"). La app tiene el modelo `AlternativeTransport` pero no decodifica las fases de `active_periods`.
+
+**Impacto:** Para alertas como la C3 Sevilla (parcial ahora, total en abril), no mostramos la evolución temporal.
