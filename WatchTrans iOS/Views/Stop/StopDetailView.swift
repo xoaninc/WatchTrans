@@ -108,6 +108,7 @@ struct StopDetailView: View {
     }
 
     var body: some View {
+        ScrollViewReader { scrollProxy in
         ScrollView {
             VStack(spacing: 0) {
                 if showMap {
@@ -129,6 +130,7 @@ struct StopDetailView: View {
                         locationService: locationService,
                         favoritesManager: favoritesManager
                     )
+                    .id("stopDetailTop")
 
                     // Alerts section (expandable)
                     if !alerts.isEmpty {
@@ -172,7 +174,14 @@ struct StopDetailView: View {
                             favoritesManager: favoritesManager,
                             transportModes: transportModes,
                             stopLatitude: stop.latitude,
-                            stopLongitude: stop.longitude
+                            stopLongitude: stop.longitude,
+                            onAlreadyHere: {
+                                let generator = UINotificationFeedbackGenerator()
+                                generator.notificationOccurred(.warning)
+                                withAnimation {
+                                    scrollProxy.scrollTo("stopDetailTop", anchor: .top)
+                                }
+                            }
                         )
                     }
 
@@ -260,6 +269,7 @@ struct StopDetailView: View {
                 }
             }
         }
+        } // ScrollViewReader
         .alert("Favoritos", isPresented: $showFavoriteAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -913,9 +923,9 @@ struct ConnectionsSectionView: View {
     let transportModes: [TransportModeInfo]
     let stopLatitude: Double
     let stopLongitude: Double
+    var onAlreadyHere: (() -> Void)?
 
     @State private var linesLoaded = false
-    @State private var shakeOffset: CGFloat = 0
 
     private enum TransportKind: String {
         case cercanias, metro, metroLigero, tram, funicular, bus
@@ -1000,16 +1010,10 @@ struct ConnectionsSectionView: View {
                                 }
                                 .buttonStyle(.plain)
                             } else {
-                                // Same stop or not found — shake to indicate "you're here"
+                                // Same stop or not found — scroll to top + haptic
                                 badgeView(badge)
-                                    .offset(x: shakeOffset)
                                     .onTapGesture {
-                                        withAnimation(.default.speed(4).repeatCount(3, autoreverses: true)) {
-                                            shakeOffset = 8
-                                        }
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                                            shakeOffset = 0
-                                        }
+                                        onAlreadyHere?()
                                     }
                             }
                         }
