@@ -36,7 +36,7 @@ La API ahora envía campos que la app no decodifica. No causan errores (se ignor
 |---|---|
 | `platform_confidence` | Confianza de predicción de plataforma (0.0-1.0) |
 | `delay_estimated` | Si el retraso es estimado vs confirmado |
-| `is_express` / `express_name` / `express_color` | Trenes express |
+| `is_express` / `express_name` / `express_color` | Trenes express (ej. CIVIS). Mostrar badge con `express_name` cuando `is_express: true` |
 | `wheelchair_accessible_now` | Accesibilidad RT del tren (no solo estática) |
 | `pmr_warning` | Aviso PMR (tren no accesible en esa parada) |
 | `alternative_service_warning` | Aviso de servicio alternativo activo |
