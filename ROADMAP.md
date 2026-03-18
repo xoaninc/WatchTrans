@@ -17,6 +17,18 @@ Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
 
 ### ~~1.3 LineResponse CodingKeys desactualizados~~ ✅ RESUELTO
 
+### Bugs backend arreglados (2026-03-18)
+
+Estos bugs los arregló el compañero de la API, no requieren cambios en la app:
+
+- ~~`alternative_service_warning` per-stop en vez de per-ruta~~ ✅ Arreglado (KI #185). Ahora solo true cuando hay transporte alternativo REAL en la ruta del departure.
+- ~~`parking_bicis` faltaba en `/routes/{id}/stops`~~ ✅ Arreglado. Badge Parking Bici ahora visible en vista de línea.
+- ~~Campos faltantes en `/stops/{id}/full`, `/routes/{id}/stops`, `/routes/{id}`~~ ✅ Arreglado. Badges y estados consistentes en todas las vistas.
+- ~~`estimated_restoration_time` tipo datetime en vez de string~~ ✅ Arreglado. DB guarda texto humano.
+- ~~`wheelchair_boarding` siempre null en `/stops/{stop_id}`~~ ✅ Arreglado. Faltaba en el SELECT.
+- ~~Alertas accesibilidad asociadas a todas las rutas del núcleo~~ ✅ Arreglado. Ahora solo rutas que pasan por la parada.
+- ~~17 modelos Pydantic muertos en backend~~ ✅ Eliminados. App ya limpió `NetworkResponse`.
+
 ---
 
 ## 2. FEATURES PENDIENTES

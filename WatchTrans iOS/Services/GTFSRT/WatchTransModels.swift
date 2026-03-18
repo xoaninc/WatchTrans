@@ -1401,6 +1401,14 @@ struct StopFullDetailResponse: Codable {
     let lat: Double
     let lon: Double
     let province: String?
+    let parkingBicis: String?
+    let accesibilidad: String?
+    let corMetro: String?
+    let corTren: String?
+    let corTranvia: String?
+    let corFunicular: String?
+    let corBus: String?
+    let wheelchairBoarding: Int?
     let locationType: Int?
     let parentStationId: String?
     let isHub: Bool?
@@ -1413,13 +1421,20 @@ struct StopFullDetailResponse: Codable {
     let accesses: [StationAccess]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, province
+        case id, name, lat, lon, province, accesibilidad, correspondences
+        case parkingBicis = "parking_bicis"
+        case corMetro = "cor_metro"
+        case corTren = "cor_tren"
+        case corTranvia = "cor_tranvia"
+        case corFunicular = "cor_funicular"
+        case corBus = "cor_bus"
+        case wheelchairBoarding = "wheelchair_boarding"
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case isHub = "is_hub"
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
         case acercaService = "acerca_service"
-        case routes, correspondences, platforms, accesses
+        case routes, platforms, accesses
     }
 }
