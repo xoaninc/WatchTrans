@@ -52,6 +52,26 @@ struct DepartureResponse: Codable, Identifiable {
     let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
     let vehicleLabel: String?       // Train unit identifier (e.g., "MS-07" for Metro Sevilla)
 
+    // Express service (CIVIS)
+    let isExpress: Bool?
+    let expressName: String?
+    let expressColor: String?
+
+    // Accessibility warnings
+    let wheelchairAccessibleNow: Bool?
+    let pmrWarning: Bool?
+    let alternativeServiceWarning: Bool?
+
+    // Platform confidence
+    let platformConfidence: Double?
+
+    // Delay estimation
+    let delayEstimated: Bool?
+
+    // Station occupancy (inline, TMB)
+    let stationOccupancyPct: Int?
+    let stationOccupancyStatus: Int?
+
     var id: String { tripId }
 
     /// Returns headway in minutes (for frequency-based services like Metro)
@@ -99,6 +119,16 @@ struct DepartureResponse: Codable, Identifiable {
         case vehicleLat = "vehicle_lat"
         case vehicleLon = "vehicle_lon"
         case vehicleLabel = "vehicle_label"
+        case isExpress = "is_express"
+        case expressName = "express_name"
+        case expressColor = "express_color"
+        case wheelchairAccessibleNow = "wheelchair_accessible_now"
+        case pmrWarning = "pmr_warning"
+        case alternativeServiceWarning = "alternative_service_warning"
+        case platformConfidence = "platform_confidence"
+        case delayEstimated = "delay_estimated"
+        case stationOccupancyPct = "station_occupancy_pct"
+        case stationOccupancyStatus = "station_occupancy_status"
     }
 }
 
@@ -112,9 +142,11 @@ struct TrainPositionResponse: Codable {
     let progressPercent: Double?
     let estimated: Bool?
     let timestamp: String?
+    let bearing: Double?
+    let speed: Double?
 
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, status, estimated, timestamp
+        case latitude, longitude, status, estimated, timestamp, bearing, speed
         case currentStopName = "current_stop_name"
         case currentStopId = "current_stop_id"
         case progressPercent = "progress_percent"
