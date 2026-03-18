@@ -45,6 +45,8 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /translations` | ❌ | 891 traducciones (EN/FR/ES/EU). Euskotren y Metro Madrid. |
 | `GET /transfers` | ❌ | Tiempos mínimos de transbordo entre paradas. |
 | `GET /feed-info` | ❌ | Frescura de datos GTFS por operador. |
+| `GET /interchanges` | ❌ | 76 intercambiadores (mayoría Madrid CRTM). |
+| `GET /interchanges/{code}` | ❌ | Detalle con todas las paradas del intercambiador. |
 
 ## GTFS-RT (`/api/gtfs-rt/`)
 
@@ -83,10 +85,10 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 | Categoría | ✅ Usados | ⚠️ Dead code | ❌ No usados |
 |-----------|-----------|--------------|-------------|
-| GTFS Static | 22 | 0 | 9 |
+| GTFS Static | 22 | 0 | 11 |
 | GTFS-RT | 6 | 4 | 4 |
 | Admin | 0 | 2 | 6 |
-| **Total** | **28** | **6** | **19** |
+| **Total** | **28** | **6** | **21** |
 
 ## Notas de cambios del backend (2026-03-18)
 
