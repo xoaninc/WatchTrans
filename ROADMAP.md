@@ -67,6 +67,10 @@ Modelos sync + UI para express CIVIS y PMR warning.
 - **Express CIVIS** — badge con `expressName` + `expressColor` en departures. Solo iOS.
 - **Fases de alertas** — `AlertActivePeriod` con fechas y colores por efecto en `AlertBannerView`. Solo iOS.
 - **Parking Bici** — badge 🚲 "Parking Bici" en StopDetailView. Solo iOS.
+- **Tarifas** — sección de precios por zona en LineDetailView. Solo iOS.
+- **Trip updates** — delay preciso (min+seg) en TrainDetailView. Solo iOS.
+- **Ocupación de vehículos** — badge FGC en ArrivalRowView. Solo iOS.
+- **Servicio alternativo** — label bus en LinesListView. Solo iOS.
 - **Vehicle positions** — `/gtfs-rt/vehicles` — mapa de trenes
 - **Route planner** — `/route-planner` — RAPTOR journey planning
 - **Route shapes** — `/routes/{id}/shape` — polylines para mapa
@@ -99,18 +103,17 @@ Modelos sync + UI para express CIVIS y PMR warning.
 #### ~~Modelos desactualizados~~ ✅ RESUELTO (Plan A + B)
 Todos los modelos sync con la API. Único pendiente: **CompactDepartureResponse** (modelo nuevo para Widgets/Siri, ver 2.1).
 
-#### 3.1 Tarifas
-`GET /api/gtfs/routes/{route_id}/fares` — GTFS fares (Euskotren 122, Metro Bilbao 25, Metro Sevilla 54). Campos: `route_id`, `currency`, `payment_method`, `transfers_allowed`, `fares[{price, origin_zone, destination_zone}]`.
-`GET /api/gtfs/operators/{operator_id}/fares` — CMS fares con `fare_code`, `fare_name`, `price`, `zones`, `age_category`, `periodicity`, `large_family`, `travel_limit`.
+#### ~~3.1 Tarifas~~ ✅ IMPLEMENTADO
+Sección en LineDetailView con precios por zona. Metro Bilbao (25 tarifas), Metro Sevilla (54), Metro Granada (1).
 
-#### 3.13 Retrasos de trenes (trip-updates)
-`GET /api/gtfs-rt/trip-updates` — retraso con precisión de segundos. Campos: `delay`, `vehicle_id`, `trip_info`. Ordenados por retraso desc.
+#### ~~3.13 Retrasos de trenes~~ ✅ IMPLEMENTADO
+TrainDetailView muestra delay preciso (min + seg) desde trip-updates cuando disponible.
 
-#### 3.14 Ocupación de vehículos
-`GET /api/gtfs-rt/occupancy` — ocupación por vehículo. Campos: `vehicle_id`, `occupancy_status`, `occupancy_percentage`, `occupancy_status_label`, coords. FGC envía datos.
+#### ~~3.14 Ocupación de vehículos~~ ✅ IMPLEMENTADO
+Badge de ocupación (verde/amarillo/rojo) en ArrivalRowView para departures FGC.
 
-#### 3.19 Estado de servicio de rutas
-`GET /api/gtfs/routes/{route_id}` — `service_status`, `suspended_since`, `is_alternative_service`. Incluye `stops[]` y `frequencies[]` inline. Agency como objeto `{id, name}`.
+#### ~~3.19 Estado de servicio de rutas~~ ✅ IMPLEMENTADO
+Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternative_service == true`.
 
 ### Particularidades por operador (info nueva del API doc)
 
