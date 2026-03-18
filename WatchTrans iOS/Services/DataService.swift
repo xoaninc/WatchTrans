@@ -631,9 +631,9 @@ class DataService {
     }
 
     /// Fetch details for a specific stop ID (e.g. for navigation from correspondences)
-    func fetchStopDetails(stopId: String) async -> Stop? {
-        // Check cache first
-        if let cached = getStop(by: stopId) {
+    func fetchStopDetails(stopId: String, forceRefresh: Bool = false) async -> Stop? {
+        // Check cache first (skip if force refresh for full details)
+        if !forceRefresh, let cached = getStop(by: stopId) {
             return cached
         }
         

@@ -36,6 +36,7 @@ struct StopDetailView: View {
     @State private var equipmentStatus: [EquipmentStatusResponse] = []
     @State private var airQualityData: [String: TrainAirQuality] = [:]
     @State private var showMap = false
+    @State private var detailedStop: Stop?
 
     // Network monitoring
     private var networkMonitor = NetworkMonitor.shared
@@ -123,7 +124,7 @@ struct StopDetailView: View {
 
                     // Stop info header
                     StopHeaderView(
-                        stop: stop,
+                        stop: detailedStop ?? stop,
                         locationService: locationService,
                         favoritesManager: favoritesManager
                     )
@@ -344,10 +345,11 @@ struct StopDetailView: View {
         }
 
         // Load full details and arrivals sequentially (async let causes swift_task_dealloc crash)
-        let fullDetails = await dataService.fetchStopDetails(stopId: stop.id)
+        let fullDetails = await dataService.fetchStopDetails(stopId: stop.id, forceRefresh: true)
         let rawDepartures = await dataService.fetchArrivals(for: stop.id)
-        
-        // Update UI with full details
+
+        // Update UI with full details (acercaService, serviceStatus, etc.)
+        detailedStop = fullDetails
         if fullDetails != nil {
             alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
             // TODO: Re-enable when Stop model has correspondences, accesses, and routes properties
