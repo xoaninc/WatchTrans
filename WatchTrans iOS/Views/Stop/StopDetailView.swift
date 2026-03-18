@@ -975,16 +975,16 @@ struct ConnectionsSectionView: View {
                     }
 
                     // Wrap badges in FlowLayout
-                    FlowLayout(spacing: 6) {
+                    FlowLayout(spacing: 10) {
                         ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
                             Text(badge.name)
-                                .font(.caption)
+                                .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 6)
+                                    RoundedRectangle(cornerRadius: 8)
                                         .fill(Color(hex: badge.colorHex) ?? .gray)
                                 )
                         }
