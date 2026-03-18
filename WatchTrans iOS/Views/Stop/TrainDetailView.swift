@@ -425,9 +425,9 @@ struct TrainDetailView: View {
         .navigationTitle("Detalles del tren")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            async let alertsTask: () = loadAlerts()
-            async let tripTask: () = loadTripDetails()
-            _ = await (alertsTask, tripTask)
+            // Load sequentially (async let causes swift_task_dealloc crash)
+            await loadAlerts()
+            await loadTripDetails()
         }
     }
 
