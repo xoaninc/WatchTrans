@@ -115,6 +115,17 @@ Badge de ocupación (verde/amarillo/rojo) en ArrivalRowView para departures FGC.
 #### ~~3.19 Estado de servicio de rutas~~ ✅ IMPLEMENTADO
 Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternative_service == true`.
 
+#### 3.20 Campos nuevos de departures (2026-03-18)
+- `trip_short_name` — número de tren (ej. "02381"). Solo Renfe Proximidad y Metro Ligero. Mostrar en TrainDetailView.
+- `wheelchair_accessible_static` — accesibilidad GTFS estática del tren (1=sí, 2=no). 136K trips. Complementa `wheelchair_accessible` (RT).
+- `bikes_allowed` — bicis permitidas (0=no, 1=sí). Badge 🚲 en departures de Metro Sevilla/Granada.
+
+#### 3.21 Zona tarifaria en paradas
+- `zone_id` — zona tarifaria (ej. "A", "B1"). Disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView junto al nombre.
+
+#### 3.22 Nombre de ruta sustituida
+- `alternative_for_short_name` — nombre de la ruta que sustituye (ej. "C1"). Mostrar en LinesListView como "Sustituye C1" cuando `is_alternative_service == true`.
+
 ### Particularidades por operador (info nueva del API doc)
 
 | Operador | Notas para la app |

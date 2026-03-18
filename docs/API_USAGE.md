@@ -95,3 +95,16 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `parking_bicis` ≠ `acerca_service.parking`: el primero es aparcabicis, el segundo parking de coches (solo 56 estaciones).
 - Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`. Metro Sevilla/Tram Sevilla/Zaragoza solo vía `/departures`.
 - Interior source `combined` nuevo para estaciones con datos mixtos.
+
+## Campos nuevos disponibles pero no consumidos (2026-03-18)
+
+**En departures:**
+- `trip_short_name` — número de tren (Renfe Proximidad, Metro Ligero)
+- `wheelchair_accessible_static` — accesibilidad GTFS estática (136K trips)
+- `bikes_allowed` — bicis permitidas (Metro Sevilla, Granada)
+
+**En stops (4 endpoints):**
+- `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante)
+
+**En routes:**
+- `alternative_for_short_name` — nombre de ruta sustituida (solo cuando `is_alternative_service=true`)
