@@ -82,22 +82,52 @@ Mostrar evolución temporal de alertas (ej. "reducido hasta abril, corte total d
 
 ### Pendientes de integrar
 
+#### Modelos desactualizados (ver KNOWN_ISSUES para detalle)
+- **LineResponse** CodingKeys: `color` → `route_color`, `textColor` → `route_text_color`
+- **DepartureResponse** campos nuevos: `is_express`, `express_name`, `pmr_warning`, `alternative_service_warning`, `wheelchair_accessible_now`, `platform_confidence`, `delay_estimated`, `bearing`/`speed`
+- **CompactDepartureResponse** modelo nuevo necesario para Widgets/Siri
+- **AlertResponse active_periods** con `effect` y `phase_description` por fase
+- **AcercaService** falta `source`
+- **RouteShapeResponse** falta `is_circular`
+- **PlatformPredictionResponse** verificar `sample_size` vs `observation_count`
+
 #### 3.1 Tarifas
-`GET /api/gtfs/routes/{route_id}/fares` — GTFS fares (Euskotren 122, Metro Bilbao 25, Metro Sevilla 54).
-`GET /api/gtfs/operators/{operator_id}/fares` — CMS fares (datos pendientes).
+`GET /api/gtfs/routes/{route_id}/fares` — GTFS fares (Euskotren 122, Metro Bilbao 25, Metro Sevilla 54). Campos: `route_id`, `currency`, `payment_method`, `transfers_allowed`, `fares[{price, origin_zone, destination_zone}]`.
+`GET /api/gtfs/operators/{operator_id}/fares` — CMS fares con `fare_code`, `fare_name`, `price`, `zones`, `age_category`, `periodicity`, `large_family`, `travel_limit`.
 
 #### 3.13 Retrasos de trenes (trip-updates)
-`GET /api/gtfs-rt/trip-updates` — retraso con precisión de segundos. Uso en trip detail view.
+`GET /api/gtfs-rt/trip-updates` — retraso con precisión de segundos. Campos: `delay`, `vehicle_id`, `trip_info`. Ordenados por retraso desc.
 
 #### 3.14 Ocupación de vehículos
-`GET /api/gtfs-rt/occupancy` — ocupación por vehículo (FGC envía datos). Icono en departures.
+`GET /api/gtfs-rt/occupancy` — ocupación por vehículo. Campos: `vehicle_id`, `occupancy_status`, `occupancy_percentage`, `occupancy_status_label`, coords. FGC envía datos.
 
 #### 3.19 Estado de servicio de rutas
-`GET /api/gtfs/routes/{route_id}` — `service_status`, `suspended_since`, `is_alternative_service`. Badge en LineDetailView.
+`GET /api/gtfs/routes/{route_id}` — `service_status`, `suspended_since`, `is_alternative_service`. Incluye `stops[]` y `frequencies[]` inline. Agency como objeto `{id, name}`.
+
+### Particularidades por operador (info nueva del API doc)
+
+| Operador | Notas para la app |
+|---|---|
+| **Renfe** | 3 prefijos (`RENFE_C_`, `RENFE_FEVE_`, `RENFE_PROX_`). Express CIVIS (`is_express`). PMR Tipo B alerts. FEVE León incluye buses (route_type=3). |
+| **TMB** | Tablero híbrido. Único con `station_occupancy`. Trip IDs sintéticos. Filtra solo metro+funicular. |
+| **FGC** | Ocupación por vagón (`per-car`). Límite 5,000 req/día. |
+| **Metro Madrid** | Estaciones COMPLEX (padre → sub-estaciones). Interior fuente `crtm_extensions`. Tablero híbrido. |
+| **Euskotren** | IDs con trailing colon (URL-encode `%3A`). Headsign triple fuente (SIRI ET → NeTEx → última parada). Interior `gtfs_pathways`. |
+| **Metro Bilbao** | Interior limitado (`gtfs_entrances`, solo bocas). Colores: L1=#1F1E21, L2=#F1592A, L3=#D10074. |
+| **Metro Sevilla** | Equipment status (TCE). Shapes NAP parcheados. API Cloudflare (proxy FlareSolverr). |
+| **Tranvía Zaragoza** | Basado en ETA (75s). Posición inferida de ETAs. |
+
+### Lógica de departures (referencia del API doc)
+
+- **Hybrid boards**: TMB, Metro Madrid, ML, Metro Sevilla, Tram Sevilla, Tranvía Zaragoza — RT primero, estático rellena con buffer 120s
+- **Overlay**: Renfe, Euskotren, FGC, Metro Bilbao — retrasos/andenes RT sobre horario estático
+- **Headsign cascada**: Euskotren SIRI ET → DB → última parada → `route_short_name`
+- **Andén cascada**: RT directo → historial (stop, route, headsign) → historial (stop, route)
+- **CIVIS**: headsign descartado por el server, usa última parada. `is_express=true`, `express_name="CIVIS"`
 
 ### Sin datos / No prioritarios
 
-- **Ocupación por vagón** — `GET /api/gtfs-rt/vehicles/{id}/occupancy/per-car` — FGC/Metro Madrid. Sin datos consistentes aún.
+- **Ocupación por vagón** — `GET /api/gtfs-rt/vehicles/{id}/occupancy/per-car` — FGC/Metro Madrid.
 - **Stop-time updates** — `GET /api/gtfs-rt/stop-time-updates` — duplica departures.
 - **Agencias** — `GET /api/gtfs/agencies` — uso interno.
 - **Equipment status bulk** — `GET /api/gtfs-rt/equipment-status/?operator_id=` — per-stop ya se usa.
@@ -105,6 +135,7 @@ Mostrar evolución temporal de alertas (ej. "reducido hasta abril, corte total d
 - **Líneas por coordenadas** — `GET /api/gtfs/coordinates/lines` — no prioritario.
 - **Isócrona** — `GET /api/gtfs/journey/isochrone` — no prioritario.
 - **RT completo de parada** — `GET /api/gtfs-rt/stops/{id}/realtime` — legacy/debug.
+- **Children** — `GET /api/gtfs/stops/{id}/children` — ya implementado en fetch.
 
 ---
 
