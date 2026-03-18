@@ -206,7 +206,7 @@ struct LineRouteInfo: Codable {
 // MARK: - Route Response
 
 /// Response from GET /api/gtfs/routes
-struct RouteResponse: Codable, Identifiable {
+struct RouteResponse: Identifiable {
     let id: String
     let shortName: String
     let longName: String
@@ -220,6 +220,16 @@ struct RouteResponse: Codable, Identifiable {
     var serviceStatus: String? = nil  // "active", "suspended", "partial" etc.
     var suspendedSince: String? = nil // ISO date string when service was suspended
     var isAlternativeService: Bool? = nil // true if running an alternative/replacement service
+}
+
+extension RouteResponse: Codable {
+    private struct AgencyObject: Decodable {
+        let id: String
+    }
+
+    private enum AgencyKeys: String, CodingKey {
+        case agency
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, description
@@ -234,6 +244,31 @@ struct RouteResponse: Codable, Identifiable {
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
         case isAlternativeService = "is_alternative_service"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        shortName = try container.decode(String.self, forKey: .shortName)
+        longName = try container.decode(String.self, forKey: .longName)
+        routeType = try container.decode(Int.self, forKey: .routeType)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        textColor = try container.decodeIfPresent(String.self, forKey: .textColor)
+        networkId = try container.decodeIfPresent(String.self, forKey: .networkId)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        isCircular = try container.decodeIfPresent(Bool.self, forKey: .isCircular)
+        serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
+        suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
+        isAlternativeService = try container.decodeIfPresent(Bool.self, forKey: .isAlternativeService)
+
+        // Handle both "agency_id" (flat string) and "agency" (nested object with .id)
+        if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
+            agencyId = flatId
+        } else {
+            let agencyContainer = try decoder.container(keyedBy: AgencyKeys.self)
+            let agency = try agencyContainer.decode(AgencyObject.self, forKey: .agency)
+            agencyId = agency.id
+        }
     }
 }
 

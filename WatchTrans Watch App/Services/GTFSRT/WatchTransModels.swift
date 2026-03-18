@@ -208,7 +208,7 @@ struct LineRouteInfo: Codable {
 // MARK: - Route Response
 
 /// Response from GET /api/gtfs/routes
-struct RouteResponse: Codable, Identifiable {
+struct RouteResponse: Identifiable {
     let id: String
     let shortName: String
     let longName: String
@@ -219,6 +219,16 @@ struct RouteResponse: Codable, Identifiable {
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
     let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
+}
+
+extension RouteResponse: Codable {
+    private struct AgencyObject: Decodable {
+        let id: String
+    }
+
+    private enum AgencyKeys: String, CodingKey {
+        case agency
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, description
@@ -230,6 +240,28 @@ struct RouteResponse: Codable, Identifiable {
         case agencyId = "agency_id"
         case networkId = "network_id"
         case isCircular = "is_circular"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        shortName = try container.decode(String.self, forKey: .shortName)
+        longName = try container.decode(String.self, forKey: .longName)
+        routeType = try container.decode(Int.self, forKey: .routeType)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        textColor = try container.decodeIfPresent(String.self, forKey: .textColor)
+        networkId = try container.decodeIfPresent(String.self, forKey: .networkId)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        isCircular = try container.decodeIfPresent(Bool.self, forKey: .isCircular)
+
+        // Handle both "agency_id" (flat string) and "agency" (nested object with .id)
+        if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
+            agencyId = flatId
+        } else {
+            let agencyContainer = try decoder.container(keyedBy: AgencyKeys.self)
+            let agency = try agencyContainer.decode(AgencyObject.self, forKey: .agency)
+            agencyId = agency.id
+        }
     }
 }
 
