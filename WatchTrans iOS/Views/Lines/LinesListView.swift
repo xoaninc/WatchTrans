@@ -409,6 +409,18 @@ struct LineRowView: View {
                         }
                         .foregroundStyle(alert == "Servicio interrumpido" ? .red : .orange)
                     }
+
+                    // Alternative service (bus replacement)
+                    if line.isAlternativeService == true {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bus.fill")
+                                .font(.caption2)
+                            Text("Servicio alternativo")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundStyle(.orange)
+                    }
                 }
 
                 Spacer()
