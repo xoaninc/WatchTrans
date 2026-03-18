@@ -168,6 +168,8 @@ struct StopDetailView: View {
                         ConnectionsSectionView(
                             stop: stop,
                             dataService: dataService,
+                            locationService: locationService,
+                            favoritesManager: favoritesManager,
                             transportModes: transportModes,
                             stopLatitude: stop.latitude,
                             stopLongitude: stop.longitude
@@ -906,48 +908,57 @@ struct AlertsSectionView: View {
 struct ConnectionsSectionView: View {
     let stop: Stop
     let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
     let transportModes: [TransportModeInfo]
     let stopLatitude: Double
     let stopLongitude: Double
 
     @State private var linesLoaded = false
+    @State private var shakeOffset: CGFloat = 0
+
+    private enum TransportKind: String {
+        case cercanias, metro, metroLigero, tram, funicular, bus
+    }
+
+    private struct ConnectionBadge: Identifiable {
+        let id = UUID()
+        let name: String
+        let colorHex: String
+        let kind: TransportKind
+    }
 
     /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía → Funicular
-    private var allBadges: [(name: String, colorHex: String)] {
-        var badges: [(String, String)] = []
+    private var allBadges: [ConnectionBadge] {
+        var badges: [ConnectionBadge] = []
 
         // 1. Cercanías
-        let cercaniasLines = stop.correspondences?.tren ?? parseLines(stop.corTren)
-        for line in cercaniasLines {
+        for line in stop.correspondences?.tren ?? parseLines(stop.corTren) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((formatBadgeName(line, type: "Cercanías"), color))
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Cercanías"), colorHex: color, kind: .cercanias))
         }
 
         // 2. Metro
-        let metroLines = stop.correspondences?.metro ?? parseLines(stop.corMetro)
-        for line in metroLines {
+        for line in stop.correspondences?.metro ?? parseLines(stop.corMetro) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((formatBadgeName(line, type: "Metro"), color))
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Metro"), colorHex: color, kind: .metro))
         }
 
         // 3. Metro Ligero
-        let mlLines = stop.correspondences?.ml ?? parseLines(stop.corMl)
-        for line in mlLines {
+        for line in stop.correspondences?.ml ?? parseLines(stop.corMl) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((formatBadgeName(line, type: "ML"), color))
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "ML"), colorHex: color, kind: .metroLigero))
         }
 
         // 4. Tranvía
-        let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
-        for line in tramLines {
+        for line in stop.correspondences?.tranvia ?? parseLines(stop.corTranvia) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append((formatBadgeName(line, type: "TRAM"), color))
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "TRAM"), colorHex: color, kind: .tram))
         }
-        
+
         // 5. Funicular
-        let funicularLines = stop.correspondences?.funicular ?? parseLines(stop.corFunicular)
-        for line in funicularLines {
-            badges.append((formatBadgeName(line, type: "Funicular"), "#000000"))
+        for line in stop.correspondences?.funicular ?? parseLines(stop.corFunicular) {
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Funicular"), colorHex: "#000000", kind: .funicular))
         }
 
         return badges
@@ -976,17 +987,31 @@ struct ConnectionsSectionView: View {
 
                     // Wrap badges in FlowLayout
                     FlowLayout(spacing: 10) {
-                        ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
-                            Text(badge.name)
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color(hex: badge.colorHex) ?? .gray)
-                                )
+                        ForEach(badges) { badge in
+                            if let targetStop = findCorrespondenceStop(for: badge), targetStop.id != stop.id {
+                                NavigationLink(destination: StopDetailView(
+                                    stop: targetStop,
+                                    display: nil,
+                                    dataService: dataService,
+                                    locationService: locationService,
+                                    favoritesManager: favoritesManager
+                                )) {
+                                    badgeView(badge)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                // Same stop or not found — shake to indicate "you're here"
+                                badgeView(badge)
+                                    .offset(x: shakeOffset)
+                                    .onTapGesture {
+                                        withAnimation(.default.speed(4).repeatCount(3, autoreverses: true)) {
+                                            shakeOffset = 8
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                            shakeOffset = 0
+                                        }
+                                    }
+                            }
                         }
                     }
                 }
@@ -1000,10 +1025,44 @@ struct ConnectionsSectionView: View {
                             latitude: stopLatitude,
                             longitude: stopLongitude
                         )
-                        linesLoaded = true  // Trigger view update
+                        linesLoaded = true
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func badgeView(_ badge: ConnectionBadge) -> some View {
+        Text(badge.name)
+            .font(.subheadline)
+            .fontWeight(.bold)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(hex: badge.colorHex) ?? .gray)
+            )
+    }
+
+    /// Find the corresponding stop for a badge by matching name and transport type
+    private func findCorrespondenceStop(for badge: ConnectionBadge) -> Stop? {
+        let stopName = stop.name.lowercased()
+        let prefixes: [String]
+        switch badge.kind {
+        case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_"]
+        case .metro: prefixes = ["METRO_", "TMB_METRO_"]
+        case .metroLigero: prefixes = ["ML_", "METRO_LIGERO", "METRO_L_"]
+        case .tram: prefixes = ["TRAM_", "TRANVIA_"]
+        case .funicular: prefixes = ["FUN_", "TMB_FUN_"]
+        case .bus: prefixes = ["BUS_"]
+        }
+
+        return dataService.stops.first { candidate in
+            candidate.id != stop.id &&
+            candidate.name.lowercased() == stopName &&
+            prefixes.contains(where: { candidate.id.hasPrefix($0) })
         }
     }
 
