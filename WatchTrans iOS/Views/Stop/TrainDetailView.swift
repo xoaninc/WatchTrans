@@ -74,7 +74,7 @@ struct TrainDetailView: View {
                 // Time section
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Label("Llegada", systemImage: "clock.fill")
+                        Label("Salida", systemImage: "clock.fill")
                             .font(.headline)
                             .foregroundStyle(.blue)
                         
