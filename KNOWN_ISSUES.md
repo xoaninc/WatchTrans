@@ -64,6 +64,26 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 
 El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta de hoy), y `compact`. La app no los usa.
 
+### Campos nuevos en departures no consumidos
+
+| Campo | Para qué sirve |
+|---|---|
+| `trip_short_name` | Número de tren (ej. "02381"). Solo Renfe Proximidad y Metro Ligero. |
+| `wheelchair_accessible_static` | Accesibilidad GTFS estática del tren (1=accesible, 2=no). 136K trips con dato. |
+| `bikes_allowed` | Bicis permitidas (0=no, 1=sí). Metro Sevilla y Granada tienen `1`. |
+
+### Campos nuevos en stops no consumidos
+
+| Campo | Para qué sirve |
+|---|---|
+| `zone_id` | Zona tarifaria (ej. "A", "B1"). Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia. |
+
+### Campo nuevo en routes no consumido
+
+| Campo | Para qué sirve |
+|---|---|
+| `alternative_for_short_name` | Nombre de la ruta que sustituye (ej. "C1"). Solo cuando `is_alternative_service=true`. |
+
 ### /stops/by-coordinates: param `route_types` no usado
 
 Filtrar paradas por tipo de transporte. Útil para búsqueda filtrada.
