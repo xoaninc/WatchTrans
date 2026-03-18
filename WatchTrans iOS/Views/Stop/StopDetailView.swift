@@ -204,6 +204,8 @@ struct StopDetailView: View {
                         departures: departures,
                         isLoading: isLoading,
                         dataService: dataService,
+                        locationService: locationService,
+                        favoritesManager: favoritesManager,
                         airQualityData: airQualityData
                     )
                 }
@@ -1006,6 +1008,8 @@ struct DeparturesSectionView: View {
     let departures: [Arrival]
     let isLoading: Bool
     let dataService: DataService
+    let locationService: LocationService
+    let favoritesManager: FavoritesManager?
     var airQualityData: [String: TrainAirQuality] = [:]
 
     var body: some View {
