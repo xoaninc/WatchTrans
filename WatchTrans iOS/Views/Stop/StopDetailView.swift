@@ -175,6 +175,7 @@ struct StopDetailView: View {
                             transportModes: transportModes,
                             stopLatitude: stop.latitude,
                             stopLongitude: stop.longitude,
+                            correspondences: correspondences,
                             onAlreadyHere: {
                                 let generator = UINotificationFeedbackGenerator()
                                 generator.notificationOccurred(.warning)
@@ -937,6 +938,7 @@ struct ConnectionsSectionView: View {
     let transportModes: [TransportModeInfo]
     let stopLatitude: Double
     let stopLongitude: Double
+    var correspondences: [CorrespondenceInfo] = []
     var onAlreadyHere: (() -> Void)?
 
     @State private var linesLoaded = false
@@ -1064,19 +1066,33 @@ struct ConnectionsSectionView: View {
             )
     }
 
-    /// Find the corresponding stop for a badge by matching name and transport type
+    /// Find the corresponding stop for a badge.
+    /// First tries API correspondences (exact to_stop_id), then falls back to name+prefix match.
     private func findCorrespondenceStop(for badge: ConnectionBadge) -> Stop? {
-        let stopName = stop.name.lowercased()
         let prefixes: [String]
         switch badge.kind {
         case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_", "SFM_MALLORCA_"]
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
-        case .metroLigero: prefixes = ["ML_"]  // ML_29_STATION etc.
-        case .tram: prefixes = ["TRAM_", "TRANVIA_"]  // TRAM_SEV_, TRAM_BCN_, TRANVIA_ZARAGOZA_
-        case .funicular: prefixes = ["TMB_METRO_", "FGC_"]  // TMB FM uses TMB_METRO_, FGC FV uses FGC_
+        case .metroLigero: prefixes = ["ML_"]
+        case .tram: prefixes = ["TRAM_", "TRANVIA_"]
+        case .funicular: prefixes = ["TMB_METRO_", "FGC_"]
         case .bus: prefixes = ["BUS_"]
         }
 
+        // 1. Try API correspondences — they have the exact to_stop_id
+        for corr in correspondences {
+            let toId = corr.toStopId
+            if toId != stop.id && prefixes.contains(where: { toId.hasPrefix($0) }) {
+                if let found = dataService.stops.first(where: { $0.id == toId }) {
+                    return found
+                }
+                // Stop not in cache — try fetching
+                // (can't async here, so just skip to fallback)
+            }
+        }
+
+        // 2. Fallback: match by name + prefix in loaded stops
+        let stopName = stop.name.lowercased()
         return dataService.stops.first { candidate in
             candidate.id != stop.id &&
             candidate.name.lowercased() == stopName &&
