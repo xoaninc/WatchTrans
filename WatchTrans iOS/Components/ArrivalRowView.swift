@@ -61,6 +61,7 @@ struct ArrivalRowView: View {
 
             // Destination and info
             VStack(alignment: .leading, spacing: 4) {
+                // Line 1: destination + train code + composition
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.right")
                         .font(.caption)
@@ -68,62 +69,70 @@ struct ArrivalRowView: View {
                     Text(arrival.destination)
                         .font(.body)
                         .lineLimit(1)
-                    // Train code (e.g., "75106") in subtle gray
                     if let code = arrival.trainCode, !code.isEmpty {
                         Text(code)
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
-
-                    // Show /Doble inline for Metro Sevilla double composition
                     if arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
                         Text("/Doble")
                             .font(.body)
                             .foregroundStyle(.blue)
                     }
+                }
 
-                    // Express badge (CIVIS)
-                    if arrival.isExpress, let name = arrival.expressName {
-                        Text(name)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
-                            .cornerRadius(4)
-                    }
+                // Line 2: service icons (express, accessibility, bikes, warnings)
+                let hasIcons = arrival.isExpress ||
+                    arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 ||
+                    arrival.bikesAllowed == 1 ||
+                    arrival.isAlternativeService ||
+                    arrival.pmrWarning
 
-                    // Wheelchair accessible train (RT or static fallback)
-                    if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
-                        Image(systemName: "figure.roll")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    }
-
-                    // Bikes allowed
-                    if arrival.bikesAllowed == 1 {
-                        Image(systemName: "bicycle")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
-
-                    // Alternative service (bus replacement)
-                    if arrival.isAlternativeService {
-                        Image(systemName: "bus.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-
-                    // PMR warning (accessibility issue on route)
-                    if arrival.pmrWarning {
-                        HStack(spacing: 1) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 8))
-                            Image(systemName: "figure.roll")
-                                .font(.system(size: 10))
+                if hasIcons {
+                    HStack(spacing: 6) {
+                        // Express badge (CIVIS)
+                        if arrival.isExpress, let name = arrival.expressName {
+                            Text(name)
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
+                                .cornerRadius(4)
                         }
-                        .foregroundStyle(.orange)
+
+                        // Wheelchair accessible
+                        if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
+                            Image(systemName: "figure.roll")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        }
+
+                        // Bikes allowed
+                        if arrival.bikesAllowed == 1 {
+                            Image(systemName: "bicycle")
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
+
+                        // Alternative service (bus replacement)
+                        if arrival.isAlternativeService {
+                            Image(systemName: "bus.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+
+                        // PMR warning
+                        if arrival.pmrWarning {
+                            HStack(spacing: 1) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 8))
+                                Image(systemName: "figure.roll")
+                                    .font(.system(size: 10))
+                            }
+                            .foregroundStyle(.orange)
+                        }
                     }
                 }
 
