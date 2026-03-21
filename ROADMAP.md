@@ -130,8 +130,20 @@ Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternati
 #### 3.21 Zona tarifaria en paradas
 - `zone_id` — zona tarifaria (ej. "A", "B1"). Disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView junto al nombre.
 
-#### 3.22 Nombre de ruta sustituida
-- `alternative_for_short_name` — nombre de la ruta que sustituye (ej. "C1"). Mostrar en LinesListView como "Sustituye C1" cuando `is_alternative_service == true`.
+#### ~~3.22 Nombre de ruta sustituida~~ ✅ IMPLEMENTADO (2026-03-21)
+"Sustituye C1" en LinesListView cuando `alternative_for_short_name` disponible.
+
+#### 3.24 vehicle_composition campo dedicado (2026-03-21)
+- `vehicle_composition` (`"single"`/`"double"`) en departures Metro Sevilla. Reemplaza hack de comma en `vehicleLabel`. Campo dedicado ahora disponible.
+
+#### 3.25 Endpoint dedicado de calidad de aire (2026-03-21)
+- `GET /api/gtfs-rt/air-quality/` — CO2, humedad, temperatura por unidad de tren Metro Sevilla. Reemplaza workaround via `/vehicles?enrich=true`.
+
+#### 3.26 Detalles de transporte alternativo en alertas (2026-03-21)
+- `alternative_transport[]` en alertas tiene `type`, `route`, `frequency_minutes`. App solo usa boolean `alternative_service_warning`, no muestra los detalles.
+
+#### 3.27 Contenido rico en alertas Metro Sevilla (2026-03-21)
+- `content` (HTML) e `image_url` en alertas de noticias Metro Sevilla. Baja prioridad.
 
 ### Particularidades por operador (info nueva del API doc)
 
@@ -143,8 +155,9 @@ Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternati
 | **Metro Madrid** | Estaciones COMPLEX (padre → sub-estaciones). Interior fuente `crtm_extensions`. Tablero híbrido. |
 | **Euskotren** | IDs con trailing colon (URL-encode `%3A`). Headsign triple fuente (SIRI ET → NeTEx → última parada). Interior `gtfs_pathways`. |
 | **Metro Bilbao** | Interior limitado (`gtfs_entrances`, solo bocas). Colores: L1=#1F1E21, L2=#F1592A, L3=#D10074. |
-| **Metro Sevilla** | Equipment status (TCE). Shapes NAP parcheados. API Cloudflare (proxy FlareSolverr). |
-| **Tranvía Zaragoza** | Basado en ETA (75s). Posición inferida de ETAs. |
+| **Metro Sevilla** | Equipment status (TCE). Shapes NAP parcheados. Ahora en `ALLOWED_RT_OPERATORS` (2026-03-21). `vehicle_composition`, `train_code`, air quality dedicado. |
+| **Tram Sevilla** | Alertas implementadas via Tussam avisos (2026-03-21). Azure proxy (100% success, <5s). Ahora en `ALLOWED_RT_OPERATORS`. |
+| **Tranvía Zaragoza** | Basado en ETA (75s). Posición inferida de ETAs. Ahora en `ALLOWED_RT_OPERATORS` (2026-03-21). |
 
 ### Lógica de departures (referencia del API doc)
 

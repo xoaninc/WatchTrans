@@ -70,11 +70,25 @@ El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta 
 |---|---|
 | `zone_id` | Zona tarifaria (ej. "A", "B1"). Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia. |
 
-### Campo nuevo en routes no consumido
+### ~~Campo nuevo en routes no consumido~~ ✅ IMPLEMENTADO
 
-| Campo | Para qué sirve |
-|---|---|
-| `alternative_for_short_name` | Nombre de la ruta que sustituye (ej. "C1"). Solo cuando `is_alternative_service=true`. |
+`alternative_for_short_name` — "Sustituye C1" en LinesListView.
+
+### vehicle_composition campo dedicado no usado
+
+`vehicle_composition` (`"single"`/`"double"`) en departures Metro Sevilla. App usa hack de comma en `vehicleLabel`. Migrar al campo dedicado.
+
+### alternative_transport detalles no mostrados
+
+La app decodifica `AlternativeTransport` pero no muestra los detalles (ruta bus, frecuencia). Solo usa el boolean `alternative_service_warning`.
+
+### Alertas Metro Sevilla: content + image_url no mostrados
+
+Alertas de noticias de Metro Sevilla tienen `content` (HTML) e `image_url`. La app solo muestra `headerText`/`descriptionText`.
+
+### Endpoint /air-quality/ no integrado
+
+`GET /api/gtfs-rt/air-quality/` — endpoint dedicado para calidad de aire Metro Sevilla. App usa `/vehicles?enrich=true` como workaround.
 
 ### /stops/by-coordinates: param `route_types` no usado
 

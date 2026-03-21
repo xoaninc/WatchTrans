@@ -64,6 +64,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /stops/{stop_id}/realtime` | ⚠️ Dead code | Fetch existe, nunca se llama. Legacy/debug. |
 | `GET /vehicles` | ✅ | `StopDetailView` — air quality Metro Sevilla |
 | `GET /occupancy` | ✅ | `StopDetailView` — ocupación vehículos FGC |
+| `GET /air-quality/` | ❌ | Endpoint dedicado calidad aire Metro Sevilla. App usa `/vehicles?enrich=true`. ROADMAP 3.25. |
 | `GET /vehicles/{id}/occupancy/per-car` | ❌ | Sin datos consistentes. |
 | `GET /stop-time-updates` | ❌ | Duplica departures. |
 | `GET /equipment-status/?operator_id=` | ❌ | Bulk. Per-stop ya se usa. |
@@ -86,9 +87,9 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | Categoría | ✅ Usados | ⚠️ Dead code | ❌ No usados |
 |-----------|-----------|--------------|-------------|
 | GTFS Static | 23 | 0 | 10 |
-| GTFS-RT | 9 | 1 | 4 |
+| GTFS-RT | 9 | 1 | 5 |
 | Admin | 0 | 2 | 6 |
-| **Total** | **32** | **3** | **20** |
+| **Total** | **32** | **3** | **21** |
 
 ## Notas de cambios del backend (2026-03-18)
 
@@ -101,7 +102,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`. Metro Sevilla/Tram Sevilla/Zaragoza solo vía `/departures`.
 - Interior source `combined` nuevo para estaciones con datos mixtos.
 
-## Campos nuevos consumidos (2026-03-21)
+## Campos consumidos (2026-03-21)
 
 **En departures (implementados):**
 - `train_code` — código operativo del tren (Renfe, TMB, Metro Bilbao, Metro Sevilla, Tram Sevilla)
@@ -109,12 +110,26 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `wheelchair_accessible_static` — accesibilidad estática, complementa RT
 - `bikes_allowed` — badge bici en departures
 
-**En stops (4 endpoints, no consumidos aún):**
-- `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante)
+**En routes (implementados):**
+- `alternative_for_short_name` — "Sustituye C1" en LinesListView
 
-**En routes (no consumidos aún):**
-- `alternative_for_short_name` — nombre de ruta sustituida
+## Campos disponibles no consumidos (2026-03-21)
+
+**En departures:**
+- `vehicle_composition` — `"single"`/`"double"` para Metro Sevilla. App usa hack comma en vehicleLabel. ROADMAP 3.24.
+
+**En alerts:**
+- `alternative_transport[]` detalles — ruta bus, frecuencia. App solo usa boolean. ROADMAP 3.26.
+- `content` + `image_url` — contenido rico en alertas Metro Sevilla news. ROADMAP 3.27.
+
+**En stops:**
+- `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante). ROADMAP 3.21.
+
+**En routes:**
 - `route_url` — URL de la página del operador
+
+**Endpoints no integrados:**
+- `GET /api/gtfs-rt/air-quality/` — endpoint dedicado calidad aire Metro Sevilla. ROADMAP 3.25.
 
 ## Notas de cambios del backend (2026-03-21)
 
@@ -122,3 +137,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `alternative_service_warning` ahora solo mira `route_id` del departure, no `stop_id` compartido.
 - `alternative_service_warning` solo con alternative_transport real (NO_SERVICE/DETOUR siempre; MODIFIED/REDUCED solo con bus/reroute).
 - Equipment status: `direction: "disabled"` con `is_operational: true` = equipo no disponible.
+- Metro Sevilla + Tram Sevilla + Tranvía Zaragoza añadidos a `ALLOWED_RT_OPERATORS`.
+- Tram Sevilla alertas implementadas via Tussam avisos API. FlareSolverr reemplazado por Azure proxy (100% success, <5s).
+- Delay buffer 90 min: backend no pierde trenes retrasados del tablero. Transparente para la app.
+- Hybrid board enrichment: `bikes_allowed`, `wheelchair_accessible_static`, `trip_short_name` ahora poblados para operadores híbridos.
