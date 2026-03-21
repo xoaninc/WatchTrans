@@ -652,8 +652,9 @@ struct JourneyStopsListView: View {
             VStack(spacing: 0) {
                 // Top line (not for first stop)
                 if index > 0 {
+                    let prevStatus = index > 0 ? stopStatus(for: stops[index - 1], at: index - 1) : .upcoming
                     Rectangle()
-                        .fill(status == .passed ? lineColor : Color.gray.opacity(0.3))
+                        .fill(status == .passed || prevStatus == .current ? lineColor : Color.gray.opacity(0.3))
                         .frame(width: 3, height: 12)
                 } else {
                     Spacer().frame(height: 12)
