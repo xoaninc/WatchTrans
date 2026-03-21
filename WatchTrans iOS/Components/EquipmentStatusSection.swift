@@ -20,8 +20,9 @@ struct EquipmentStatusSection: View {
         equipment.filter { !$0.isBroken }
     }
 
-    /// Outside operating hours → nightly shutdown, show "Metro cerrado"
+    /// All equipment is marked as broken and we're outside operating hours → nightly shutdown
     private var isNightlyShutdown: Bool {
+        guard working.isEmpty, !broken.isEmpty else { return false }
         guard let hours = operatingHours else { return false }
         return !isWithinOperatingHours(hours)
     }
