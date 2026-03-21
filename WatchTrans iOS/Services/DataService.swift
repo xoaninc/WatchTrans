@@ -1046,7 +1046,8 @@ class DataService {
                     isCircular: route.isCircular ?? false,
                     serviceStatus: route.serviceStatus,
                     suspendedSince: route.suspendedSince,
-                    isAlternativeService: route.isAlternativeService
+                    isAlternativeService: route.isAlternativeService,
+                    alternativeForShortName: route.alternativeForShortName
                 )
                 lineDict[lineId] = (
                     line: line,
@@ -1071,7 +1072,8 @@ class DataService {
                 suspensionAlert: nil,  // Will be populated below
                 serviceStatus: value.line.serviceStatus,
                 suspendedSince: value.line.suspendedSince,
-                isAlternativeService: value.line.isAlternativeService
+                isAlternativeService: value.line.isAlternativeService,
+                alternativeForShortName: value.line.alternativeForShortName
             )
         }
 
@@ -1232,7 +1234,8 @@ class DataService {
                         isCircular: line.isCircular,
                         serviceStatus: line.serviceStatus,
                         suspendedSince: line.suspendedSince,
-                        isAlternativeService: line.isAlternativeService
+                        isAlternativeService: line.isAlternativeService,
+                        alternativeForShortName: line.alternativeForShortName
                     )
                     didUpdate = true
                     DebugLog.log("🏷️ [DataService] Improved line name: \(line.name) -> \(derived)")

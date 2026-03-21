@@ -415,9 +415,15 @@ struct LineRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "bus.fill")
                                 .font(.caption2)
-                            Text("Servicio alternativo")
-                                .font(.caption2)
-                                .fontWeight(.medium)
+                            if let replaced = line.alternativeForShortName, !replaced.isEmpty {
+                                Text("Sustituye \(replaced)")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            } else {
+                                Text("Servicio alternativo")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
                         }
                         .foregroundStyle(.orange)
                     }

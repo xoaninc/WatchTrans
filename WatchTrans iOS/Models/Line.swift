@@ -21,6 +21,7 @@ struct Line: Identifiable, Codable, Equatable, Hashable {
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
     let isAlternativeService: Bool? // true if running an alternative/replacement service
+    let alternativeForShortName: String? // Name of route being substituted (e.g., "C1")
 
     // Computed property for SwiftUI Color (uses Color+Hex extension)
     var color: Color {

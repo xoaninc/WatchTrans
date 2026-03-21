@@ -251,6 +251,7 @@ struct RouteResponse: Identifiable {
     var serviceStatus: String? = nil  // "active", "suspended", "partial" etc.
     var suspendedSince: String? = nil // ISO date string when service was suspended
     var isAlternativeService: Bool? = nil // true if running an alternative/replacement service
+    var alternativeForShortName: String? = nil // Name of the route being substituted (e.g., "C1")
 }
 
 extension RouteResponse: Codable {
@@ -275,6 +276,7 @@ extension RouteResponse: Codable {
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
         case isAlternativeService = "is_alternative_service"
+        case alternativeForShortName = "alternative_for_short_name"
     }
 
     init(from decoder: Decoder) throws {
@@ -291,6 +293,7 @@ extension RouteResponse: Codable {
         serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
         suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
         isAlternativeService = try container.decodeIfPresent(Bool.self, forKey: .isAlternativeService)
+        alternativeForShortName = try container.decodeIfPresent(String.self, forKey: .alternativeForShortName)
 
         // Handle both "agency_id" (flat string) and "agency" (nested object with .id)
         if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
