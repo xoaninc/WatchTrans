@@ -58,7 +58,7 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 
 ### route-planner: parámetros nuevos no usados
 
-El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta de hoy), y `compact`. La app no los usa.
+El endpoint acepta `arrive_by` (hora de llegada deseada), `travel_date` (planificar para otra fecha), y `compact` (respuesta ligera). La app solo usa `departure_time` con hora actual. Pendiente añadir selector de hora/fecha en JourneyPlannerView.
 
 ### ~~Campos nuevos en departures no consumidos~~ ✅ IMPLEMENTADO
 
@@ -78,9 +78,9 @@ El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta 
 
 `vehicle_composition` decodificado. Mapper usa campo API primero, fallback a hack comma en `tripId`.
 
-### alternative_transport detalles no mostrados
+### ~~alternative_transport detalles no mostrados~~ ✅ YA IMPLEMENTADO
 
-La app decodifica `AlternativeTransport` pero no muestra los detalles (ruta bus, frecuencia). Solo usa el boolean `alternative_service_warning`.
+UI ya existe en StopDetailView y LineDetailView: "Transporte alternativo" con icono, descripción, from → to.
 
 ### Alertas Metro Sevilla: content + image_url no mostrados
 
@@ -92,7 +92,7 @@ Migrado a `GET /api/gtfs-rt/air-quality/`. Match por `train_code` ↔ `vehicle_i
 
 ### /stops/by-coordinates: param `route_types` no usado
 
-Filtrar paradas por tipo de transporte. Útil para búsqueda filtrada.
+Filtrar paradas por tipo de transporte (ej. `?route_types=1` solo metro, `?route_types=2` solo tren). Útil para añadir un selector de tipo de transporte en el mapa o en la sección de búsqueda. Pendiente decidir ubicación en la UI.
 
 ### ~~NetworkResponse dead fields~~ ✅ RESUELTO
 
