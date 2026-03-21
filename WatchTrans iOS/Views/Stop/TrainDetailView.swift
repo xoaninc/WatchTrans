@@ -376,11 +376,9 @@ struct TrainDetailView: View {
                             .padding(.top, 4)
                         }
 
-                        // Position freshness
+                        // Log position freshness
                         if let ts = arrival.trainPositionTimestamp, let ago = timeAgo(from: ts) {
-                            Text("Actualizado \(ago)")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                            let _ = DebugLog.log("📍 [TrainDetail] Position freshness: \(ago) (ts: \(ts))")
                         }
                     } else {
                         HStack {
