@@ -114,6 +114,25 @@ struct TrainDetailView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.green.opacity(0.15))
                             )
+                        } else if arrival.wheelchairInaccessible {
+                            HStack(spacing: 4) {
+                                ZStack {
+                                    Image(systemName: "figure.roll")
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 16, weight: .light))
+                                }
+                                .font(.subheadline)
+                                Text("No accesible")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.red.opacity(0.15))
+                            )
                         }
                     }
 
@@ -356,6 +375,13 @@ struct TrainDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.top, 4)
                         }
+
+                        // Position freshness
+                        if let ts = arrival.trainPositionTimestamp, let ago = timeAgo(from: ts) {
+                            Text("Actualizado \(ago)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     } else {
                         HStack {
                             Image(systemName: "questionmark.circle")
@@ -473,6 +499,18 @@ struct TrainDetailView: View {
         case "red": return .red
         default: return .gray
         }
+    }
+
+    private func timeAgo(from isoString: String) -> String? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: isoString) ?? ISO8601DateFormatter().date(from: isoString) else { return nil }
+        let seconds = Int(-date.timeIntervalSinceNow)
+        if seconds < 5 { return "ahora" }
+        if seconds < 60 { return "hace \(seconds)s" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "hace \(minutes) min" }
+        return nil
     }
 
     private func loadTripDetails() async {

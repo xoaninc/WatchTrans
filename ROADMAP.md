@@ -139,6 +139,9 @@ Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternati
 #### ~~3.25 Endpoint dedicado de calidad de aire~~ ✅ IMPLEMENTADO (2026-03-21)
 `GET /api/gtfs-rt/air-quality/` integrado. Match por `train_code` ↔ `vehicle_id`. Reemplaza workaround `/vehicles?enrich=true`.
 
+#### 3.28 Mapa de vehículos en tiempo real (2026-03-21)
+- `destination` campo en `/vehicles` — headsign del vehículo. Útil para mostrar pins en mapa RT con label "→ Luis de Morales". Requiere nueva vista de mapa de vehículos.
+
 #### 3.26 Detalles de transporte alternativo en alertas (2026-03-21)
 - `alternative_transport[]` en alertas tiene `type`, `route`, `frequency_minutes`. App solo usa boolean `alternative_service_warning`, no muestra los detalles.
 
