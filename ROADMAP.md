@@ -2,7 +2,7 @@
 
 Features pendientes, bugs y mejoras técnicas.
 
-**Última actualización:** 2026-03-18
+**Última actualización:** 2026-03-21
 
 ---
 
@@ -62,8 +62,11 @@ Modelos sync + UI para express CIVIS y PMR warning.
 - **Alertas** — `/gtfs-rt/alerts` — con filtros route_id, stop_id, `AlertFilterHelper`, effects GTFS-RT, `AlternativeTransport`
 - **Alertas por parada** — badges en Home, inline en LineDetailView, sección en StopDetailView. iOS + Watch.
 - **Interior de estaciones** — `/stops/{id}/station-interior` — `StationInteriorSection` con accesos, recorridos, vestíbulos, niveles. Solo iOS.
-- **Equipment status** — `/gtfs-rt/equipment-status/{stop_id}` — `EquipmentStatusSection` con iconos AIGA. Solo Metro Sevilla tiene datos. Solo iOS.
-- **Accesibilidad** — `wheelchairBoarding` badge, `wheelchairAccessible` per-tren, `AcercaService` PMR, `pmrWarning` per-departure. Solo iOS.
+- **Equipment status** — `/gtfs-rt/equipment-status/{stop_id}` — `EquipmentStatusSection` con iconos AIGA, cierre nocturno automático via `/operating-hours`. Solo Metro Sevilla tiene datos. Solo iOS.
+- **Accesibilidad** — `wheelchairBoarding` badge, `wheelchairAccessible` per-tren, `AcercaService` PMR (Atendo), `pmrWarning` per-departure. Solo iOS.
+- **Train code** — código operativo del tren (`train_code`) en ArrivalRowView y TrainDetailView. Renfe, TMB, Metro Bilbao, Metro Sevilla, Tram Sevilla. Solo iOS.
+- **Correspondencias navegables** — badges tappable que navegan a la parada correspondiente (ej. Metro → Cercanías). Scroll-to-top + haptic si ya estás en la parada. Solo iOS.
+- **Journey stops navegables** — paradas del itinerario en TrainDetailView son tappable para abrir StopDetailView. Solo iOS.
 - **Express CIVIS** — badge con `expressName` + `expressColor` en departures. Solo iOS.
 - **Fases de alertas** — `AlertActivePeriod` con fechas y colores por efecto en `AlertBannerView`. Solo iOS.
 - **Parking Bici** — badge 🚲 "Parking Bici" en StopDetailView. Solo iOS.
@@ -97,6 +100,9 @@ Modelos sync + UI para express CIVIS y PMR warning.
 - **Búsqueda en rango horario** — solo iOS.
 - **Interior de estaciones** — solo iOS.
 - **Accesibilidad** (badges, Acerca PMR) — solo iOS.
+- **Train code** — solo iOS.
+- **Correspondencias navegables** — solo iOS.
+- **Journey stops navegables** — solo iOS.
 
 ### Pendientes de integrar
 
@@ -115,10 +121,11 @@ Badge de ocupación (verde/amarillo/rojo) en ArrivalRowView para departures FGC.
 #### ~~3.19 Estado de servicio de rutas~~ ✅ IMPLEMENTADO
 Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternative_service == true`.
 
-#### 3.20 Campos nuevos de departures (2026-03-18)
-- `trip_short_name` — número de tren (ej. "02381"). Solo Renfe Proximidad y Metro Ligero. Mostrar en TrainDetailView.
-- `wheelchair_accessible_static` — accesibilidad GTFS estática del tren (1=sí, 2=no). 136K trips. Complementa `wheelchair_accessible` (RT).
-- `bikes_allowed` — bicis permitidas (0=no, 1=sí). Badge 🚲 en departures de Metro Sevilla/Granada.
+#### ~~3.20 Campos nuevos de departures~~ ✅ IMPLEMENTADO
+`trip_short_name`, `wheelchair_accessible_static`, `bikes_allowed` — modelos + UI en TrainDetailView y ArrivalRowView.
+
+#### ~~3.23 Train code~~ ✅ IMPLEMENTADO (2026-03-21)
+`train_code` — código operativo del vehículo. Mostrado en gris junto al headsign en ArrivalRowView y con icono # en TrainDetailView. Disponible para Renfe ("75106"), TMB ("110"), Metro Bilbao ("510"), Metro Sevilla ("MS-07"), Tram Sevilla ("1309"). Null para FGC/Euskotren.
 
 #### 3.21 Zona tarifaria en paradas
 - `zone_id` — zona tarifaria (ej. "A", "B1"). Disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView junto al nombre.

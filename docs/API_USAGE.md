@@ -1,7 +1,7 @@
 # WatchTrans App — API Usage Map
 
 **Base URL:** `https://api.watch-trans.app`
-**Última actualización:** 2026-03-18
+**Última actualización:** 2026-03-21
 
 Referencia de qué endpoints consume la app y cuáles no.
 Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Server/docs/API_ENDPOINTS.md`
@@ -36,8 +36,8 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /route-planner/range` | ✅ | `DataService.fetchRoutePlanRange` — rRAPTOR por franja |
 | `GET /trips/{trip_id}` | ✅ | `DataService.fetchTrip` — detalle de viaje |
 | `GET /stops/{id}/departures?compact=true` | ❌ | Modelo `CompactDepartureResponse` no existe. Pendiente para Widgets. |
-| `GET /routes/{route_id}/fares` | ❌ | ROADMAP 3.1. |
-| `GET /operators/{operator_id}/fares` | ❌ | ROADMAP 3.1. |
+| `GET /routes/{route_id}/fares` | ✅ | `LineDetailView` — tarifas por zona |
+| `GET /operators/{operator_id}/fares` | ❌ | CMS fares. No prioritario. |
 | `GET /agencies` | ❌ | Uso interno. |
 | `GET /coordinates/lines` | ❌ | No prioritario. |
 | `GET /province/{name}/lines` | ❌ | No prioritario. |
@@ -60,10 +60,10 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /station-occupancy` | ✅ | `StopDetailView.loadData` — ocupación TMB |
 | `GET /equipment-status/{stop_id}` | ✅ | `StopDetailView.loadData` — ascensores Metro Sevilla |
 | `GET /stats` | ⚠️ Dead code | Fetch existe, nunca se llama |
-| `GET /trip-updates` | ⚠️ Dead code | Fetch existe, nunca se llama. ROADMAP 3.13. |
+| `GET /trip-updates` | ✅ | `TrainDetailView` — delay preciso (min+seg) |
 | `GET /stops/{stop_id}/realtime` | ⚠️ Dead code | Fetch existe, nunca se llama. Legacy/debug. |
-| `GET /vehicles` | ⚠️ Dead code | Fetch existe, nunca se llama desde vistas |
-| `GET /occupancy` | ❌ | ROADMAP 3.14. |
+| `GET /vehicles` | ✅ | `StopDetailView` — air quality Metro Sevilla |
+| `GET /occupancy` | ✅ | `StopDetailView` — ocupación vehículos FGC |
 | `GET /vehicles/{id}/occupancy/per-car` | ❌ | Sin datos consistentes. |
 | `GET /stop-time-updates` | ❌ | Duplica departures. |
 | `GET /equipment-status/?operator_id=` | ❌ | Bulk. Per-stop ya se usa. |
@@ -85,10 +85,10 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 | Categoría | ✅ Usados | ⚠️ Dead code | ❌ No usados |
 |-----------|-----------|--------------|-------------|
-| GTFS Static | 22 | 0 | 11 |
-| GTFS-RT | 6 | 4 | 4 |
+| GTFS Static | 23 | 0 | 10 |
+| GTFS-RT | 9 | 1 | 4 |
 | Admin | 0 | 2 | 6 |
-| **Total** | **28** | **6** | **21** |
+| **Total** | **32** | **3** | **20** |
 
 ## Notas de cambios del backend (2026-03-18)
 
@@ -101,16 +101,24 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`. Metro Sevilla/Tram Sevilla/Zaragoza solo vía `/departures`.
 - Interior source `combined` nuevo para estaciones con datos mixtos.
 
-## Campos nuevos disponibles pero no consumidos (2026-03-18)
+## Campos nuevos consumidos (2026-03-21)
 
-**En departures:**
-- `trip_short_name` — número de tren (Renfe Proximidad, Metro Ligero)
-- `wheelchair_accessible_static` — accesibilidad GTFS estática (136K trips)
-- `bikes_allowed` — bicis permitidas (Metro Sevilla, Granada)
+**En departures (implementados):**
+- `train_code` — código operativo del tren (Renfe, TMB, Metro Bilbao, Metro Sevilla, Tram Sevilla)
+- `trip_short_name` — número de tren en TrainDetailView
+- `wheelchair_accessible_static` — accesibilidad estática, complementa RT
+- `bikes_allowed` — badge bici en departures
 
-**En stops (4 endpoints):**
+**En stops (4 endpoints, no consumidos aún):**
 - `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante)
 
-**En routes:**
-- `alternative_for_short_name` — nombre de ruta sustituida (solo cuando `is_alternative_service=true`)
-- `route_url` — URL de la página del operador para esta ruta
+**En routes (no consumidos aún):**
+- `alternative_for_short_name` — nombre de ruta sustituida
+- `route_url` — URL de la página del operador
+
+## Notas de cambios del backend (2026-03-21)
+
+- `train_code` nuevo campo en departures, vehicles, trip-updates. Código operativo limpio extraído de `vehicle_id`.
+- `alternative_service_warning` ahora solo mira `route_id` del departure, no `stop_id` compartido.
+- `alternative_service_warning` solo con alternative_transport real (NO_SERVICE/DETOUR siempre; MODIFIED/REDUCED solo con bus/reroute).
+- Equipment status: `direction: "disabled"` con `is_operational: true` = equipo no disponible.

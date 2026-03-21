@@ -12,11 +12,9 @@
 
 Corregido: `route_color` y `route_text_color` en `LineResponse` y `LineRouteInfo`.
 
-## ~~DepartureResponse campos nuevos~~ ✅ MODELOS AÑADIDOS
+## ~~DepartureResponse campos nuevos~~ ✅ IMPLEMENTADO
 
-Campos decodificados pero sin UI: `isExpress`, `expressName`, `expressColor`, `pmrWarning`, `alternativeServiceWarning`, `wheelchairAccessibleNow`, `platformConfidence`, `delayEstimated`, `stationOccupancyPct`, `stationOccupancyStatus`. También `bearing`/`speed` en TrainPosition.
-
-**Pendiente Plan B:** UI para express badge CIVIS, aviso PMR, aviso servicio alternativo.
+Todos los campos con UI: express CIVIS badge, PMR warning, alternative service, train_code. `platformConfidence` y `delayEstimated` decodificados sin UI (deferred).
 
 ## ~~AcercaService falta source~~ ✅ RESUELTO
 
@@ -24,11 +22,9 @@ Campos decodificados pero sin UI: `isExpress`, `expressName`, `expressColor`, `p
 
 API manda `severity_level`, no `severity`. CodingKey corregido.
 
-## ~~Alertas active_periods fases~~ ✅ MODELOS AÑADIDOS
+## ~~Alertas active_periods fases~~ ✅ IMPLEMENTADO
 
-`AlertActivePeriod` struct con `effect` y `phaseDescription`. Decodifica pero sin UI todavía.
-
-**Pendiente Plan B:** Mostrar fases temporales en alertas.
+`AlertActivePeriod` con fases temporales en `AlertBannerView`.
 
 ## ~~TrainPosition bearing/speed~~ ✅ RESUELTO
 
@@ -64,13 +60,9 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 
 El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta de hoy), y `compact`. La app no los usa.
 
-### Campos nuevos en departures no consumidos
+### ~~Campos nuevos en departures no consumidos~~ ✅ IMPLEMENTADO
 
-| Campo | Para qué sirve |
-|---|---|
-| `trip_short_name` | Número de tren (ej. "02381"). Solo Renfe Proximidad y Metro Ligero. |
-| `wheelchair_accessible_static` | Accesibilidad GTFS estática del tren (1=accesible, 2=no). 136K trips con dato. |
-| `bikes_allowed` | Bicis permitidas (0=no, 1=sí). Metro Sevilla y Granada tienen `1`. |
+`trip_short_name`, `wheelchair_accessible_static`, `bikes_allowed`, `train_code` — todos decodificados y con UI.
 
 ### Campos nuevos en stops no consumidos
 
