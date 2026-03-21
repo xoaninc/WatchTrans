@@ -153,9 +153,35 @@ Símbolos de transporte relevantes (PI TF):
 
 | Concepto | Estado |
 |----------|--------|
-| Funicular | Sin icono. Candidatos: Temaki `gondola_lift` (CC0) |
-| Teleférico | Sin icono. Candidato: Temaki `gondola_lift` o `chairlift` (CC0) |
+| Funicular | Sin icono. Candidatos: Temaki `gondola_lift` (CC0), ISO 7001 PI TF 012 |
+| Teleférico | Sin icono. Candidatos: Temaki `gondola_lift` o `chairlift` (CC0), ISO 7001 PI TF 011 |
 | Metro (pictograma propio) | Usamos `tram.fill` genérico. No hay pictograma diferenciado |
+| Ferry | Sin icono. Candidatos: ISO 7001 PI TF 004, Temaki `ferry` (CC0) |
+
+## Bugs / datos de la API sin símbolo
+
+### `corBus` — correspondencia bus no se muestra
+
+El campo `corBus` existe en el modelo `Stop` y se decodifica de la API, pero en `StopDetailView` los badges de correspondencia bus **nunca se añaden** a `allBadges`. El `TransportKind.bus` existe en el enum pero no se procesa. Necesita implementación + icono `bus.fill`.
+
+### `routeType` (GTFS) — decodificado pero no usado
+
+`RouteResponse.routeType: Int` se decodifica de la API pero no se usa para nada visual ni lógico. Valores GTFS estándar:
+
+| Valor | Tipo | Icono que podría usar |
+|-------|------|----------------------|
+| 0 | Tram/Streetcar | `tram` / `lightrail.fill` |
+| 1 | Subway/Metro | `tram.tunnel.fill` |
+| 2 | Rail (cercanías, regional) | `train.side.front.car` |
+| 3 | Bus | `bus.fill` |
+| 4 | Ferry | — (sin icono) |
+| 5 | Cable tram | — (sin icono) |
+| 6 | Gondola/aerial | — (sin icono) |
+| 7 | Funicular | — (sin icono) |
+| 11 | Trolleybus | `bus.fill` |
+| 12 | Monorail | — (sin icono) |
+
+Actualmente el tipo de transporte se determina por prefijo del stop ID (`METRO_*`, `RENFE_C_*`, etc.), no por `routeType`. Podría usarse `routeType` como fuente de verdad para asignar iconos automáticamente.
 
 ## Pendiente (KNOWN_ISSUES.md)
 
@@ -163,3 +189,5 @@ Símbolos de transporte relevantes (PI TF):
 - Revisar licencia de StairClimbingSymbol
 - Evaluar fuentes adicionales (Temaki, Maki, Material Design, Accesibiliconos)
 - Considerar convertir EPS relevantes a SVG para imagesets
+- Implementar badges de correspondencia bus (`corBus`)
+- Evaluar uso de `routeType` para asignación automática de iconos
