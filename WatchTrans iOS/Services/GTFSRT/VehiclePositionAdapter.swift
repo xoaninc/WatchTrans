@@ -189,7 +189,7 @@ extension VehiclePositionAdapter {
             return nil
         }
 
-        return TrainAirQuality(co2: co2, humidity: humidity, temperature: temperature, co2Rating: co2Rating)
+        return TrainAirQuality(vehicleId: nil, co2: co2, humidity: humidity, temperature: temperature, co2Rating: co2Rating)
     }
 
     /// Extract air quality for all Metro Sevilla vehicles, keyed by vehicle_label
