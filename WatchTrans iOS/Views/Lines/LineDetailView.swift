@@ -898,7 +898,8 @@ struct LineStopRowView: View {
                 isCircular: false,
                 serviceStatus: nil,
                 suspendedSince: nil,
-                isAlternativeService: nil
+                isAlternativeService: nil,
+                alternativeForShortName: nil
             ),
             dataService: DataService(),
             locationService: LocationService(),

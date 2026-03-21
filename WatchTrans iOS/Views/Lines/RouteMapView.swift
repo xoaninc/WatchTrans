@@ -485,7 +485,8 @@ struct FullScreenMapView: View {
             isCircular: false,
             serviceStatus: nil,
             suspendedSince: nil,
-            isAlternativeService: nil
+            isAlternativeService: nil,
+            alternativeForShortName: nil
         ),
         stops: [
             Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corMl: nil, corTren: nil, corTranvia: nil),
