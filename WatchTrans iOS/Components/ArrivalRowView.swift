@@ -61,7 +61,10 @@ struct ArrivalRowView: View {
 
             // Destination and info
             VStack(alignment: .leading, spacing: 4) {
-                // Line 1: destination + train code + composition
+                // Destination + train code + composition + icons
+                // Icons go to line 2 only when composition is shown (Metro Sevilla /Doble)
+                let showsComposition = arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true
+
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.right")
                         .font(.caption)
@@ -74,66 +77,21 @@ struct ArrivalRowView: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
-                    if arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
+                    if showsComposition {
                         Text("/Doble")
                             .font(.body)
                             .foregroundStyle(.blue)
                     }
+
+                    // Icons inline when no composition
+                    if !showsComposition {
+                        serviceIconsView
+                    }
                 }
 
-                // Line 2: service icons (express, accessibility, bikes, warnings)
-                let hasIcons = arrival.isExpress ||
-                    arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 ||
-                    arrival.bikesAllowed == 1 ||
-                    arrival.isAlternativeService ||
-                    arrival.pmrWarning
-
-                if hasIcons {
-                    HStack(spacing: 6) {
-                        // Express badge (CIVIS)
-                        if arrival.isExpress, let name = arrival.expressName {
-                            Text(name)
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
-                                .cornerRadius(4)
-                        }
-
-                        // Wheelchair accessible
-                        if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
-                            Image(systemName: "figure.roll")
-                                .font(.caption)
-                                .foregroundStyle(.blue)
-                        }
-
-                        // Bikes allowed
-                        if arrival.bikesAllowed == 1 {
-                            Image(systemName: "bicycle")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
-
-                        // Alternative service (bus replacement)
-                        if arrival.isAlternativeService {
-                            Image(systemName: "bus.fill")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-
-                        // PMR warning
-                        if arrival.pmrWarning {
-                            HStack(spacing: 1) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 8))
-                                Image(systemName: "figure.roll")
-                                    .font(.system(size: 10))
-                            }
-                            .foregroundStyle(.orange)
-                        }
-                    }
+                // Icons on line 2 only when composition takes too much space
+                if showsComposition {
+                    serviceIconsView
                 }
 
                 // Train position (if available)
@@ -269,6 +227,54 @@ struct ArrivalRowView: View {
         .padding(.horizontal, 12)
         .background(Color(.systemGray6))
         .cornerRadius(10)
+    }
+
+    @ViewBuilder
+    private var serviceIconsView: some View {
+        let hasIcons = arrival.isExpress ||
+            arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 ||
+            arrival.bikesAllowed == 1 ||
+            arrival.isAlternativeService ||
+            arrival.pmrWarning
+
+        if hasIcons {
+            HStack(spacing: 6) {
+                if arrival.isExpress, let name = arrival.expressName {
+                    Text(name)
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
+                        .cornerRadius(4)
+                }
+                if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
+                    Image(systemName: "figure.roll")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                }
+                if arrival.bikesAllowed == 1 {
+                    Image(systemName: "bicycle")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+                if arrival.isAlternativeService {
+                    Image(systemName: "bus.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                if arrival.pmrWarning {
+                    HStack(spacing: 1) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 8))
+                        Image(systemName: "figure.roll")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundStyle(.orange)
+                }
+            }
+        }
     }
 }
 
