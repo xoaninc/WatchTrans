@@ -86,9 +86,9 @@ La app decodifica `AlternativeTransport` pero no muestra los detalles (ruta bus,
 
 Alertas de noticias de Metro Sevilla tienen `content` (HTML) e `image_url`. La app solo muestra `headerText`/`descriptionText`.
 
-### Endpoint /air-quality/ no integrado
+### ~~Endpoint /air-quality/ no integrado~~ ✅ IMPLEMENTADO
 
-`GET /api/gtfs-rt/air-quality/` — endpoint dedicado para calidad de aire Metro Sevilla. App usa `/vehicles?enrich=true` como workaround.
+Migrado a `GET /api/gtfs-rt/air-quality/`. Match por `train_code` ↔ `vehicle_id`.
 
 ### /stops/by-coordinates: param `route_types` no usado
 

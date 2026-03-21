@@ -133,11 +133,11 @@ Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternati
 #### ~~3.22 Nombre de ruta sustituida~~ ✅ IMPLEMENTADO (2026-03-21)
 "Sustituye C1" en LinesListView cuando `alternative_for_short_name` disponible.
 
-#### 3.24 vehicle_composition campo dedicado (2026-03-21)
-- `vehicle_composition` (`"single"`/`"double"`) en departures Metro Sevilla. Reemplaza hack de comma en `vehicleLabel`. Campo dedicado ahora disponible.
+#### ~~3.24 vehicle_composition campo dedicado~~ ✅ IMPLEMENTADO (2026-03-21)
+`vehicle_composition` decodificado. Mapper prefiere campo API, fallback a comma hack.
 
-#### 3.25 Endpoint dedicado de calidad de aire (2026-03-21)
-- `GET /api/gtfs-rt/air-quality/` — CO2, humedad, temperatura por unidad de tren Metro Sevilla. Reemplaza workaround via `/vehicles?enrich=true`.
+#### ~~3.25 Endpoint dedicado de calidad de aire~~ ✅ IMPLEMENTADO (2026-03-21)
+`GET /api/gtfs-rt/air-quality/` integrado. Match por `train_code` ↔ `vehicle_id`. Reemplaza workaround `/vehicles?enrich=true`.
 
 #### 3.26 Detalles de transporte alternativo en alertas (2026-03-21)
 - `alternative_transport[]` en alertas tiene `type`, `route`, `frequency_minutes`. App solo usa boolean `alternative_service_warning`, no muestra los detalles.

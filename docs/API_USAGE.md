@@ -99,7 +99,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - Alertas de accesibilidad ahora solo se asocian a rutas que pasan por la parada afectada.
 - `estimated_restoration_time` tipo string (texto humano), no datetime.
 - `parking_bicis` ≠ `acerca_service.parking`: el primero es aparcabicis, el segundo parking de coches (solo 56 estaciones).
-- Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`. Metro Sevilla/Tram Sevilla/Zaragoza solo vía `/departures`.
+- Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`, `metro_sevilla`, `tram_sevilla`, `tranvia_zaragoza`.
 - Interior source `combined` nuevo para estaciones con datos mixtos.
 
 ## Campos consumidos (2026-03-21)
@@ -116,7 +116,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 ## Campos disponibles no consumidos (2026-03-21)
 
 **En departures:**
-- `vehicle_composition` — `"single"`/`"double"` para Metro Sevilla. App usa hack comma en vehicleLabel. ROADMAP 3.24.
+- ~~`vehicle_composition`~~ ✅ IMPLEMENTADO — `"single"`/`"double"` para Metro Sevilla.
 
 **En alerts:**
 - `alternative_transport[]` detalles — ruta bus, frecuencia. App solo usa boolean. ROADMAP 3.26.
@@ -129,7 +129,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `route_url` — URL de la página del operador
 
 **Endpoints no integrados:**
-- `GET /api/gtfs-rt/air-quality/` — endpoint dedicado calidad aire Metro Sevilla. ROADMAP 3.25.
+- ~~`GET /api/gtfs-rt/air-quality/`~~ ✅ IMPLEMENTADO — calidad aire Metro Sevilla con match por train_code.
 
 ## Notas de cambios del backend (2026-03-21)
 
@@ -141,3 +141,10 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - Tram Sevilla alertas implementadas via Tussam avisos API. FlareSolverr reemplazado por Azure proxy (100% success, <5s).
 - Delay buffer 90 min: backend no pierde trenes retrasados del tablero. Transparente para la app.
 - Hybrid board enrichment: `bikes_allowed`, `wheelchair_accessible_static`, `trip_short_name` ahora poblados para operadores híbridos.
+
+## Notas de cambios del backend (2026-03-21, segunda tanda)
+
+- **Tram Sevilla departures**: `train_code` ahora devuelve número de vehículo (ej. "1309"), antes null. `wheelchair_accessible_static: 1` ahora poblado. `train_position` disponible cuando hay VP data.
+- **Tram Sevilla vehicles**: `GET /vehicles?operator_id=tram_sevilla` ahora devuelve posiciones GPS. Campos nuevos: `destination`, `position_meters`, `fetch_timestamp`.
+- **Agencies**: campo nuevo `text_color`.
+- **Feed-info**: campos nuevos `contact_email`, `contact_url`, `default_language`.
