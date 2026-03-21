@@ -366,18 +366,18 @@ struct StopDetailView: View {
 
         // Update UI with full details (acercaService, serviceStatus, etc.)
         detailedStop = fullDetails
+        // Always load alerts and correspondences
+        alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
+        correspondences = await dataService.fetchCorrespondences(stopId: stop.id)
+
         if fullDetails != nil {
-            alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
             // TODO: Re-enable when Stop model has correspondences, accesses, and routes properties
-            // correspondences = fullDetails.correspondences ?? []
             // accesses = fullDetails.accesses ?? []
             // if fullDetails.routes != nil {
             //     // Future optimization: Use routes from /full to populate connection badges
             // }
         } else {
             // Fallback to old method if /full fails
-            alerts = await dataService.fetchAlertsForStop(stopId: stop.id)
-            correspondences = await dataService.fetchCorrespondences(stopId: stop.id)
             transportModes = await dataService.fetchTransportModes(stopId: stop.id)
             accesses = await dataService.fetchAccesses(stopId: stop.id)
         }
