@@ -325,6 +325,10 @@ struct TrainDetailView: View {
                                     Text(currentStop)
                                         .font(.title2)
                                         .fontWeight(.semibold)
+                                } else if arrival.trainLatitude != nil {
+                                    Text("En ruta")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
                                 }
                             }
 
