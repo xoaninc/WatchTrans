@@ -144,7 +144,14 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 ## Notas de cambios del backend (2026-03-21, segunda tanda)
 
-- **Tram Sevilla departures**: `train_code` ahora devuelve número de vehículo (ej. "1309"), antes null. `wheelchair_accessible_static: 1` ahora poblado. `train_position` disponible cuando hay VP data.
+- **Tram Sevilla departures**: `train_code` ahora devuelve número de vehículo (ej. "1309"), antes null. `wheelchair_accessible_static: 1` ahora poblado. `train_position` disponible con GPS.
 - **Tram Sevilla vehicles**: `GET /vehicles?operator_id=tram_sevilla` ahora devuelve posiciones GPS. Campos nuevos: `destination`, `position_meters`, `fetch_timestamp`.
 - **Agencies**: campo nuevo `text_color`.
 - **Feed-info**: campos nuevos `contact_email`, `contact_url`, `default_language`.
+
+## Notas de cambios del backend (2026-03-21, tercera tanda)
+
+- **train_position.progress_percent**: ahora calculado via PostGIS (proyección GPS sobre shape real), 0-100%. Antes null o hardcoded. Funciona para Tram Sevilla, Metro Sevilla, Tranvía Zaragoza (cualquier operador con shapes + GPS).
+- **train_position.current_stop_name/id**: ahora poblados con la parada más cercana al GPS del vehículo. Antes null para operadores híbridos.
+- **train_code en train_position**: disponible dentro del objeto train_position (además de en el departure raíz).
+- App ya decodifica todos estos campos — no requiere cambios de código.
