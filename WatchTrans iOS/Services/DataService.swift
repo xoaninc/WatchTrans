@@ -2470,13 +2470,13 @@ class DataService {
 
     /// Plan a journey between two stops using the API route planner
     /// Returns all Pareto-optimal alternatives and any service alerts
-    func planJourneys(fromStopId: String, toStopId: String) async -> RoutePlanResult? {
-        DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId)")
+    func planJourneys(fromStopId: String, toStopId: String, arriveBy: Bool = false) async -> RoutePlanResult? {
+        DebugLog.log("🗺️ [DataService] Planning journey: \(fromStopId) → \(toStopId) \(arriveBy ? "(arrive by)" : "(depart at)")")
 
         do {
             // NOTE: Using compact=false for main app to get full shapes
             // Widgets use a different path via GTFSRealtimeService with compact=true
-            let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId)
+            let response = try await gtfsRealtimeService.fetchRoutePlan(fromStopId: fromStopId, toStopId: toStopId, arriveBy: arriveBy)
 
             guard response.success else {
                 DebugLog.log("⚠️ [DataService] Route plan failed: \(response.message ?? "unknown error")")

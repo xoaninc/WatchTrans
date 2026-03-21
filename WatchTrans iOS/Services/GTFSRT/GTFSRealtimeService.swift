@@ -653,20 +653,24 @@ class GTFSRealtimeService {
     ///   - fromStopId: Origin stop ID
     ///   - toStopId: Destination stop ID
     ///   - compact: If true, returns minimal response for Widget/Siri (<5KB)
-    func fetchRoutePlan(fromStopId: String, toStopId: String, compact: Bool = false) async throws -> RoutePlanResponse {
+    func fetchRoutePlan(fromStopId: String, toStopId: String, compact: Bool = false, arriveBy: Bool = false) async throws -> RoutePlanResponse {
         guard var components = URLComponents(string: "\(baseURL)/route-planner") else {
             throw NetworkError.badResponse
         }
-        
+
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
-        let departureTime = formatter.string(from: Date())
+        let timeStr = formatter.string(from: Date())
 
         components.queryItems = [
             URLQueryItem(name: "from", value: fromStopId),
             URLQueryItem(name: "to", value: toStopId),
-            URLQueryItem(name: "departure_time", value: departureTime)
         ]
+        if arriveBy {
+            components.queryItems?.append(URLQueryItem(name: "arrive_by", value: timeStr))
+        } else {
+            components.queryItems?.append(URLQueryItem(name: "departure_time", value: timeStr))
+        }
         if compact {
             components.queryItems?.append(URLQueryItem(name: "compact", value: "true"))
         }

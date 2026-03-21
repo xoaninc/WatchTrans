@@ -30,7 +30,8 @@ struct JourneyPlannerView: View {
     @State private var showAlerts = true  // Service alerts expanded by default
     @State private var errorMessage: String?
 
-    // Time range search
+    // Time options
+    @State private var arriveBy = false  // false = "Salir a las", true = "Llegar a las"
     @State private var useTimeRange = false
     @State private var rangeStartTime = Date()
     @State private var endTime = Date().addingTimeInterval(3600) // 1 hour from now
@@ -248,8 +249,15 @@ struct JourneyPlannerView: View {
                 }
             }
 
-            // Time range toggle
+            // Time options
             VStack(spacing: 12) {
+                // Arrive by / Depart at selector
+                Picker("", selection: $arriveBy) {
+                    Text("Salir a las").tag(false)
+                    Text("Llegar a las").tag(true)
+                }
+                .pickerStyle(.segmented)
+
                 Toggle(isOn: $useTimeRange) {
                     HStack(spacing: 6) {
                         Image(systemName: "clock.arrow.2.circlepath")
@@ -541,7 +549,7 @@ struct JourneyPlannerView: View {
             )
         } else {
             // Use standard single-departure route planner
-            result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id)
+            result = await dataService.planJourneys(fromStopId: origin.id, toStopId: destination.id, arriveBy: arriveBy)
         }
 
         if let result = result {
