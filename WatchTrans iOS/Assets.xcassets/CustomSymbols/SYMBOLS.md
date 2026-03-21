@@ -28,19 +28,19 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `tram.fill` | Tranvía/tren relleno | Icono genérico de transporte ferroviario. Se usa para todo tipo de servicio ferroviario como icono por defecto. | `ArrivalRowView`, mapas, widgets, anotaciones, settings, `TrainDetailView` |
-| `tram.tunnel.fill` | Tren saliendo de túnel | Indicar que la parada es de metro (subterráneo). | `StopDetailView` badge "Metro" |
-| `lightrail.fill` | Tren ligero relleno | Indicar que la parada es de tranvía/tram. | `StopDetailView` badge "Tram" |
+| `tram.fill` | Tranvía/tren relleno | Icono genérico de transporte ferroviario. Se usa para todo tipo de servicio ferroviario como icono por defecto. | `ArrivalRowView`, `TrainDetailView` (posición tren, vehículo, timeline), `StopDetailView` (mapa), `FullMapView` (anotaciones), `TrainAnnotationView`, `NativeAnimatedMapView`, `LogoImageView`, `SettingsView`, `PlanRouteIntent`, widgets iOS/Watch, `LiveActivityWidget`, Watch `ArrivalCard`, Watch `TrainDetailView` |
+| `tram.tunnel.fill` | Tren saliendo de túnel | Indicar metro (subterráneo). | `StopDetailView` badge "Metro", `FullMapView` (tipo metro), `LogoImageView`, `SettingsView` (credits de todos los metros) |
+| `lightrail.fill` | Tren ligero relleno | Indicar tranvía/tram o metro ligero. | `StopDetailView` badge "Tram", `FullMapView` (tipo tram), `NativeAnimatedMapView`, `LogoImageView`, `Journey` model (modo metro ligero) |
 | `tram` | Tranvía sin relleno | Modo de transporte tranvía en el planificador de rutas. | `Journey` model (modo tranvía) |
-| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo de transporte cercanías en el planificador. | `TrainDetailView` badge "Vía", `Journey` model (modo cercanías) |
-| `bus.fill` | Autobús relleno | Indicar parada de bus o servicio alternativo por autobús. | `StopDetailView` badge "Bus", `ArrivalRowView` (servicio alternativo) |
+| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo cercanías en planificador. | `TrainDetailView` badge "Vía", `StopDetailView` Acerca "Andén", `NativeAnimatedMapView`, `Journey` model (modo cercanías), Watch `TrainDetailView` (andén) |
+| `bus.fill` | Autobús relleno | Indicar parada de bus o servicio alternativo por autobús. | `StopDetailView` badge "Bus", `ArrivalRowView` (servicio alternativo), `LinesListView` (indicador alternativo), `FullMapView` (tipo bus), `NativeAnimatedMapView`, `Journey` model (modo bus) |
 
 ### Accesibilidad
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
 | `figure.roll` | Persona en silla de ruedas | Indicar accesibilidad. Verde = accesible. Rojo + xmark superpuesto = no accesible. | `ArrivalRowView` (por tren), `TrainDetailView`, `StopDetailView` (por parada), `EquipmentStatusSection` (header), `StationInteriorSection` (accesos no accesibles) |
-| `figure.walk` | Persona andando | Indicar recorrido a pie entre estaciones o dentro de la estación. | `PathwayRow` (recorrido tipo walkway), `JourneyPlannerView` (segmento andando) |
+| `figure.walk` | Persona andando | Indicar recorrido a pie entre estaciones o dentro de la estación. | `PathwayRow` (recorrido tipo walkway), `JourneyPlannerView` (segmento andando, tiempo caminando), `StopDetailView` (entrada cercana, estaciones cercanas), `PlanRouteIntent` |
 | `figure.stairs` | Persona subiendo escaleras | **No se usa** — sustituido por `StairsSymbol` AIGA en pathways. | — |
 | `bicycle` | Bicicleta | Indicar que el tren permite bicicletas o que la estación tiene parking de bici. | `ArrivalRowView` (bicicletas permitidas), `StopDetailView` badge "Parking Bici" |
 
