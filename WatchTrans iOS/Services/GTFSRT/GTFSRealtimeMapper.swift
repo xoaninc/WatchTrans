@@ -111,6 +111,7 @@ class GTFSRealtimeMapper {
                 expressColor: departure.expressColor,
                 pmrWarning: departure.pmrWarning ?? false,
                 isAlternativeService: departure.alternativeServiceWarning ?? false,
+                trainCode: departure.trainCode,
                 tripShortName: departure.tripShortName,
                 wheelchairAccessibleStatic: departure.wheelchairAccessibleStatic,
                 bikesAllowed: departure.bikesAllowed

@@ -68,6 +68,17 @@ struct TrainDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+
+                            if let code = arrival.trainCode, !code.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "number")
+                                        .font(.caption2)
+                                    Text(code)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                }
+                                .foregroundStyle(.secondary)
+                            }
                         }
 
                         Spacer()

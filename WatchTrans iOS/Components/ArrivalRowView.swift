@@ -68,6 +68,13 @@ struct ArrivalRowView: View {
                     Text(arrival.destination)
                         .font(.body)
                         .lineLimit(1)
+                    // Train code (e.g., "75106") in subtle gray
+                    if let code = arrival.trainCode, !code.isEmpty {
+                        Text(code)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+
                     // Show /Doble inline for Metro Sevilla double composition
                     if arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
                         Text("/Doble")

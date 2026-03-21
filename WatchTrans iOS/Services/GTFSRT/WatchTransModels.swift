@@ -73,6 +73,7 @@ struct DepartureResponse: Codable, Identifiable {
     let stationOccupancyStatus: Int?
 
     // Train identification and accessibility
+    let trainCode: String?            // Operational train code (Renfe: "75106", Metro Bilbao: "510")
     let tripShortName: String?
     let wheelchairAccessibleStatic: Int?
     let bikesAllowed: Int?
@@ -134,6 +135,7 @@ struct DepartureResponse: Codable, Identifiable {
         case delayEstimated = "delay_estimated"
         case stationOccupancyPct = "station_occupancy_pct"
         case stationOccupancyStatus = "station_occupancy_status"
+        case trainCode = "train_code"
         case tripShortName = "trip_short_name"
         case wheelchairAccessibleStatic = "wheelchair_accessible_static"
         case bikesAllowed = "bikes_allowed"
@@ -147,6 +149,7 @@ struct TrainPositionResponse: Codable {
     let currentStopName: String?
     let currentStopId: String?
     let status: String?
+    let trainCode: String?          // Operational train code (same as in DepartureResponse)
     let progressPercent: Double?
     let estimated: Bool?
     let timestamp: String?
@@ -155,6 +158,7 @@ struct TrainPositionResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case latitude, longitude, status, estimated, timestamp, bearing, speed
+        case trainCode = "train_code"
         case currentStopName = "current_stop_name"
         case currentStopId = "current_stop_id"
         case progressPercent = "progress_percent"

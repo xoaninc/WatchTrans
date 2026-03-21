@@ -68,6 +68,7 @@ struct Arrival: Identifiable, Codable {
     var vehicleOccupancyStatus: Int? = nil
 
     // Train identification
+    var trainCode: String? = nil      // Operational train code (Renfe: "75106", Metro Bilbao: "510")
     var tripShortName: String? = nil
     var wheelchairAccessibleStatic: Int? = nil
     var bikesAllowed: Int? = nil
@@ -112,6 +113,7 @@ struct Arrival: Identifiable, Codable {
             pmrWarning: pmrWarning,
             isAlternativeService: isAlternativeService,
             vehicleOccupancyStatus: vehicleOccupancyStatus,
+            trainCode: trainCode,
             tripShortName: tripShortName,
             wheelchairAccessibleStatic: wheelchairAccessibleStatic,
             bikesAllowed: bikesAllowed

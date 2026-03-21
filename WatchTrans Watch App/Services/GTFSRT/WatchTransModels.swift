@@ -75,6 +75,7 @@ struct DepartureResponse: Codable, Identifiable {
     let stationOccupancyStatus: Int?
 
     // Train identification and accessibility
+    let trainCode: String?
     let tripShortName: String?
     let wheelchairAccessibleStatic: Int?
     let bikesAllowed: Int?
@@ -136,6 +137,7 @@ struct DepartureResponse: Codable, Identifiable {
         case delayEstimated = "delay_estimated"
         case stationOccupancyPct = "station_occupancy_pct"
         case stationOccupancyStatus = "station_occupancy_status"
+        case trainCode = "train_code"
         case tripShortName = "trip_short_name"
         case wheelchairAccessibleStatic = "wheelchair_accessible_static"
         case bikesAllowed = "bikes_allowed"
