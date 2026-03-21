@@ -2072,7 +2072,7 @@ class DataService {
     }
 
     /// Get trip details (skips synthetic RT trips that have no server-side detail)
-    private static let syntheticTripPrefixes = ["MSEV_RT_", "ZGZ_RT_", "TMB_METRO_"]
+    private static let syntheticTripPrefixes = ["MSEV_RT_", "ZGZ_RT_", "TMB_METRO_", "TSEV_RT_"]
 
     func fetchTripDetails(tripId: String) async -> TripDetailResponse? {
         // Synthetic RT trips don't exist in /trips/ — info is already in the departure
