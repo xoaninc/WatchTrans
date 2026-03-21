@@ -1386,8 +1386,9 @@ struct EquipmentStatusResponse: Codable, Identifiable {
 
 // MARK: - Air Quality Data
 
-/// Air quality data from Metro Sevilla vehicle raw_data
+/// Air quality data from GET /api/gtfs-rt/air-quality/
 struct TrainAirQuality: Codable {
+    let vehicleId: String?          // Train unit ID (e.g., "107") — matches train_code in departures
     let co2: Int?
     let humidity: Int?
     let temperature: Int?
@@ -1395,6 +1396,7 @@ struct TrainAirQuality: Codable {
 
     enum CodingKeys: String, CodingKey {
         case co2, humidity, temperature
+        case vehicleId = "vehicle_id"
         case co2Rating = "co2_rating"
     }
 

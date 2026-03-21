@@ -1187,12 +1187,12 @@ struct DeparturesSectionView: View {
                         dataService: dataService,
                         locationService: locationService,
                         favoritesManager: favoritesManager,
-                        airQuality: departure.vehicleLabel.flatMap { airQualityData[$0] }
+                        airQuality: departure.trainCode.flatMap { airQualityData[$0] }
                     )) {
                         ArrivalRowView(
                             arrival: departure,
                             dataService: dataService,
-                            airQuality: departure.vehicleLabel.flatMap { airQualityData[$0] }
+                            airQuality: departure.trainCode.flatMap { airQualityData[$0] }
                         )
                     }
                     .buttonStyle(.plain)

@@ -232,34 +232,28 @@ extension GTFSRealtimeService {
         return estimated
     }
 
-    /// Fetch air quality data for all Metro Sevilla vehicles
-    /// Returns a dictionary keyed by vehicle_label (e.g. "MS-07")
+    /// Fetch air quality data from dedicated endpoint
+    /// Returns a dictionary keyed by vehicle_id/train_code (e.g. "107")
     func fetchMetroSevillaAirQuality() async throws -> [String: TrainAirQuality] {
-        guard var components = URLComponents(string: "\(APIConfiguration.gtfsRTBaseURL)/vehicles") else {
+        guard let url = URL(string: "\(APIConfiguration.gtfsRTBaseURL)/air-quality/?operator_id=metro_sevilla") else {
             throw NetworkError.badResponse
         }
 
-        components.queryItems = [
-            URLQueryItem(name: "operator_id", value: "metro_sevilla"),
-            URLQueryItem(name: "enrich", value: "true"),
-            URLQueryItem(name: "limit", value: "50")
-        ]
-
-        guard let url = components.url else {
-            throw NetworkError.badResponse
-        }
-
-        DebugLog.log("🌿 [RT] Fetching Metro Sevilla air quality: \(url.absoluteString)")
+        DebugLog.log("🌿 [RT] Fetching air quality from dedicated endpoint")
 
         let networkService = NetworkService()
         let data = try await networkService.fetchData(url)
-        let decoder = JSONDecoder()
-        let vehicles = try decoder.decode([VehiclePositionResponse].self, from: data)
+        let readings = try JSONDecoder().decode([TrainAirQuality].self, from: data)
 
-        let airQualityMap = VehiclePositionAdapter.extractAllAirQuality(from: vehicles)
-        DebugLog.log("🌿 [RT] ✅ Got air quality for \(airQualityMap.count)/\(vehicles.count) vehicles")
+        var result: [String: TrainAirQuality] = [:]
+        for reading in readings {
+            if let id = reading.vehicleId {
+                result[id] = reading
+            }
+        }
 
-        return airQualityMap
+        DebugLog.log("🌿 [RT] ✅ Got air quality for \(result.count) train units")
+        return result
     }
 }
 
