@@ -67,9 +67,84 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 | `icloud.slash` | iCloud tachado | Indicar que los datos son offline (sin conexión) |
 | `mappin.circle` | Pin de mapa | Punto de encuentro del servicio Acerca PMR |
 
+## Fuentes completas disponibles
+
+### AIGA/DOT Symbol Signs (68 archivos EPS)
+
+Carpeta: `symbol_signs_aiga_eps/`
+
+Set completo de 50 pictogramas + flechas direccionales descargado de https://www.aiga.org/resources/symbol-signs
+
+Relevantes para transporte y accesibilidad:
+
+| Archivo | Qué es |
+|---------|--------|
+| `ss_09_Escalator.eps` | Escalera mecánica |
+| `ss_10_Escalator-down.eps` | Escalera mecánica bajada |
+| `ss_11_Escalator-up.eps` | Escalera mecánica subida |
+| `ss_12_Stairs.eps` | Escaleras |
+| `ss_13_Stairs-down.eps` | Escaleras bajada |
+| `ss_14_Stairs-up.eps` | Escaleras subida |
+| `ss_15_Elevator.eps` | Ascensor |
+| `ss_24_Air-Transportation.eps` | Transporte aéreo |
+| `ss_25_Heliport.eps` | Helipuerto |
+| `ss_26_Taxi.eps` | Taxi |
+| `ss_27_Bus.eps` | Autobús |
+| `ss_28_Ground-transportation.eps` | Transporte terrestre |
+| `ss_29_Rail-Transportation.eps` | Transporte ferroviario |
+| `ss_30_Water-Transportation.eps` | Transporte marítimo |
+| `ss_39_TicketPurchase.eps` | Compra de billetes |
+| `ss_46_Parking.eps` | Parking |
+| `ss_50_Exit.eps` | Salida |
+
+**Licencia**: Se describe como "dominio público" (US Government work, 1974). **Marco legal pendiente de verificar** para distribución en App Store — ver KNOWN_ISSUES.md.
+
+### ISO 7001 (Wikimedia Commons)
+
+Carpeta: `iso_7001_wikimedia_svg/`
+
+191 SVGs descargados de https://commons.wikimedia.org/wiki/Category:ISO_7001_icons (todas las subcategorías). Recreaciones comunitarias de los símbolos ISO 7001:2023.
+
+Categorías incluidas: Accessibility, Behaviour of the public, Commercial facilities, Public facilities, Sporting activities, Tourism/culture/heritage, Transportation facilities, Diagrams.
+
+**Licencia de los SVGs en Wikimedia**: cada archivo tiene su propia licencia (generalmente CC0 o CC BY-SA). **Sin embargo**, los símbolos ISO 7001 originales son copyright de ISO (~$30/símbolo). Estas recreaciones en Wikimedia son trabajos derivados. **Marco legal pendiente de verificar** para uso en App Store.
+
+Símbolos de transporte relevantes (PI TF):
+
+| Archivo | Qué es |
+|---------|--------|
+| `ISO_7001_PI_TF_001.svg` | Aeropuerto/avión |
+| `ISO_7001_PI_TF_002.svg` | Estación de tren/ferrocarril |
+| `ISO_7001_PI_TF_003.svg` | Metro/underground |
+| `ISO_7001_PI_TF_004.svg` | Puerto/barcos/ferry |
+| `ISO_7001_PI_TF_005.svg` | Helipuerto |
+| `ISO_7001_PI_TF_006.svg` | Parada de bus |
+| `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar |
+| `ISO_7001_PI_TF_008.svg` | Parada de taxi |
+| `ISO_7001_PI_TF_009.svg` | Alquiler de coches |
+| `ISO_7001_PI_TF_010.svg` | Bicicleta |
+| `ISO_7001_PI_TF_011.svg` | Teleférico/cable car |
+| `ISO_7001_PI_TF_012.svg` | Funicular |
+| `ISO_7001_PI_TF_014.svg` | Parking |
+| `ISO_7001_PI_TF_024.svg` | Asientos prioritarios (condiciones médicas) |
+| `ISO_7001_PI_TF_040.svg` | Embarque bus |
+| `ISO_7001_PI_TF_044.svg` | Carga vehículo eléctrico |
+
+### Otras fuentes pendientes de evaluar
+
+| Fuente | Licencia | URL | Estado |
+|--------|----------|-----|--------|
+| Temaki | CC0 | https://github.com/rapideditor/temaki | Pendiente. Tiene subway, tram, train, gondola_lift, elevator |
+| Maki (Mapbox) | CC0 | https://github.com/mapbox/maki | Pendiente. Tiene rail, rail-metro, rail-light, bus |
+| Material Design Icons | Apache 2.0 | https://fonts.google.com/icons | Pendiente. Tiene train, tram, subway, bus, elevator, escalator |
+| Accesibiliconos | CC BY-SA 4.0 | https://accesibiliconos.org/ | Pendiente. 52 pictogramas accesibilidad |
+| JIS Z8210 (equiv. japonés ISO 7001) | Revisar | https://github.com/cat-in-136/JISZ8210_Symbols_SVG | Pendiente |
+| SBB Picto Library (ferrocarriles suizos) | Revisar | https://github.com/sbb-design-systems/picto-library | Pendiente |
+| ISO 7001 | Copyright ISO (~$30/símbolo) | https://www.iso.org/standard/77442.html | NO usar sin licencia |
+
 ## Licencias
 
-- **AIGA/DOT Symbol Signs**: Dominio público (US Government work, 1974). Sin restricciones de uso.
+- **AIGA/DOT Symbol Signs**: Descrito como dominio público (US Government work, 1974). **Marco legal pendiente de verificar para distribución en App Store.**
 - **StairClimbingSymbol**: Fuente por determinar. Revisar licencia antes de publicar.
 - **SF Symbols**: Incluidos con iOS/watchOS. Uso permitido en apps de Apple.
 - **ISO 7001**: Copyright de ISO. NO usar sin licencia. ~$30/símbolo o suscripción anual.
@@ -78,13 +153,13 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 | Concepto | Estado |
 |----------|--------|
-| Funicular | Sin icono. No hay AIGA ni SF Symbol. Candidatos: Temaki `gondola_lift` (CC0) |
+| Funicular | Sin icono. Candidatos: Temaki `gondola_lift` (CC0) |
 | Teleférico | Sin icono. Candidato: Temaki `gondola_lift` o `chairlift` (CC0) |
 | Metro (pictograma propio) | Usamos `tram.fill` genérico. No hay pictograma diferenciado |
 
 ## Pendiente (KNOWN_ISSUES.md)
 
+- **Marco legal AIGA**: verificar si "dominio público" aplica a distribución en App Store
 - Revisar licencia de StairClimbingSymbol
-- Revisar atribución AIGA para App Store
-- Considerar añadir símbolos AIGA para: bus, taxi, tren (rail transportation)
-- Evaluar Temaki (CC0) para metro/tranvía/funicular si se necesitan
+- Evaluar fuentes adicionales (Temaki, Maki, Material Design, Accesibiliconos)
+- Considerar convertir EPS relevantes a SVG para imagesets
