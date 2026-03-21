@@ -74,6 +74,7 @@ struct DepartureResponse: Codable, Identifiable {
 
     // Train identification and accessibility
     let trainCode: String?            // Operational train code (Renfe: "75106", Metro Bilbao: "510")
+    let vehicleComposition: String?   // "single", "double", null (Metro Sevilla)
     let tripShortName: String?
     let wheelchairAccessibleStatic: Int?
     let bikesAllowed: Int?
@@ -136,6 +137,7 @@ struct DepartureResponse: Codable, Identifiable {
         case stationOccupancyPct = "station_occupancy_pct"
         case stationOccupancyStatus = "station_occupancy_status"
         case trainCode = "train_code"
+        case vehicleComposition = "vehicle_composition"
         case tripShortName = "trip_short_name"
         case wheelchairAccessibleStatic = "wheelchair_accessible_static"
         case bikesAllowed = "bikes_allowed"

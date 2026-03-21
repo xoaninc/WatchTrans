@@ -74,9 +74,9 @@ El endpoint acepta `arrive_by` (hora de llegada), `travel_date` (fecha distinta 
 
 `alternative_for_short_name` — "Sustituye C1" en LinesListView.
 
-### vehicle_composition campo dedicado no usado
+### ~~vehicle_composition campo dedicado no usado~~ ✅ IMPLEMENTADO
 
-`vehicle_composition` (`"single"`/`"double"`) en departures Metro Sevilla. App usa hack de comma en `vehicleLabel`. Migrar al campo dedicado.
+`vehicle_composition` decodificado. Mapper usa campo API primero, fallback a hack comma en `tripId`.
 
 ### alternative_transport detalles no mostrados
 

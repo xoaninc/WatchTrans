@@ -41,8 +41,8 @@ class GTFSRealtimeMapper {
             // Skip departures where the train doesn't stop at this station
             if departure.isSkipped == true { continue }
 
-            // Detect double composition from trip_id (e.g., "MSEV_RT_111,116_d0" has comma)
-            let isDoubleComposition = departure.tripId.contains(",")
+            // Detect double composition: prefer API field, fallback to trip_id comma hack
+            let isDoubleComposition = departure.vehicleComposition == "double" || departure.tripId.contains(",")
             let cleanHeadsign = (departure.headsign ?? "").trimmingCharacters(in: .whitespaces)
 
             // Per-departure logging removed for production (was flooding logs with 40+ lines per stop)
