@@ -56,9 +56,9 @@ La API tiene `?compact=true` para departures con esquema reducido. No hay modelo
 
 - **Platform confidence** — deferred al ROADMAP
 
-### route-planner: parámetros nuevos no usados
+### route-planner: parámetros parcialmente usados
 
-El endpoint acepta `arrive_by` (hora de llegada deseada), `travel_date` (planificar para otra fecha), y `compact` (respuesta ligera). La app solo usa `departure_time` con hora actual. Pendiente añadir selector de hora/fecha en JourneyPlannerView.
+`departure_time` con DatePicker ya funciona (rango horario). Pendientes: `arrive_by` (llegar A las X), `travel_date` (otro día), `compact` (respuesta ligera).
 
 ### ~~Campos nuevos en departures no consumidos~~ ✅ IMPLEMENTADO
 
@@ -78,9 +78,9 @@ El endpoint acepta `arrive_by` (hora de llegada deseada), `travel_date` (planifi
 
 `vehicle_composition` decodificado. Mapper usa campo API primero, fallback a hack comma en `tripId`.
 
-### ~~alternative_transport detalles no mostrados~~ ✅ YA IMPLEMENTADO
+### ~~alternative_transport detalles no mostrados~~ ✅ UI IMPLEMENTADA (pendiente backend)
 
-UI ya existe en StopDetailView y LineDetailView: "Transporte alternativo" con icono, descripción, from → to.
+UI existe en StopDetailView y LineDetailView. Pero `alternative_transport` es siempre `null` en la API — Groq extrae la info pero no se expone en el campo. Cuando el backend lo popule, la app lo mostrará automáticamente.
 
 ### Alertas Metro Sevilla: content + image_url no mostrados
 
