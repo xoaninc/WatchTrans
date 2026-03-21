@@ -34,7 +34,7 @@ struct DepartureResponse: Codable, Identifiable {
     
     // Service status
     let isSuspended: Bool?         // true if line has FULL_SUSPENSION alert
-    let wheelchairAccessible: String?  // "WHEELCHAIR_ACCESSIBLE", "NOT_WHEELCHAIR_ACCESSIBLE", "NO_VALUE"
+    let wheelchairAccessible: Int?  // null=no data, 1=unknown, 2=accessible, 3=not accessible
 
     // Frequency-based departures (Metro)
     let frequencyBased: Bool?

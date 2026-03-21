@@ -209,6 +209,14 @@ struct ArrivalRowView: View {
                     Image(systemName: "figure.roll")
                         .font(.caption)
                         .foregroundStyle(.green)
+                } else if arrival.wheelchairInaccessible {
+                    ZStack {
+                        Image(systemName: "figure.roll")
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .light))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.red)
                 }
 
                 // Offline indicator
@@ -232,7 +240,7 @@ struct ArrivalRowView: View {
     @ViewBuilder
     private var serviceIconsView: some View {
         let hasIcons = arrival.isExpress ||
-            arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 ||
+            arrival.wheelchairAccessible || arrival.wheelchairInaccessible ||
             arrival.bikesAllowed == 1 ||
             arrival.isAlternativeService ||
             arrival.pmrWarning
@@ -249,10 +257,18 @@ struct ArrivalRowView: View {
                         .background(Color(hex: arrival.expressColor ?? arrival.routeColor ?? "") ?? .purple)
                         .cornerRadius(4)
                 }
-                if arrival.wheelchairAccessible || arrival.wheelchairAccessibleStatic == 1 {
+                if arrival.wheelchairAccessible {
                     Image(systemName: "figure.roll")
                         .font(.caption)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.green)
+                } else if arrival.wheelchairInaccessible {
+                    ZStack {
+                        Image(systemName: "figure.roll")
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .light))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.red)
                 }
                 if arrival.bikesAllowed == 1 {
                     Image(systemName: "bicycle")
@@ -384,6 +400,7 @@ struct AirQualityBadgeView: View {
                 routeId: "RENFE_C3_36",
                 isSuspended: false,
                 wheelchairAccessible: true,
+                wheelchairInaccessible: false,
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: false,
@@ -420,6 +437,7 @@ struct AirQualityBadgeView: View {
                 routeId: "TMB_METRO_L1",
                 isSuspended: false,
                 wheelchairAccessible: false,
+                wheelchairInaccessible: false,
                 frequencyBased: true,
                 headwayMinutes: 5,
                 isOfflineData: false,

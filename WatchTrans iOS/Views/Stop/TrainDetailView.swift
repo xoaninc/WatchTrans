@@ -855,6 +855,7 @@ struct JourneyStopsListView: View {
                 routeId: "RENFE_C3_36",
                 isSuspended: false,
                 wheelchairAccessible: true,
+                wheelchairInaccessible: false,
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: false,

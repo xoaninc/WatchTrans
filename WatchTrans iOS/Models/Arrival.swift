@@ -34,7 +34,8 @@ struct Arrival: Identifiable, Codable {
     
     // Service status
     let isSuspended: Bool  // true if line has FULL_SUSPENSION alert
-    let wheelchairAccessible: Bool  // true if trip is wheelchair accessible
+    let wheelchairAccessible: Bool  // true if wheelchair accessible (RT==2 or static==2)
+    let wheelchairInaccessible: Bool  // true if not wheelchair accessible (RT==3 or static==3)
 
     // Frequency-based (Metro)
     let frequencyBased: Bool
@@ -70,7 +71,6 @@ struct Arrival: Identifiable, Codable {
     // Train identification
     var trainCode: String? = nil      // Operational train code (Renfe: "75106", Metro Bilbao: "510")
     var tripShortName: String? = nil
-    var wheelchairAccessibleStatic: Int? = nil
     var bikesAllowed: Int? = nil
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
@@ -96,6 +96,7 @@ struct Arrival: Identifiable, Codable {
             routeId: routeId,
             isSuspended: isSuspended,
             wheelchairAccessible: wheelchairAccessible,
+            wheelchairInaccessible: wheelchairInaccessible,
             frequencyBased: frequencyBased,
             headwayMinutes: headwayMinutes,
             isOfflineData: isOfflineData,
@@ -115,7 +116,6 @@ struct Arrival: Identifiable, Codable {
             vehicleOccupancyStatus: vehicleOccupancyStatus,
             trainCode: trainCode,
             tripShortName: tripShortName,
-            wheelchairAccessibleStatic: wheelchairAccessibleStatic,
             bikesAllowed: bikesAllowed
         )
     }

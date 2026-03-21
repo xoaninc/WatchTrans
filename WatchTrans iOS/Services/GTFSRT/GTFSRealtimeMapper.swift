@@ -94,7 +94,8 @@ class GTFSRealtimeMapper {
                 routeColor: departure.routeColor,
                 routeId: departure.routeId,
                 isSuspended: departure.isSuspended ?? false,
-                wheelchairAccessible: departure.wheelchairAccessible == "WHEELCHAIR_ACCESSIBLE",
+                wheelchairAccessible: Self.wheelchairValue(rt: departure.wheelchairAccessible, static: departure.wheelchairAccessibleStatic) == 2,
+                wheelchairInaccessible: Self.wheelchairValue(rt: departure.wheelchairAccessible, static: departure.wheelchairAccessibleStatic) == 3,
                 frequencyBased: departure.frequencyBased ?? false,
                 headwayMinutes: departure.headwayMinutes,
                 isOfflineData: false,
@@ -113,7 +114,6 @@ class GTFSRealtimeMapper {
                 isAlternativeService: departure.alternativeServiceWarning ?? false,
                 trainCode: departure.trainCode,
                 tripShortName: departure.tripShortName,
-                wheelchairAccessibleStatic: departure.wheelchairAccessibleStatic,
                 bikesAllowed: departure.bikesAllowed
             )
 
@@ -127,6 +127,15 @@ class GTFSRealtimeMapper {
 
         DebugLog.log("✅ [Mapper] Mapped \(sortedArrivals.count) arrivals")
         return Array(sortedArrivals)
+    }
+
+    // MARK: - Wheelchair
+
+    /// Resolve wheelchair accessibility: RT (2/3) takes priority, fallback to static
+    static func wheelchairValue(rt: Int?, static staticVal: Int?) -> Int? {
+        if let rt, rt == 2 || rt == 3 { return rt }
+        if let staticVal, staticVal == 2 || staticVal == 3 { return staticVal }
+        return nil
     }
 
     // MARK: - Helpers

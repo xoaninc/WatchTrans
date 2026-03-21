@@ -141,6 +141,16 @@ private struct EquipmentRow: View {
         device.location ?? (device.isElevator ? "Ascensor" : "Escalera")
     }
 
+    /// AIGA escalator asset based on direction
+    private var escalatorAssetName: String {
+        guard let dir = device.direction else { return "EscalatorSymbol" }
+        switch dir {
+        case "up": return "EscalatorUpSymbol"
+        case "down": return "EscalatorDownSymbol"
+        default: return "EscalatorSymbol"
+        }
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             // Device icon with status color
@@ -152,20 +162,12 @@ private struct EquipmentRow: View {
                     .frame(width: 18, height: 18)
                     .foregroundStyle(statusColor)
             } else {
-                HStack(spacing: 2) {
-                    Image("EscalatorSymbol")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .foregroundStyle(statusColor)
-                    if let dir = device.direction, dir == "up" || dir == "down" {
-                        Image(systemName: dir == "up" ? "arrow.up" : "arrow.down")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(statusColor)
-                    }
-                }
+                Image(escalatorAssetName)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(statusColor)
             }
 
             // Location

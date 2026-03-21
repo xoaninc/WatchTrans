@@ -68,8 +68,8 @@ Key endpoints documented in `API_STATUS.md`.
 
 ### Synthetic RT Trips
 
-Some operators (Metro Sevilla, Tranvía Zaragoza, TMB Metro) generate synthetic RT trip IDs:
-- Prefixes: `MSEV_RT_`, `ZGZ_RT_`, `TMB_METRO_`
+Some operators (Metro Sevilla, Tranvía Zaragoza, TMB Metro, Tram Sevilla) generate synthetic RT trip IDs:
+- Prefixes: `MSEV_RT_`, `ZGZ_RT_`, `TMB_METRO_`, `TSEV_RT_`
 - These do NOT exist in `/trips/` endpoint — skip the fetch
 - For journey display, use route stops as fallback (`/routes/{route_id}/stops`)
 - Double composition in Metro Sevilla: detected by comma in trip_id (e.g., `MSEV_RT_111,116_d0`)
@@ -98,6 +98,7 @@ Recent commits also use conventional format: `fix(scope):`, `feat(scope):`, `per
 - **NEVER hardcode workarounds for API inconsistencies** without asking the user first. The user also maintains the backend — if the API sends unexpected field names or formats, ask before adding fallback logic in the app. The fix likely belongs on the server side.
 - **All URLs and API constants go in `APIConfiguration.swift`** — no hardcoded URLs in views, services, or widgets.
 - **Commit and push after every functional change** — never accumulate uncommitted work. Each feature, fix, or meaningful change gets its own commit + push immediately.
+- **Build after push** — after every `git push`, verify the project builds. SourceKit diagnostics are unreliable — only a real build confirms correctness. Use `/swift-concurrency` and `/swiftui-pro` skills when changing SwiftUI views or concurrency code.
 - **SF Symbols**: verify symbols exist with `NSImage(systemSymbolName:)` before using. `elevator`, `elevator.fill`, `escalator`, `escalator.fill` do NOT exist. Use custom AIGA imagesets instead.
 
 ## Key Context

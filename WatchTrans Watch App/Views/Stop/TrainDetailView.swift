@@ -64,6 +64,25 @@ struct TrainDetailView: View {
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(Color.green.opacity(0.15))
                             )
+                        } else if arrival.wheelchairInaccessible {
+                            HStack(spacing: 2) {
+                                ZStack {
+                                    Image(systemName: "figure.roll")
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .light))
+                                }
+                                .font(.caption2)
+                                Text("No accesible")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.red.opacity(0.15))
+                            )
                         }
                     }
 

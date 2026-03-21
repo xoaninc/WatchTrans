@@ -129,3 +129,7 @@ Badge cambiado de "Parking" con icono P a "Parking Bici" con icono 🚲.
 ### ~~Fases de alertas~~ ✅ IMPLEMENTADO
 
 `AlertBannerView` muestra fases temporales con fechas y colores por efecto cuando hay >1 active_period.
+
+### AIGA symbols: marco legal pendiente
+
+Los iconos AIGA (ElevatorSymbol, EscalatorSymbol, EscalatorUpSymbol, EscalatorDownSymbol, StairsSymbol) provienen del set AIGA Symbol Signs. StairClimbingSymbol proviene de otra fuente. Fuente AIGA: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs. Pendiente revisar licencia y atribución antes de publicar en App Store.

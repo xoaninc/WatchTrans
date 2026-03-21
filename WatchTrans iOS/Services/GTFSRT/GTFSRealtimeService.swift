@@ -682,7 +682,7 @@ class GTFSRealtimeService {
         DebugLog.log("🗺️ [RT] ▶️ ROUTE PLAN REQUEST")
         DebugLog.log("🗺️ [RT]   From: \(fromStopId)")
         DebugLog.log("🗺️ [RT]   To: \(toStopId)")
-        DebugLog.log("🗺️ [RT]   Departure: \(departureTime)")
+        DebugLog.log("🗺️ [RT]   Departure: \(timeStr)")
         DebugLog.log("🗺️ [RT]   Compact Mode: \(compact) (Size optimization)")
         DebugLog.log("🗺️ [RT]   URL: \(url.absoluteString)")
 

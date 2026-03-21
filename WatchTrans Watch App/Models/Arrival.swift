@@ -34,7 +34,8 @@ struct Arrival: Identifiable, Codable {
 
     // Service status
     let isSuspended: Bool  // true if line has FULL_SUSPENSION alert
-    let wheelchairAccessible: Bool  // true if trip is wheelchair accessible
+    let wheelchairAccessible: Bool  // true if wheelchair accessible (RT==2 or static==2)
+    let wheelchairInaccessible: Bool  // true if not wheelchair accessible (RT==3 or static==3)
 
     // Frequency-based (Metro)
     let frequencyBased: Bool
@@ -78,6 +79,7 @@ struct Arrival: Identifiable, Codable {
             routeId: routeId,
             isSuspended: isSuspended,
             wheelchairAccessible: wheelchairAccessible,
+            wheelchairInaccessible: wheelchairInaccessible,
             frequencyBased: frequencyBased,
             headwayMinutes: headwayMinutes,
             isOfflineData: isOfflineData,

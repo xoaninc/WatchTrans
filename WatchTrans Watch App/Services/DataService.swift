@@ -1701,6 +1701,7 @@ class DataService {
                 routeId: dep.routeId,
                 isSuspended: false,
                 wheelchairAccessible: false,
+                wheelchairInaccessible: false,
                 frequencyBased: false,
                 headwayMinutes: nil,
                 isOfflineData: true,  // Mark as offline data

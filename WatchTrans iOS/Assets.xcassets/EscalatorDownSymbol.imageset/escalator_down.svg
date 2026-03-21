@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://web.resource.org/cc/"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="513.5"
+   height="400.5"
+   id="svg2"
+   sodipodi:version="0.32"
+   inkscape:version="0.45.1"
+   sodipodi:docname="Aiga escalator down.svg"
+   sodipodi:docbase="/home/jirka"
+   inkscape:output_extension="org.inkscape.output.svg.inkscape"
+   version="1.0">
+  <metadata
+     id="metadata23">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs21" />
+  <sodipodi:namedview
+     inkscape:window-height="946"
+     inkscape:window-width="1272"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     guidetolerance="10.0"
+     gridtolerance="10.0"
+     objecttolerance="10.0"
+     borderopacity="1.0"
+     bordercolor="#666666"
+     pagecolor="#ffffff"
+     id="base"
+     width="513.5px"
+     height="400.5px"
+     inkscape:zoom="1.5283582"
+     inkscape:cx="321.25"
+     inkscape:cy="251.25"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:current-layer="svg2" />
+  <g
+     transform="translate(184,1)"
+     style="fill:#000000;fill-rule:evenodd;stroke:none;stroke-width:0pt;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none"
+     id="g4">
+    <path
+       d="M 33,68 C 52,68 67,53 67,34 C 67,15 52,0 33,0 C 15,0 0,15 0,34 C 0,53 15,68 33,68 z "
+       id="path6" />
+  </g>
+  <g
+     transform="translate(1,38)"
+     style="fill:#000000;fill-rule:evenodd;stroke:none;stroke-width:0pt;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none"
+     id="g8">
+    <path
+       d="M 250,92 C 250,92 250,70 250,70 C 250,25 183,25 183,70 C 183,70 183,157 183,157 C 183,157 183,157 183,157 C 183,157 120,221 120,221 C 114,227 113,227 101,227 C 101,227 62,227 62,227 C 23,227 0,262 0,292 C 0,322 23,359 66,359 C 66,359 119,359 135,359 C 151,359 171,353 187,338 C 187,338 389,136 389,136 C 394,132 396,131 404,131 C 404,131 431,131 453,131 C 478,131 512,104 512,65 C 512,26 477,0 452,0 C 452,0 373,0 373,0 C 356,0 335,6 323,19 C 323,19 250,92 250,92 z "
+       id="path10" />
+  </g>
+  <g
+     transform="translate(289,264)"
+     style="fill:#000000;fill-rule:evenodd;stroke:none;stroke-width:0pt;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none"
+     id="g12">
+    <path
+       d="M 17,136 C 17,136 88,136 88,136 C 108,136 108,106 88,106 C 88,106 52,106 52,106 C 52,106 121,37 121,37 C 136,22 114,0 98,16 C 98,16 30,84 30,84 C 30,84 30,48 30,48 C 30,29 0,28 0,48 C 0,48 0,119 0,119 C 0,129 7,136 17,136 z "
+       id="path14" />
+  </g>
+  <g
+     transform="translate(34,71)"
+     style="fill:#ffffff;fill-rule:evenodd;stroke:none;stroke-width:0pt;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none"
+     id="g16">
+    <path
+       d="M 344,0 C 344,0 415,0 415,0 C 433,0 444,20 444,31 C 444,43 436,64 415,64 C 415,64 372,64 372,64 C 354,64 346,67 336,77 C 336,77 132,281 132,281 C 124,289 113,292 100,292 C 100,292 33,292 33,292 C 16,292 0,277 0,258 C 0,239 15,228 30,228 C 30,228 76,228 76,228 C 89,228 98,225 106,217 C 106,217 313,10 313,10 C 322,1 330,0 344,0 z "
+       id="path18" />
+  </g>
+</svg>

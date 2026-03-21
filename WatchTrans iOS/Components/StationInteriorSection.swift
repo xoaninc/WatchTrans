@@ -97,11 +97,11 @@ private struct AccessRow: View {
         return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
-    private var isAccessible: Bool { access.wheelchair == true }
+    private var isWheelchairAccessible: Bool { access.wheelchair == true }
 
     var body: some View {
         HStack(spacing: 8) {
-            if isAccessible {
+            if isWheelchairAccessible {
                 Image("ElevatorSymbol")
                     .renderingMode(.template)
                     .resizable()
@@ -110,8 +110,11 @@ private struct AccessRow: View {
                     .foregroundStyle(.green)
                     .frame(width: 20)
             } else {
-                Image(systemName: "door.left.hand.open")
-                    .font(.subheadline)
+                Image("StairClimbingSymbol")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
                     .foregroundStyle(.secondary)
                     .frame(width: 20)
             }
@@ -128,7 +131,7 @@ private struct AccessRow: View {
 
             Spacer()
 
-            if isAccessible {
+            if isWheelchairAccessible {
                 Text("Accesible")
                     .font(.caption2)
                     .foregroundStyle(.white)
@@ -199,13 +202,18 @@ private struct PathwayRow: View {
         return "\(from) → \(to)"
     }
 
+    private var isCustomAssetIcon: Bool {
+        let mode = pathway.pathwayModeName
+        return mode == "elevator" || mode == "escalator" || mode == "stairs"
+    }
+
     private var modeIcon: String {
         switch pathway.pathwayModeName {
         case "walkway": return "figure.walk"
-        case "stairs": return "figure.stairs"
+        case "stairs": return "StairsSymbol"
         case "moving_sidewalk": return "arrow.left.arrow.right"
-        case "escalator": return "arrow.up.right"
-        case "elevator": return "arrow.up.arrow.down"
+        case "escalator": return "EscalatorSymbol"
+        case "elevator": return "ElevatorSymbol"
         case "fare_gate": return "creditcard"
         default: return "figure.walk"
         }
@@ -213,10 +221,19 @@ private struct PathwayRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: modeIcon)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            Group {
+                if isCustomAssetIcon {
+                    Image(modeIcon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Image(systemName: modeIcon)
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(width: 20, height: 20)
 
             Text(displayText)
                 .font(.subheadline)
