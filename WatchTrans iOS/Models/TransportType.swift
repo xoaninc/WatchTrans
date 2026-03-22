@@ -18,25 +18,15 @@ enum TransportType: String, Codable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Get transport type from API agency_id
-    static func from(agencyId: String) -> TransportType {
-        let upper = agencyId.uppercased()
-        
-        if upper.contains("METRO_LIGERO") || upper.contains("ML") {
-            return .metroLigero
+    /// Get transport type from GTFS route_type
+    static func from(routeType: Int) -> TransportType {
+        switch routeType {
+        case 0: return .tram
+        case 1: return .metro
+        case 2: return .cercanias
+        case 3: return .bus
+        case 7: return .cercanias  // funicular — agrupado con cercanías
+        default: return .cercanias
         }
-        // Generic Metro detection (covers METRO_SEVILLA, TMB_METRO, METRO_BILBAO...)
-        if upper.contains("METRO") {
-            return .metro
-        }
-        // Generic Tram detection (covers TRAM_SEV, TRAM_BCN, TRANVIA_MURCIA, TUSSAM...)
-        if upper.contains("TRAM") || upper.contains("TRANVIA") || upper.contains("TUSSAM") {
-            return .tram
-        }
-        if upper.contains("FGC") {
-            return .fgc
-        }
-        
-        return .cercanias
     }
 }

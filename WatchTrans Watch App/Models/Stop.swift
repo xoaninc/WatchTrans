@@ -32,6 +32,7 @@ struct Stop: Identifiable, Equatable, Hashable {
     let corFunicular: String?  // Funicular connections
     let correspondences: StopCorrespondences?
     let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
+    let routeType: Int?         // GTFS route_type: 0=tram, 1=metro, 2=rail, 3=bus, 7=funicular
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
 
@@ -42,6 +43,7 @@ struct Stop: Identifiable, Equatable, Hashable {
          corMetro: String? = nil, corMl: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
          correspondences: StopCorrespondences? = nil, wheelchairBoarding: Int? = nil,
+         routeType: Int? = nil,
          serviceStatus: String? = nil, suspendedSince: String? = nil) {
         self.id = id
         self.name = name
@@ -62,6 +64,7 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.corFunicular = corFunicular
         self.correspondences = correspondences
         self.wheelchairBoarding = wheelchairBoarding
+        self.routeType = routeType
         self.serviceStatus = serviceStatus
         self.suspendedSince = suspendedSince
     }
@@ -71,31 +74,17 @@ struct Stop: Identifiable, Equatable, Hashable {
         CLLocation(latitude: latitude, longitude: longitude)
     }
 
-    /// Get the transport type from the stop ID prefix
+    /// Get the transport type from API route_type (GTFS standard)
     var transportType: TransportType {
-        if id.hasPrefix("METRO_") {
-            return .metro
-        } else if id.hasPrefix("ML_") || id.hasPrefix("METRO_LIGERO") {
-            return .metroLigero
-        } else if id.hasPrefix("TRANVIA_") || id.hasPrefix("TRAM_") {
-            return .tram
-        } else if id.hasPrefix("FGC") {
-            return .fgc
+        guard let rt = routeType else { return .cercanias }
+        switch rt {
+        case 0: return .tram
+        case 1: return .metro
+        case 2: return .cercanias
+        case 3: return .bus
+        case 7: return .cercanias  // funicular — agrupado con cercanías
+        default: return .cercanias
         }
-
-        // If the stop ID doesn't encode the mode (e.g., "L1-21" in Sevilla),
-        // infer a reasonable default from the lines that serve this stop.
-        // This is data-driven and avoids city-specific rules.
-        let upperLines = connectionLineIds.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
-        if upperLines.contains(where: { $0.hasPrefix("ML") }) { return .metroLigero }
-        if upperLines.contains(where: { $0.hasPrefix("L") }) { return .metro }
-        // Handle plain numbers as Metro
-        if upperLines.contains(where: { Int($0) != nil }) { return .metro }
-        if upperLines.contains(where: { $0.hasPrefix("T") }) { return .tram }
-        if upperLines.contains(where: { $0.hasPrefix("FGC") }) { return .fgc }
-        if upperLines.contains(where: { $0.hasPrefix("C") }) { return .cercanias }
-
-        return .cercanias
     }
 
     // Calculate distance from current location
@@ -180,6 +169,7 @@ extension Stop: Codable {
         case hasParking, hasBusConnection, hasMetroConnection, isHub
         case corMetro, corMl, corTren, corTranvia, corBus, corFunicular, correspondences
         case wheelchairBoarding = "wheelchair_boarding"
+        case routeType = "route_type"
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
     }
@@ -205,6 +195,7 @@ extension Stop: Codable {
         corFunicular = try container.decodeIfPresent(String.self, forKey: .corFunicular)
         correspondences = try container.decodeIfPresent(StopCorrespondences.self, forKey: .correspondences)
         wheelchairBoarding = try container.decodeIfPresent(Int.self, forKey: .wheelchairBoarding)
+        routeType = try container.decodeIfPresent(Int.self, forKey: .routeType)
         serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
         suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
     }

@@ -990,7 +990,7 @@ class DataService {
 
         for route in routeResponses {
             // Create unique ID per agency to separate Metro L1 from Cercanías C1
-            let transportType = TransportType.from(agencyId: route.agencyId)
+            let transportType = TransportType.from(routeType: route.routeType)
             let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
 
             // Debug: Log longName for Cercanías routes (to diagnose RENFE issue)

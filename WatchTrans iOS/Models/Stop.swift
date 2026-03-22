@@ -32,6 +32,7 @@ struct Stop: Identifiable, Equatable, Hashable {
     let correspondences: StopCorrespondences?
     let wheelchairBoarding: Int? // 0=unknown, 1=accessible, 2=not accessible, null=no data
     let acercaService: AcercaService? // Adif PMR service (48 Renfe stations)
+    let routeType: Int?         // GTFS route_type: 0=tram, 1=metro, 2=rail, 3=bus, 7=funicular
     let serviceStatus: String?  // "active", "suspended", "partial" etc.
     let suspendedSince: String? // ISO date string when service was suspended
 
@@ -42,7 +43,7 @@ struct Stop: Identifiable, Equatable, Hashable {
          corMetro: String? = nil, corMl: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
          correspondences: StopCorrespondences? = nil, wheelchairBoarding: Int? = nil,
-         acercaService: AcercaService? = nil,
+         acercaService: AcercaService? = nil, routeType: Int? = nil,
          serviceStatus: String? = nil, suspendedSince: String? = nil) {
         self.id = id
         self.name = name
@@ -63,6 +64,7 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.correspondences = correspondences
         self.wheelchairBoarding = wheelchairBoarding
         self.acercaService = acercaService
+        self.routeType = routeType
         self.serviceStatus = serviceStatus
         self.suspendedSince = suspendedSince
     }
@@ -72,15 +74,17 @@ struct Stop: Identifiable, Equatable, Hashable {
         CLLocation(latitude: latitude, longitude: longitude)
     }
 
-    /// Get the transport type from the stop ID prefix only (cor_* are correspondences, not this stop's type)
+    /// Get the transport type from API route_type (GTFS standard)
     var transportType: TransportType {
-        // ML_ must be checked before METRO_ to avoid false match
-        if id.hasPrefix("ML_") || id.hasPrefix("METRO_LIGERO") || id.hasPrefix("METRO_L_") { return .metroLigero }
-        if id.hasPrefix("METRO_") || id.hasPrefix("TMB_METRO") { return .metro }
-        if id.hasPrefix("TRANVIA_") || id.hasPrefix("TRAM_") { return .tram }
-        if id.hasPrefix("FGC") { return .fgc }
-        if id.hasPrefix("EUSKOTREN") { return .cercanias }
-        return .cercanias
+        guard let rt = routeType else { return .cercanias }
+        switch rt {
+        case 0: return .tram
+        case 1: return .metro
+        case 2: return .cercanias
+        case 3: return .bus
+        case 7: return .cercanias  // funicular — no tiene tipo propio, se agrupa con cercanías
+        default: return .cercanias
+        }
     }
 
     // Calculate distance from current location
@@ -177,6 +181,7 @@ extension Stop: Codable {
         case correspondences
         case wheelchairBoarding = "wheelchair_boarding"
         case acercaService = "acerca_service"
+        case routeType = "route_type"
         case serviceStatus = "service_status"
         case suspendedSince = "suspended_since"
     }
@@ -202,6 +207,7 @@ extension Stop: Codable {
         correspondences = try container.decodeIfPresent(StopCorrespondences.self, forKey: .correspondences)
         wheelchairBoarding = try container.decodeIfPresent(Int.self, forKey: .wheelchairBoarding)
         acercaService = try container.decodeIfPresent(AcercaService.self, forKey: .acercaService)
+        routeType = try container.decodeIfPresent(Int.self, forKey: .routeType)
         serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
         suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
     }
