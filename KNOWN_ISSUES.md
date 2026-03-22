@@ -135,3 +135,7 @@ Badge cambiado de "Parking" con icono P a "Parking Bici" con icono 🚲.
 Los iconos AIGA (ElevatorSymbol, EscalatorSymbol, EscalatorUpSymbol, EscalatorDownSymbol, StairsSymbol) provienen del set AIGA Symbol Signs. StairClimbingSymbol proviene de otra fuente sin verificar. Set completo de 68 EPS descargado de https://www.aiga.org/resources/symbol-signs y guardado en `CustomSymbols/symbol_signs_aiga_eps/`. SVGs individuales de Wikimedia: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs.
 
 **Pendiente**: Verificar que "dominio público" (US Government work, 1974) aplica a distribución comercial en App Store. Verificar licencia de StairClimbingSymbol. Ver `CustomSymbols/SYMBOLS.md` para referencia completa.
+
+### Colores de TransportType por revisar
+
+Los colores asignados a cada `TransportType` en `SettingsView.colorForTransportType()` fueron puestos arbitrariamente y no han sido validados. Pendiente decidir colores definitivos para: metro (.red), metroLigero (.blue), tren (.purple), tram (.green), fgc (.orange), euskotren (.red), bus (.blue), funicular (.brown).
