@@ -180,11 +180,12 @@ struct FullMapView: View {
         switch type {
         case .metro: return "Metro de \(capitalized)"
         case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .cercanias: return "Cercanías \(capitalized)"
+        case .tren: return "Cercanías \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
         case .fgc: return "FGC"
         case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
+        case .funicular: return "Funicular de \(capitalized)"
         }
     }
 
@@ -192,11 +193,12 @@ struct FullMapView: View {
         switch type {
         case .metro: return "tram.tunnel.fill"
         case .metroLigero: return "tram.fill"
-        case .cercanias: return "tram.fill"
+        case .tren: return "tram.fill"
         case .tram: return "lightrail.fill"
         case .fgc: return "tram.fill"
         case .euskotren: return "tram.fill"
         case .bus: return "bus.fill"
+        case .funicular: return "tram.fill"
         }
     }
 
@@ -442,11 +444,12 @@ struct LineFilterSheet: View {
         switch type {
         case .metro: return "Metro de \(capitalized)"
         case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .cercanias: return "Cercanías \(capitalized)"
+        case .tren: return "Cercanías \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
         case .fgc: return "FGC"
         case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
+        case .funicular: return "Funicular de \(capitalized)"
         }
     }
 }

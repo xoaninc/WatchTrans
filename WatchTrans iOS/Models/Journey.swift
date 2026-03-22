@@ -128,7 +128,7 @@ enum SegmentType {
 
 enum TransportMode: String, CaseIterable {
     case metro = "metro"
-    case cercanias = "cercanias"
+    case tren = "cercanias"
     case metroLigero = "metro_ligero"
     case tranvia = "tranvia"
     case bus = "bus"
@@ -137,7 +137,7 @@ enum TransportMode: String, CaseIterable {
     var icon: String {
         switch self {
         case .metro: return "tram.fill"
-        case .cercanias: return "train.side.front.car"
+        case .tren: return "train.side.front.car"
         case .metroLigero: return "lightrail.fill"
         case .tranvia: return "tram"
         case .bus: return "bus.fill"
@@ -148,7 +148,7 @@ enum TransportMode: String, CaseIterable {
     var displayName: String {
         switch self {
         case .metro: return "Metro"
-        case .cercanias: return "Cercanías"
+        case .tren: return "Cercanías"
         case .metroLigero: return "Metro Ligero"
         case .tranvia: return "Tranvía"
         case .bus: return "Bus"
@@ -168,7 +168,7 @@ enum TransportMode: String, CaseIterable {
     var animationSpeed: Double {
         switch self {
         case .metro: return 1.5        // Fast urban transit (reduced from 2.0)
-        case .cercanias: return 1.8    // Faster regional (reduced from 2.5)
+        case .tren: return 1.8    // Faster regional (reduced from 2.5)
         case .metroLigero: return 1.4
         case .tranvia: return 1.2
         case .bus: return 1.2
@@ -180,7 +180,7 @@ enum TransportMode: String, CaseIterable {
     var cameraAltitude: Double {
         switch self {
         case .metro: return 3600       // City overview (Zoomed out 20%)
-        case .cercanias: return 5400   // Regional view (Zoomed out 20%)
+        case .tren: return 5400   // Regional view (Zoomed out 20%)
         case .metroLigero: return 3600 // (Zoomed out 20%)
         case .tranvia: return 3000     // City view (Zoomed out 20%)
         case .bus: return 3000         // (Zoomed out 20%)
@@ -192,7 +192,7 @@ enum TransportMode: String, CaseIterable {
     var cameraPitch: Double {
         switch self {
         case .metro: return 60
-        case .cercanias: return 50
+        case .tren: return 50
         case .metroLigero: return 55
         case .tranvia: return 65
         case .bus: return 60

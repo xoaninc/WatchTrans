@@ -76,14 +76,14 @@ struct Stop: Identifiable, Equatable, Hashable {
 
     /// Get the transport type from API route_type (GTFS standard)
     var transportType: TransportType {
-        guard let rt = routeType else { return .cercanias }
+        guard let rt = routeType else { return .tren }
         switch rt {
         case 0: return .tram
         case 1: return .metro
-        case 2: return .cercanias
+        case 2: return .tren
         case 3: return .bus
-        case 7: return .cercanias  // funicular — agrupado con cercanías
-        default: return .cercanias
+        case 7: return .funicular
+        default: return .tren
         }
     }
 

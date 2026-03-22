@@ -891,7 +891,7 @@ struct LineStopRowView: View {
                 id: "c3",
                 name: "C3",
                 longName: "Sol - Aranjuez",
-                type: .cercanias,
+                type: .tren,
                 colorHex: "#813380",
                 nucleo: "madrid",
                 routeIds: ["RENFE_C3_34"],

@@ -59,11 +59,11 @@ struct LinesView: View {
     // Get Cercanías/Rodalies lines for the current location
     var cercaniasLines: [Line] {
         guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .cercanias }.sorted { compareLineWithType($0, $1) }
+            return dataService.lines.filter { $0.type == .tren }.sorted { compareLineWithType($0, $1) }
         }
 
         return dataService.lines
-            .filter { $0.type == .cercanias && $0.nucleo.lowercased() == province }
+            .filter { $0.type == .tren && $0.nucleo.lowercased() == province }
             .sorted { compareLineWithType($0, $1) }
     }
 
@@ -265,7 +265,7 @@ struct LinesView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
                             LogoImageView(
-                                logoType: isRodalies ? .rodalies : .cercanias,
+                                logoType: isRodalies ? .rodalies : .tren,
                                 height: 18
                             )
 

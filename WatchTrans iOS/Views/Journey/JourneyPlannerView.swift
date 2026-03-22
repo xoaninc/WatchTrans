@@ -388,7 +388,7 @@ struct JourneyPlannerView: View {
         switch stopType {
         case .metro:
             return stop.corMetro
-        case .cercanias:
+        case .tren:
             return stop.corTren
         case .metroLigero:
             return stop.corMl
@@ -401,6 +401,8 @@ struct JourneyPlannerView: View {
             return nil  // No correspondence field for Euskotren
         case .bus:
             return stop.corBus
+        case .funicular:
+            return stop.corFunicular
         }
     }
 
@@ -426,7 +428,7 @@ struct JourneyPlannerView: View {
                 if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) { return true }
             case .metroLigero:
                 if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
-            case .cercanias:
+            case .tren:
                 if network == "RENFE" || (stop.corTren != nil && !stop.corTren!.isEmpty) { return true }
             case .tram:
                 if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
@@ -436,6 +438,8 @@ struct JourneyPlannerView: View {
                 if network == "EUSKOTREN" { return true }
             case .bus:
                 if network == "BUS" || (stop.corBus != nil && !stop.corBus!.isEmpty) { return true }
+            case .funicular:
+                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) { return true }
             }
         }
         return false

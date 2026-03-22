@@ -396,7 +396,7 @@ struct NearbyStopsSectionView: View {
                 if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) {
                     return true
                 }
-            case .cercanias:
+            case .tren:
                 if network == "RENFE" || (stop.corTren != nil && !stop.corTren!.isEmpty) {
                     return true
                 }
@@ -414,6 +414,10 @@ struct NearbyStopsSectionView: View {
                 }
             case .bus:
                 if network == "BUS" {
+                    return true
+                }
+            case .funicular:
+                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) {
                     return true
                 }
             }

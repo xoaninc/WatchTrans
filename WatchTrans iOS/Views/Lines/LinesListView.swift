@@ -98,10 +98,10 @@ struct LinesListView: View {
     // Get Cercanias/Rodalies lines for the current location
     var cercaniasLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .cercanias })
+            return sortedNumerically(dataService.filteredLines.filter { $0.type == .tren })
         }
         return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .cercanias && $0.nucleo.lowercased() == province })
+            .filter { $0.type == .tren && $0.nucleo.lowercased() == province })
     }
 
     // Get Metro lines for the current location
@@ -160,11 +160,11 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: isRodalies ? .rodalies : .cercanias,
+                                logoType: isRodalies ? .rodalies : .tren,
                                 height: 22
                             ),
                             title: isRodalies ? "Rodalies" : "Cercanías",
-                            onShowPlan: { showingPlanFor = .cercanias }
+                            onShowPlan: { showingPlanFor = .tren }
                         )
                     }
                 }
@@ -519,7 +519,7 @@ struct NetworkPlanView: View {
             path = nil  // No map available
         case .bus:
             path = nil  // No map available
-        case .cercanias:
+        case .tren:
             switch nucleoLower {
             case "madrid":
                 path = "cercanias/madrid_cercanias.pdf"
@@ -569,6 +569,8 @@ struct NetworkPlanView: View {
             default:
                 path = nil
             }
+        case .funicular:
+            path = nil  // No map available
         }
 
         guard let path = path, let url = URL(string: "\(baseURL)/\(path)") else {
@@ -750,13 +752,14 @@ struct NetworkPlanView: View {
 
     private var planTitle: String {
         switch lineType {
-        case .cercanias: return "Plano Cercanías"
+        case .tren: return "Plano Cercanías"
         case .metro: return "Plano Metro"
         case .metroLigero: return "Plano Metro Ligero"
         case .tram: return "Plano Tranvía"
         case .fgc: return "Plano FGC"
         case .euskotren: return "Plano Euskotren"
         case .bus: return "Plano Bus"
+        case .funicular: return "Plano Funicular"
         }
     }
 }

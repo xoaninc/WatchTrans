@@ -16,7 +16,7 @@ struct LogoImageView: View {
     private static let baseURL = APIConfiguration.logosBaseURL
 
     enum LogoType {
-        case cercanias
+        case tren
         case rodalies
         case metro(nucleo: String)
         case metroLigero
@@ -28,7 +28,7 @@ struct LogoImageView: View {
         /// Remote logo filename (without extension)
         var remoteFilename: String? {
             switch self {
-            case .cercanias:
+            case .tren:
                 return "cercanias"
             case .rodalies:
                 return "rodalies"
@@ -91,7 +91,7 @@ struct LogoImageView: View {
         /// Returns nil if we should use SF Symbol instead (to avoid showing wrong city's logo)
         var localAssetName: String? {
             switch self {
-            case .cercanias:
+            case .tren:
                 return "CercaniasLogo"  // RENFE es igual en toda España
             case .rodalies:
                 return "RodaliesLogo"   // Rodalies de Catalunya
@@ -126,7 +126,7 @@ struct LogoImageView: View {
         /// SF Symbol for ultimate fallback
         var sfSymbol: String {
             switch self {
-            case .cercanias, .rodalies, .fgc, .euskotren, .sfm:
+            case .tren, .rodalies, .fgc, .euskotren, .sfm:
                 return "tram.fill"
             case .metro, .metroLigero:
                 return "tram.tunnel.fill"
@@ -204,7 +204,7 @@ extension LogoImageView {
         } else if nucleo.lowercased() == "rodalies de catalunya" {
             self.logoType = .rodalies
         } else {
-            self.logoType = .cercanias
+            self.logoType = .tren
         }
     }
 
@@ -221,11 +221,11 @@ extension LogoImageView {
             self.logoType = .tram(nucleo: nucleo)
         case .fgc:
             self.logoType = .fgc
-        case .cercanias:
+        case .tren:
             if nucleo.lowercased() == "rodalies de catalunya" {
                 self.logoType = .rodalies
             } else {
-                self.logoType = .cercanias
+                self.logoType = .tren
             }
         }
     }
@@ -233,7 +233,7 @@ extension LogoImageView {
 
 #Preview {
     VStack(spacing: 20) {
-        LogoImageView(logoType: .cercanias, height: 20)
+        LogoImageView(logoType: .tren, height: 20)
         LogoImageView(logoType: .metro(nucleo: "Madrid"), height: 20)
         LogoImageView(logoType: .metro(nucleo: "Sevilla"), height: 20)
         LogoImageView(logoType: .tram(nucleo: "Zaragoza"), height: 20)

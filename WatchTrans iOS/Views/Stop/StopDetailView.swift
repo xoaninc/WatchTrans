@@ -643,7 +643,7 @@ struct StopHeaderView: View {
 
                     // Transport type of this stop
                     switch stop.transportType {
-                    case .cercanias:
+                    case .tren:
                         Label("Tren", systemImage: "tram.fill")
                             .font(.caption)
                             .foregroundStyle(.blue)
@@ -671,6 +671,10 @@ struct StopHeaderView: View {
                         Label("Bus", systemImage: "bus.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
+                    case .funicular:
+                        Label("Funicular", systemImage: "tram.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
                     }
 
                     if stop.hasBusConnection {
@@ -944,7 +948,7 @@ struct ConnectionsSectionView: View {
     @State private var linesLoaded = false
 
     private enum TransportKind: String {
-        case cercanias, metro, metroLigero, tram, funicular, bus
+        case tren, metro, metroLigero, tram, funicular, bus
     }
 
     private struct ConnectionBadge: Identifiable {
@@ -961,7 +965,7 @@ struct ConnectionsSectionView: View {
         // 1. Cercanías
         for line in stop.correspondences?.tren ?? parseLines(stop.corTren) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Cercanías"), colorHex: color, kind: .cercanias))
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Cercanías"), colorHex: color, kind: .tren))
         }
 
         // 2. Metro
@@ -1071,7 +1075,7 @@ struct ConnectionsSectionView: View {
     private func findCorrespondenceStop(for badge: ConnectionBadge) -> Stop? {
         let prefixes: [String]
         switch badge.kind {
-        case .cercanias: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_", "SFM_MALLORCA_"]
+        case .tren: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_", "SFM_MALLORCA_"]
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
         case .metroLigero: prefixes = ["ML_"]
         case .tram: prefixes = ["TRAM_", "TRANVIA_"]

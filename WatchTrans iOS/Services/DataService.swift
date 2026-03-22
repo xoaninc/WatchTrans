@@ -994,7 +994,7 @@ class DataService {
             let lineId = "\(route.agencyId)_\(route.shortName.lowercased())"
 
             // Debug: Log longName for Cercanías routes (to diagnose RENFE issue)
-            if transportType == .cercanias {
+            if transportType == .tren {
                 DebugLog.log("🚃 [API] Route \(route.shortName) longName: \"\(route.longName)\"")
             }
 
@@ -1182,7 +1182,7 @@ class DataService {
         normalizedShortName: String,
         transportType: TransportType
     ) -> Bool {
-        guard transportType == .cercanias else { return false }
+        guard transportType == .tren else { return false }
         return normalizedValue.contains("cercan")
             && normalizedValue.contains("linea")
             && normalizedValue.contains(normalizedShortName)
@@ -1207,7 +1207,7 @@ class DataService {
             
             // Always try to improve Cercanías names if they don't look like "A - B"
             let needsImprovement = shouldDeriveLongNameForEndpoints(line) || 
-                                  (line.type == .cercanias && !line.longName.contains(" - "))
+                                  (line.type == .tren && !line.longName.contains(" - "))
             
             guard needsImprovement else { continue }
             guard let routeId = line.routeIds.first else { continue }
@@ -1270,7 +1270,7 @@ class DataService {
         let normalizedName = normalizeForMatching(line.name)
         if normalizedLong == normalizedName { return true }
         if normalizedLong.contains("linea") && normalizedLong.contains(normalizedName) { return true }
-        if line.type == .cercanias {
+        if line.type == .tren {
             return normalizedLong.contains("cercan") && normalizedLong.contains("linea")
         }
         return false
@@ -1927,7 +1927,7 @@ class DataService {
             return .tram
         }
         if upper.hasPrefix("C"), upper.count > 1 {
-            return .cercanias
+            return .tren
         }
         if upper.hasPrefix("FGC") {
             return .fgc

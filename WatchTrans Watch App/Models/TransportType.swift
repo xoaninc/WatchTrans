@@ -10,19 +10,21 @@ import Foundation
 enum TransportType: String, Codable {
     case metro = "Metro"
     case metroLigero = "Metro Ligero"
-    case cercanias = "Cercanías"
+    case tren = "Tren"
     case tram = "Tram"
     case fgc = "FGC"  // Ferrocarrils de la Generalitat de Catalunya
+    case bus = "Bus"
+    case funicular = "Funicular"
 
     /// Get transport type from GTFS route_type
     static func from(routeType: Int) -> TransportType {
         switch routeType {
         case 0: return .tram
         case 1: return .metro
-        case 2: return .cercanias
-        case 3: return .cercanias  // bus — Watch no tiene .bus, se agrupa
-        case 7: return .cercanias  // funicular
-        default: return .cercanias
+        case 2: return .tren
+        case 3: return .bus
+        case 7: return .funicular
+        default: return .tren
         }
     }
 }

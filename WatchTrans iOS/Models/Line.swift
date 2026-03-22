@@ -12,7 +12,7 @@ struct Line: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let name: String          // "C3", "L1", "ML1"
     let longName: String      // "Chamartín - Aeropuerto T4"
-    let type: TransportType   // .metro, .cercanias, .tram
+    let type: TransportType   // .metro, .tren, .tram
     let colorHex: String      // Store as hex string for Codable
     let nucleo: String        // Province/network name: "madrid", "sevilla", "barcelona", etc.
     let routeIds: [String]    // Actual API route IDs (e.g., ["RENFE_C1_34"])

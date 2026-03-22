@@ -129,7 +129,7 @@ struct SettingsView: View {
 
         default:
             // Fallback: show based on available transport types
-            if dataService.lines.contains(where: { $0.type == .cercanias }) {
+            if dataService.lines.contains(where: { $0.type == .tren }) {
                 credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
             }
             if dataService.lines.contains(where: { $0.type == .metro }) {
@@ -486,11 +486,12 @@ struct SettingsView: View {
         switch type {
         case .metro: return "Metro de \(capitalized)"
         case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .cercanias: return "Cercanías \(capitalized)"
+        case .tren: return "Cercanías \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
         case .fgc: return "FGC"
         case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
+        case .funicular: return "Funicular de \(capitalized)"
         }
     }
 
@@ -500,7 +501,7 @@ struct SettingsView: View {
             return .red
         case .metroLigero:
             return .blue
-        case .cercanias:
+        case .tren:
             return .purple
         case .tram:
             return .green
@@ -510,6 +511,8 @@ struct SettingsView: View {
             return .red
         case .bus:
             return .blue
+        case .funicular:
+            return .brown
         }
     }
 

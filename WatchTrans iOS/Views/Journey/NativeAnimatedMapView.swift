@@ -420,7 +420,7 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             case .metro:
                 iconName = "tram.fill"
                 localLogoName = province == "sevilla" ? "MetroSevillaLogo" : "MetroLogo"
-            case .cercanias:
+            case .tren:
                 iconName = "train.side.front.car"
                 localLogoName = province.contains("catalunya") || province.contains("barcelona") ? "RodaliesLogo" : "CercaniasLogo"
             case .tranvia:

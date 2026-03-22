@@ -721,7 +721,7 @@ struct AlertsListView: View {
                 id: "c1",
                 name: "C1",
                 longName: "Chamartín - Aeropuerto T4",
-                type: .cercanias,
+                type: .tren,
                 colorHex: "#75B6E0",
                 nucleo: "madrid",
                 routeIds: ["RENFE_C1_34"],
