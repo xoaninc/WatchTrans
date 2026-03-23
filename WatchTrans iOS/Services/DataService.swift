@@ -493,29 +493,18 @@ class DataService {
         return matching.first?.name
     }
 
-    /// Get transport type from network (uses API field, falls back to code prefix)
+    /// Get transport type from network — requires API to provide transport_type field
     func networkTransportType(_ network: NetworkResponse) -> TransportType {
-        if let tt = network.transportType {
-            switch tt {
-            case "cercanias": return .tren
-            case "metro": return .metro
-            case "tram": return .tram
-            case "metro_ligero": return .metroLigero
-            case "fgc": return .fgc
-            case "euskotren": return .euskotren
-            default: return .tren
-            }
+        guard let tt = network.transportType else { return .tren }
+        switch tt {
+        case "cercanias": return .tren
+        case "metro": return .metro
+        case "tram": return .tram
+        case "metro_ligero": return .metroLigero
+        case "fgc": return .fgc
+        case "euskotren": return .euskotren
+        default: return .tren
         }
-        let code = network.code.uppercased()
-        if code.hasPrefix("RENFE") || code.hasPrefix("SFM") { return .tren }
-        if code.hasPrefix("TMB_METRO") { return .metro }
-        if code.hasPrefix("METROVALENCIA") { return .metro }
-        if code.hasPrefix("METRO_L") { return .metroLigero }
-        if code.hasPrefix("METRO") { return .metro }
-        if code.hasPrefix("TRAM") || code.hasPrefix("TRANVIA") || code == "TUSSAM" { return .tram }
-        if code == "FGC" { return .fgc }
-        if code.hasPrefix("EUSKOTREN") { return .euskotren }
-        return .tren
     }
 
     /// Find network code for a given nucleo and transport type
