@@ -43,6 +43,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 | `TramSymbol` | `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar (tranvía con catenaria) | Indicar que la parada/línea es de tranvía. Sustituye SF Symbol `lightrail.fill`. | **Pendiente integrar en código** |
 | `BusSymbol` | `ISO_7001_PI_TF_006.svg` | Autobús (bus visto de lado) | Indicar que la parada/línea es de bus. Sustituye SF Symbol `bus.fill`. | **Pendiente integrar en código** |
 | `FunicularSymbol` | `ISO_7001_PI_TF_012.svg` | Funicular (tren inclinado subiendo pendiente) | Indicar que la parada es de funicular. | ✅ Integrado en `StopDetailView` |
+| `WheelchairSymbol` | `ISO_7001_PI_PF_006.svg` | Persona en silla de ruedas | Indicar accesibilidad. Sustituye SF Symbol `figure.roll`. Colores via `.foregroundStyle()`: verde=accesible, rojo=no accesible (con overlay ISO 7001 Red Slash o Red Cross), azul=header/badge. | **Pendiente integrar en código** |
 
 ### Otros (revisar licencia)
 
@@ -67,7 +68,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `figure.roll` | Persona en silla de ruedas | Indicar accesibilidad. Verde = accesible (RT o static == 2). Rojo + xmark = no accesible (== 3). Azul = header/badge parada. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView`, `EquipmentStatusSection` (header), `StationInteriorSection` |
+| `figure.roll` | Persona en silla de ruedas | **Será sustituido por `WheelchairSymbol` (ISO 7001)**. Verde=accesible, rojo+xmark=no accesible, azul=header. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView`, `EquipmentStatusSection` (header), `StationInteriorSection` |
 | `figure.walk` | Persona andando | Indicar recorrido a pie. | `PathwayRow`, `JourneyPlannerView`, `StopDetailView`, `PlanRouteIntent` |
 | `figure.stairs` | Persona subiendo escaleras | **No se usa** — sustituido por `StairsSymbol` AIGA en pathways. | — |
 | `bicycle` | Bicicleta | Indicar bicicletas permitidas o parking bici. | `ArrivalRowView`, `StopDetailView` badge "Parking Bici" |
@@ -164,6 +165,7 @@ Decisión tomada: usar ISO 7001 (Wikimedia) para los 5 modos de transporte. Asse
 | `tram.tunnel.fill` | `MetroSymbol` | ~5 archivos |
 | `lightrail.fill` / `tram` | `TramSymbol` | ~5 archivos |
 | `bus.fill` | `BusSymbol` | ~5 archivos |
+| `figure.roll` | `WheelchairSymbol` | ~10 archivos (colores via foregroundStyle, overlay para "no accesible" pendiente decidir: ISO 7001 Red Slash o Red Cross) |
 
 **Nota:** `train.side.front.car` NO se sustituye — se usa para "Vía/Andén", no como modo de transporte.
 
