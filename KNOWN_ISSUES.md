@@ -132,10 +132,18 @@ Badge cambiado de "Parking" con icono P a "Parking Bici" con icono 🚲.
 
 ### AIGA symbols: marco legal pendiente
 
-Los iconos AIGA (ElevatorSymbol, EscalatorSymbol, EscalatorUpSymbol, EscalatorDownSymbol, StairsSymbol) provienen del set AIGA Symbol Signs. StairClimbingSymbol proviene de otra fuente sin verificar. Set completo de 68 EPS descargado de https://www.aiga.org/resources/symbol-signs y guardado en `CustomSymbols/symbol_signs_aiga_eps/`. SVGs individuales de Wikimedia: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs.
+Los iconos AIGA (ElevatorSymbol, EscalatorSymbol, EscalatorUpSymbol, EscalatorDownSymbol, StairsSymbol) provienen del set AIGA Symbol Signs. StairClimbingSymbol proviene de otra fuente sin verificar. Set completo de 82 SVGs en `CustomSymbols/symbol_signs_aiga_svg/` (descargados de Wikimedia). Fuente original: https://www.aiga.org/resources/symbol-signs. ISO 7001 (191 SVGs) en `CustomSymbols/iso_7001_wikimedia_svg/`.
 
 **Pendiente**: Verificar que "dominio público" (US Government work, 1974) aplica a distribución comercial en App Store. Verificar licencia de StairClimbingSymbol. Ver `CustomSymbols/SYMBOLS.md` para referencia completa.
 
 ### Colores de TransportType por revisar
 
-Los colores asignados a cada `TransportType` en `SettingsView.colorForTransportType()` fueron puestos arbitrariamente y no han sido validados. Pendiente decidir colores definitivos para: metro (.red), metroLigero (.blue), tren (.purple), tram (.green), fgc (.orange), euskotren (.red), bus (.blue), funicular (.brown).
+Colores actuales (decididos por el usuario): metro=.orange, tren=.blue, tram=.green, bus=.red, funicular=.brown.
+
+### Mapa de accesos: door.left.hand.open pendiente sustituir
+
+`StopDetailView.swift:97` — Los pins del mapa de accesos usan `door.left.hand.open` para accesos no accesibles y `figure.roll` para accesibles. Debería usar `StairClimbingSymbol`/`ElevatorSymbol` como ya se hace en `AccessRow` de `StationInteriorSection`.
+
+### Pathway modes sin datos en la API
+
+`StationInteriorSection PathwayRow` tiene iconos para `moving_sidewalk`, `escalator` (pathway), `elevator` (pathway), `fare_gate`, pero **ninguna estación de la API devuelve estos modes**. Solo existen `walkway` y `stairs`. Código preventivo pendiente de limpiar.
