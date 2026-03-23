@@ -173,7 +173,6 @@ struct TrainPositionResponse: Codable {
 struct NetworkResponse: Codable, Identifiable {
     let code: String
     let name: String
-    let city: String?
     let color: String
     let textColor: String
     let routeCount: Int?
@@ -183,7 +182,7 @@ struct NetworkResponse: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case code = "id"
-        case name, city, color
+        case name, color
         case textColor = "text_color"
         case routeCount = "route_count"
         case transportType = "transport_type"
@@ -193,7 +192,6 @@ struct NetworkResponse: Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         code = (try? container.decode(String.self, forKey: .code)) ?? ""
         name = (try? container.decode(String.self, forKey: .name)) ?? ""
-        city = try? container.decodeIfPresent(String.self, forKey: .city)
         color = (try? container.decode(String.self, forKey: .color)) ?? ""
         textColor = (try? container.decode(String.self, forKey: .textColor)) ?? ""
         routeCount = try? container.decodeIfPresent(Int.self, forKey: .routeCount)
