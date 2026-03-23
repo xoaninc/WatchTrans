@@ -497,12 +497,9 @@ class DataService {
     func networkTransportType(_ network: NetworkResponse) -> TransportType {
         guard let tt = network.transportType else { return .tren }
         switch tt {
-        case "cercanias": return .tren
-        case "metro": return .metro
+        case "cercanias", "fgc", "euskotren": return .tren
+        case "metro", "metro_ligero": return .metro
         case "tram": return .tram
-        case "metro_ligero": return .metroLigero
-        case "fgc": return .fgc
-        case "euskotren": return .euskotren
         default: return .tren
         }
     }
