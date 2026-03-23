@@ -660,9 +660,16 @@ struct StopHeaderView: View {
                             .font(.caption)
                             .foregroundStyle(.orange)
                     case .funicular:
-                        Label("Funicular", systemImage: "tram.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            Image("FunicularSymbol")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 12)
+                            Text("Funicular")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.brown)
                     }
 
                     if stop.hasBusConnection {

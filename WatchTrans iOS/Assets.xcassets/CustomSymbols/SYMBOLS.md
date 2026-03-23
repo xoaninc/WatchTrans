@@ -2,6 +2,22 @@
 
 Pictogramas custom usados en WatchTrans. Todos se renderizan con `.renderingMode(.template)` para tinting.
 
+## TransportType enum
+
+La app usa `TransportType` (5 cases) basado en el campo `route_type` GTFS de la API:
+
+| Case | route_type | Color | Cubre |
+|------|-----------|-------|-------|
+| `.metro` | 1 | `.orange` | Metro Madrid, Metro Sevilla, TMB Metro, Metro Bilbao, Metro Ligero... |
+| `.tren` | 2 | `.blue` | Cercanías, Rodalies, FGC, Euskotren, FEVE, SFM Mallorca... |
+| `.tram` | 0 | `.green` | Tranvías (Sevilla, Zaragoza, Murcia, Barcelona, Tenerife...) |
+| `.bus` | 3 | `.red` | Buses |
+| `.funicular` | 7 | `.brown` | Funiculares |
+
+**Eliminados en esta sesión:** `.metroLigero` (fusionado con `.metro`), `.fgc` (fusionado con `.tren`), `.euskotren` (fusionado con `.tren`).
+
+**Nota:** `TransportMode` (Journey planner) y `LogoType` (LogoImageView) son enums internos separados que SÍ mantienen `.metroLigero`, `.fgc`, `.euskotren` para logos de operadores y modos de transporte de la API.
+
 ## Assets custom
 
 ### AIGA/DOT (Dominio público)
@@ -16,6 +32,12 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 | `EscalatorDownSymbol` | Escalera mecánica bajando (persona en escalera + flecha abajo) | Mostrar escalera mecánica que baja, con estado operativo RT. | `EquipmentStatusSection` (escalera mecánica dirección bajada) |
 | `StairsSymbol` | Escaleras normales (persona subiendo peldaños) | Indicar que un recorrido dentro de la estación incluye escaleras. | `PathwayRow` (recorridos con escaleras en interior de estación) |
 
+### ISO 7001 (Wikimedia Commons, recreación comunitaria)
+
+| Asset | Qué es | Para qué se usa | Dónde en la app |
+|-------|--------|-----------------|-----------------|
+| `FunicularSymbol` | Funicular (tren inclinado subiendo pendiente con vagones) | Indicar que la parada es de funicular. | `StopDetailView` badge "Funicular" |
+
 ### Otros (revisar licencia)
 
 | Asset | Qué es | Para qué se usa | Dónde en la app |
@@ -28,44 +50,44 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `tram.fill` | Tranvía/tren relleno | Icono genérico de transporte ferroviario. Se usa para todo tipo de servicio ferroviario como icono por defecto. | `ArrivalRowView`, `TrainDetailView` (posición tren, vehículo, timeline), `StopDetailView` (mapa), `FullMapView` (anotaciones), `TrainAnnotationView`, `NativeAnimatedMapView`, `LogoImageView`, `SettingsView`, `PlanRouteIntent`, widgets iOS/Watch, `LiveActivityWidget`, Watch `ArrivalCard`, Watch `TrainDetailView` |
-| `tram.tunnel.fill` | Tren saliendo de túnel | Indicar metro (subterráneo). | `StopDetailView` badge "Metro", `FullMapView` (tipo metro), `LogoImageView`, `SettingsView` (credits de todos los metros) |
-| `lightrail.fill` | Tren ligero relleno | Indicar tranvía/tram o metro ligero. | `StopDetailView` badge "Tram", `FullMapView` (tipo tram), `NativeAnimatedMapView`, `LogoImageView`, `Journey` model (modo metro ligero) |
+| `tram.fill` | Tranvía/tren relleno | Icono genérico de transporte ferroviario. Se usa como icono por defecto para tren. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView` (mapa, badge "Tren"), `FullMapView`, `TrainAnnotationView`, `NativeAnimatedMapView`, `LogoImageView`, `SettingsView`, `PlanRouteIntent`, widgets iOS/Watch, `LiveActivityWidget`, Watch `ArrivalCard` |
+| `tram.tunnel.fill` | Tren saliendo de túnel | Indicar metro (subterráneo). | `StopDetailView` badge "Metro", `FullMapView` (tipo metro), `LogoImageView`, `SettingsView` (credits) |
+| `lightrail.fill` | Tren ligero relleno | Indicar tranvía/tram. | `StopDetailView` badge "Tram", `FullMapView` (tipo tram), `NativeAnimatedMapView`, `LogoImageView`, `Journey` model (modo metro ligero) |
 | `tram` | Tranvía sin relleno | Modo de transporte tranvía en el planificador de rutas. | `Journey` model (modo tranvía) |
-| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo cercanías en planificador. | `TrainDetailView` badge "Vía", `StopDetailView` Acerca "Andén", `NativeAnimatedMapView`, `Journey` model (modo cercanías), Watch `TrainDetailView` (andén) |
-| `bus.fill` | Autobús relleno | Indicar parada de bus o servicio alternativo por autobús. | `StopDetailView` badge "Bus", `ArrivalRowView` (servicio alternativo), `LinesListView` (indicador alternativo), `FullMapView` (tipo bus), `NativeAnimatedMapView`, `Journey` model (modo bus) |
+| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo cercanías en planificador. | `TrainDetailView` badge "Vía", `StopDetailView` Acerca "Andén", `NativeAnimatedMapView`, `Journey` model (modo cercanías), Watch `TrainDetailView` |
+| `bus.fill` | Autobús relleno | Indicar parada de bus o servicio alternativo por autobús. | `StopDetailView` badge "Bus", `ArrivalRowView` (servicio alternativo), `LinesListView`, `FullMapView`, `NativeAnimatedMapView`, `Journey` model (modo bus) |
 
 ### Accesibilidad
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `figure.roll` | Persona en silla de ruedas | Indicar accesibilidad. Verde = accesible. Rojo + xmark superpuesto = no accesible. | `ArrivalRowView` (por tren), `TrainDetailView`, `StopDetailView` (por parada), `EquipmentStatusSection` (header), `StationInteriorSection` (accesos no accesibles) |
-| `figure.walk` | Persona andando | Indicar recorrido a pie entre estaciones o dentro de la estación. | `PathwayRow` (recorrido tipo walkway), `JourneyPlannerView` (segmento andando, tiempo caminando), `StopDetailView` (entrada cercana, estaciones cercanas), `PlanRouteIntent` |
+| `figure.roll` | Persona en silla de ruedas | Indicar accesibilidad. Verde = accesible (RT o static == 2). Rojo + xmark = no accesible (== 3). Azul = header/badge parada. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView`, `EquipmentStatusSection` (header), `StationInteriorSection` |
+| `figure.walk` | Persona andando | Indicar recorrido a pie. | `PathwayRow`, `JourneyPlannerView`, `StopDetailView`, `PlanRouteIntent` |
 | `figure.stairs` | Persona subiendo escaleras | **No se usa** — sustituido por `StairsSymbol` AIGA en pathways. | — |
-| `bicycle` | Bicicleta | Indicar que el tren permite bicicletas o que la estación tiene parking de bici. | `ArrivalRowView` (bicicletas permitidas), `StopDetailView` badge "Parking Bici" |
+| `bicycle` | Bicicleta | Indicar bicicletas permitidas o parking bici. | `ArrivalRowView`, `StopDetailView` badge "Parking Bici" |
 
 ### Equipamiento / Servicios
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `door.left.hand.open` | Puerta abierta (pomo izquierda) | Entrada a estación sin ascensor. También para indicar entrada en journey planner y vestíbulo en Acerca PMR. | `StationInteriorSection` (accesos sin ascensor), `StopDetailView` mapa de accesos, `JourneyPlannerView` (entrada), `StopDetailView` Acerca (vestíbulo) |
-| `door.right.hand.open` | Puerta abierta (pomo derecha) | Indicar punto de salida de la estación en el planificador de rutas. | `JourneyPlannerView` (salida) |
-| `creditcard` | Tarjeta de crédito | Indicar torniquete o puerta de tarifa en recorridos dentro de estación. | `PathwayRow` (recorrido tipo fare gate) |
-| `arrow.left.arrow.right` | Flechas izquierda-derecha | Indicar pasillo mecánico (cinta transportadora) en recorridos. | `PathwayRow` (recorrido tipo moving sidewalk) |
-| `moon.zzz.fill` | Luna con zzz | Indicar que los equipos (ascensores/escaleras) están apagados por cierre nocturno. | `EquipmentStatusSection` (cierre nocturno Metro Sevilla) |
+| `door.left.hand.open` | Puerta abierta | Entrada sin ascensor. Entrada en journey planner. Vestíbulo en Acerca PMR. | `StationInteriorSection`, `StopDetailView` mapa, `JourneyPlannerView`, `StopDetailView` Acerca |
+| `door.right.hand.open` | Puerta abierta (derecha) | Salida de estación en journey planner. | `JourneyPlannerView` |
+| `creditcard` | Tarjeta | Torniquete/fare gate en recorridos. | `PathwayRow` |
+| `arrow.left.arrow.right` | Flechas izq-der | Pasillo mecánico/cinta en recorridos. | `PathwayRow` |
+| `moon.zzz.fill` | Luna con zzz | Equipos apagados por cierre nocturno. | `EquipmentStatusSection` |
 
 ### UI general
 
 | SF Symbol | Qué es | Para qué se usa |
 |-----------|--------|-----------------|
-| `exclamationmark.triangle.fill` | Triángulo de alerta | Alertas de servicio, retrasos, PMR warning |
-| `xmark` | Cruz | Superpuesto sobre `figure.roll` para indicar "no accesible" |
-| `location.fill` / `location.slash` | Pin de ubicación | Posición del tren, ubicación del usuario |
-| `star.fill` / `star` | Estrella | Favoritos (llena=favorito, vacía=no) |
-| `clock` / `clock.fill` | Reloj | Horarios, próximas salidas |
-| `chevron.right` / `chevron.up` / `chevron.down` | Flechas | Navegación, expandir/contraer secciones |
-| `icloud.slash` | iCloud tachado | Indicar que los datos son offline (sin conexión) |
-| `mappin.circle` | Pin de mapa | Punto de encuentro del servicio Acerca PMR |
+| `exclamationmark.triangle.fill` | Triángulo de alerta | Alertas, retrasos, PMR warning |
+| `xmark` | Cruz | Superpuesto sobre `figure.roll` para "no accesible" |
+| `location.fill` / `location.slash` | Pin de ubicación | Posición del tren, ubicación usuario |
+| `star.fill` / `star` | Estrella | Favoritos |
+| `clock` / `clock.fill` | Reloj | Horarios, salidas |
+| `chevron.right` / `chevron.up` / `chevron.down` | Flechas | Navegación, expandir/contraer |
+| `icloud.slash` | iCloud tachado | Datos offline |
+| `mappin.circle` | Pin de mapa | Punto de encuentro Acerca PMR |
 
 ## Fuentes completas disponibles
 
@@ -97,17 +119,13 @@ Relevantes para transporte y accesibilidad:
 | `ss_46_Parking.eps` | Parking |
 | `ss_50_Exit.eps` | Salida |
 
-**Licencia**: Se describe como "dominio público" (US Government work, 1974). **Marco legal pendiente de verificar** para distribución en App Store — ver KNOWN_ISSUES.md.
+**Licencia**: Descrito como dominio público (US Government work, 1974). **Marco legal pendiente de verificar** — ver KNOWN_ISSUES.md.
 
 ### ISO 7001 (Wikimedia Commons)
 
 Carpeta: `iso_7001_wikimedia_svg/`
 
-191 SVGs descargados de https://commons.wikimedia.org/wiki/Category:ISO_7001_icons (todas las subcategorías). Recreaciones comunitarias de los símbolos ISO 7001:2023.
-
-Categorías incluidas: Accessibility, Behaviour of the public, Commercial facilities, Public facilities, Sporting activities, Tourism/culture/heritage, Transportation facilities, Diagrams.
-
-**Licencia de los SVGs en Wikimedia**: cada archivo tiene su propia licencia (generalmente CC0 o CC BY-SA). **Sin embargo**, los símbolos ISO 7001 originales son copyright de ISO (~$30/símbolo). Estas recreaciones en Wikimedia son trabajos derivados. **Marco legal pendiente de verificar** para uso en App Store.
+191 SVGs descargados de https://commons.wikimedia.org/wiki/Category:ISO_7001_icons. Recreaciones comunitarias.
 
 Símbolos de transporte relevantes (PI TF):
 
@@ -124,70 +142,42 @@ Símbolos de transporte relevantes (PI TF):
 | `ISO_7001_PI_TF_009.svg` | Alquiler de coches |
 | `ISO_7001_PI_TF_010.svg` | Bicicleta |
 | `ISO_7001_PI_TF_011.svg` | Teleférico/cable car |
-| `ISO_7001_PI_TF_012.svg` | Funicular |
+| `ISO_7001_PI_TF_012.svg` | Funicular ← **usado como FunicularSymbol** |
 | `ISO_7001_PI_TF_014.svg` | Parking |
-| `ISO_7001_PI_TF_024.svg` | Asientos prioritarios (condiciones médicas) |
+| `ISO_7001_PI_TF_024.svg` | Asientos prioritarios |
 | `ISO_7001_PI_TF_040.svg` | Embarque bus |
 | `ISO_7001_PI_TF_044.svg` | Carga vehículo eléctrico |
+
+**Licencia**: Cada SVG tiene su propia licencia en Wikimedia (generalmente CC0 o CC BY-SA). Los originales ISO 7001 son copyright ISO. **Marco legal pendiente** — ver KNOWN_ISSUES.md.
 
 ### Otras fuentes pendientes de evaluar
 
 | Fuente | Licencia | URL | Estado |
 |--------|----------|-----|--------|
-| Temaki | CC0 | https://github.com/rapideditor/temaki | Pendiente. Tiene subway, tram, train, gondola_lift, elevator |
-| Maki (Mapbox) | CC0 | https://github.com/mapbox/maki | Pendiente. Tiene rail, rail-metro, rail-light, bus |
-| Material Design Icons | Apache 2.0 | https://fonts.google.com/icons | Pendiente. Tiene train, tram, subway, bus, elevator, escalator |
-| Accesibiliconos | CC BY-SA 4.0 | https://accesibiliconos.org/ | Pendiente. 52 pictogramas accesibilidad |
-| JIS Z8210 (equiv. japonés ISO 7001) | Revisar | https://github.com/cat-in-136/JISZ8210_Symbols_SVG | Pendiente |
-| SBB Picto Library (ferrocarriles suizos) | Revisar | https://github.com/sbb-design-systems/picto-library | Pendiente |
-| ISO 7001 | Copyright ISO (~$30/símbolo) | https://www.iso.org/standard/77442.html | NO usar sin licencia |
+| Temaki | CC0 | https://github.com/rapideditor/temaki | Pendiente |
+| Maki (Mapbox) | CC0 | https://github.com/mapbox/maki | Pendiente |
+| Material Design Icons | Apache 2.0 | https://fonts.google.com/icons | Pendiente |
+| Accesibiliconos | CC BY-SA 4.0 | https://accesibiliconos.org/ | Pendiente |
+| JIS Z8210 | Revisar | https://github.com/cat-in-136/JISZ8210_Symbols_SVG | Pendiente |
+| SBB Picto Library | Revisar | https://github.com/sbb-design-systems/picto-library | Pendiente |
 
 ## Licencias
 
-- **AIGA/DOT Symbol Signs**: Descrito como dominio público (US Government work, 1974). **Marco legal pendiente de verificar para distribución en App Store.**
+- **AIGA/DOT Symbol Signs**: Dominio público (US Government work, 1974). **Marco legal pendiente de verificar.**
+- **ISO 7001 (Wikimedia)**: Recreaciones comunitarias, licencia por archivo. Originales copyright ISO (~$30/símbolo). **Marco legal pendiente.**
 - **StairClimbingSymbol**: Fuente por determinar. Revisar licencia antes de publicar.
-- **SF Symbols**: Incluidos con iOS/watchOS. Uso permitido en apps de Apple.
-- **ISO 7001**: Copyright de ISO. NO usar sin licencia. ~$30/símbolo o suscripción anual.
-
-## Símbolos que NO tenemos
-
-| Concepto | Estado |
-|----------|--------|
-| Funicular | Sin icono. Candidatos: Temaki `gondola_lift` (CC0), ISO 7001 PI TF 012 |
-| Teleférico | Sin icono. Candidatos: Temaki `gondola_lift` o `chairlift` (CC0), ISO 7001 PI TF 011 |
-| Metro (pictograma propio) | Usamos `tram.fill` genérico. No hay pictograma diferenciado |
-| Ferry | Sin icono. Candidatos: ISO 7001 PI TF 004, Temaki `ferry` (CC0) |
+- **SF Symbols**: Incluidos con iOS/watchOS. Uso permitido en apps Apple.
 
 ## Bugs / datos de la API sin símbolo
 
 ### `corBus` — correspondencia bus no se muestra
 
-El campo `corBus` existe en el modelo `Stop` y se decodifica de la API, pero en `StopDetailView` los badges de correspondencia bus **nunca se añaden** a `allBadges`. El `TransportKind.bus` existe en el enum pero no se procesa. Necesita implementación + icono `bus.fill`.
-
-### `routeType` (GTFS) — decodificado pero no usado
-
-`RouteResponse.routeType: Int` se decodifica de la API pero no se usa para nada visual ni lógico. Valores GTFS estándar:
-
-| Valor | Tipo | Icono que podría usar |
-|-------|------|----------------------|
-| 0 | Tram/Streetcar | `tram` / `lightrail.fill` |
-| 1 | Subway/Metro | `tram.tunnel.fill` |
-| 2 | Rail (cercanías, regional) | `train.side.front.car` |
-| 3 | Bus | `bus.fill` |
-| 4 | Ferry | — (sin icono) |
-| 5 | Cable tram | — (sin icono) |
-| 6 | Gondola/aerial | — (sin icono) |
-| 7 | Funicular | — (sin icono) |
-| 11 | Trolleybus | `bus.fill` |
-| 12 | Monorail | — (sin icono) |
-
-Actualmente el tipo de transporte se determina por prefijo del stop ID (`METRO_*`, `RENFE_C_*`, etc.), no por `routeType`. Podría usarse `routeType` como fuente de verdad para asignar iconos automáticamente.
+El campo `corBus` existe en el modelo `Stop` y se decodifica de la API, pero en `StopDetailView` los badges de correspondencia bus **nunca se añaden** a `allBadges`. Necesita implementación.
 
 ## Pendiente (KNOWN_ISSUES.md)
 
-- **Marco legal AIGA**: verificar si "dominio público" aplica a distribución en App Store
+- Marco legal AIGA y ISO 7001 Wikimedia
 - Revisar licencia de StairClimbingSymbol
-- Evaluar fuentes adicionales (Temaki, Maki, Material Design, Accesibiliconos)
-- Considerar convertir EPS relevantes a SVG para imagesets
 - Implementar badges de correspondencia bus (`corBus`)
-- Evaluar uso de `routeType` para asignación automática de iconos
+- Evaluar fuentes adicionales (Temaki, Maki, Material Design, Accesibiliconos)
+- Colores de TransportType pendientes de validar por el usuario
