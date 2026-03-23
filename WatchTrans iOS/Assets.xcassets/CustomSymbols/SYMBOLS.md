@@ -30,7 +30,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 | `EscalatorSymbol` | Escalera mecánica (persona en escalera con pasamanos, sin dirección) | Mostrar escaleras mecánicas sin dirección conocida. En pathways indica que el recorrido incluye una escalera mecánica. | `EquipmentStatusSection` (escaleras mecánicas sin dirección), `PathwayRow` (recorridos) |
 | `EscalatorUpSymbol` | Escalera mecánica subiendo (persona en escalera + flecha arriba) | Mostrar escalera mecánica que sube, con estado operativo RT. | `EquipmentStatusSection` (escalera mecánica dirección subida) |
 | `EscalatorDownSymbol` | Escalera mecánica bajando (persona en escalera + flecha abajo) | Mostrar escalera mecánica que baja, con estado operativo RT. | `EquipmentStatusSection` (escalera mecánica dirección bajada) |
-| `StairsSymbol` | Escaleras normales (persona subiendo peldaños) | Indicar que un recorrido dentro de la estación incluye escaleras. | `PathwayRow` (recorridos con escaleras en interior de estación) |
+| `StairsSymbol` | Escaleras normales (persona subiendo peldaños) | **Será sustituido por `StairClimbingSymbol`** en PathwayRow. | `PathwayRow` — **pendiente sustituir** |
 
 ### ISO 7001 (Wikimedia Commons, recreación comunitaria)
 
@@ -49,7 +49,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 
 | Asset | Qué es | Para qué se usa | Dónde en la app |
 |-------|--------|-----------------|-----------------|
-| `StairClimbingSymbol` | Monigote subiendo escaleras (silueta lateral) | Indicar que un acceso/entrada a la estación es por escaleras (no tiene ascensor ni rampa). | `AccessRow` (accesos no accesibles en interior de estación) |
+| `StairClimbingSymbol` | Monigote subiendo escaleras (silueta lateral) | Indicar escaleras en todos los contextos: accesos y recorridos. | `AccessRow` (accesos), `PathwayRow` (recorridos — **pendiente sustituir StairsSymbol**) |
 
 ## SF Symbols (Apple, incluidos con iOS)
 
