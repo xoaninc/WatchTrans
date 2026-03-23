@@ -69,6 +69,7 @@ struct OperatingHoursResult {
 class DataService {
     var lines: [Line] = []
     var stops: [Stop] = []
+    var networks: [NetworkResponse] = []
     var currentLocation: LocationContext?
     var isLoading = false
     var isLoadingLines = false
@@ -486,6 +487,42 @@ class DataService {
     /// Used to determine primary network without hardcoded ID lists
     private var networkTransportTypes: [String: String] = [:]
 
+    /// Get display name for a transport type from loaded networks
+    func networkDisplayName(for transportType: TransportType) -> String? {
+        let matching = networks.filter { networkTransportType($0) == transportType }
+        return matching.first?.name
+    }
+
+    /// Get transport type from network (uses API field, falls back to code prefix)
+    func networkTransportType(_ network: NetworkResponse) -> TransportType {
+        if let tt = network.transportType {
+            switch tt {
+            case "cercanias": return .tren
+            case "metro": return .metro
+            case "tram": return .tram
+            case "metro_ligero": return .metroLigero
+            case "fgc": return .fgc
+            case "euskotren": return .euskotren
+            default: return .tren
+            }
+        }
+        let code = network.code.uppercased()
+        if code.hasPrefix("RENFE") || code.hasPrefix("SFM") { return .tren }
+        if code.hasPrefix("TMB_METRO") { return .metro }
+        if code.hasPrefix("METROVALENCIA") { return .metro }
+        if code.hasPrefix("METRO_L") { return .metroLigero }
+        if code.hasPrefix("METRO") { return .metro }
+        if code.hasPrefix("TRAM") || code.hasPrefix("TRANVIA") || code == "TUSSAM" { return .tram }
+        if code == "FGC" { return .fgc }
+        if code.hasPrefix("EUSKOTREN") { return .euskotren }
+        return .tren
+    }
+
+    /// Find network code for a given nucleo and transport type
+    func findNetworkCode(nucleo: String, type: TransportType) -> String? {
+        networks.first { networkTransportType($0) == type }?.code
+    }
+
     // MARK: - Route Shape Cache
 
     /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
@@ -786,8 +823,9 @@ class DataService {
             if networkTransportTypes.isEmpty {
                 DebugLog.log("📍 [DataService] Fetching networks for transport types...")
                 do {
-                    let networks = try await gtfsRealtimeService.fetchNetworks()
-                    for network in networks {
+                    let fetchedNetworks = try await gtfsRealtimeService.fetchNetworks()
+                    self.networks = fetchedNetworks
+                    for network in fetchedNetworks {
                         if let transportType = network.transportType {
                             networkTransportTypes[network.code] = transportType
                         }
