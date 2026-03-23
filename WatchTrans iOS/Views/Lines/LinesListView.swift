@@ -20,37 +20,16 @@ struct LinesListView: View {
         dataService.currentLocation?.provinceName.lowercased()
     }
 
-    // Check if current location is Barcelona/Catalunya (for Rodalies branding)
     var isRodalies: Bool {
-        dataService.currentLocation?.isRodalies ?? false
+        dataService.networks.contains { $0.name.lowercased().contains("rodalies") }
     }
 
-    // Metro section title based on province
     var metroSectionTitle: String {
-        guard let province = currentProvince else { return "Metro" }
-        switch province {
-        case "sevilla": return "Metro Sevilla"
-        case "vizcaya", "bilbao": return "Metro Bilbao"
-        case "valencia": return "Metrovalencia"
-        case "málaga", "malaga": return "Metro Málaga"
-        case "granada": return "Metro Granada"
-        case "santa cruz de tenerife", "tenerife": return "Tranvía Tenerife"
-        case "barcelona", "rodalies de catalunya": return "Metro Barcelona"
-        default: return "Metro"
-        }
+        dataService.networkDisplayName(for: .metro) ?? "Metro"
     }
 
-    // Tram section title based on province
     var tramSectionTitle: String {
-        guard let province = currentProvince else { return "Tranvía" }
-        switch province {
-        case "sevilla": return "MetroCentro"
-        case "zaragoza": return "Tranvía Zaragoza"
-        case "alicante": return "TRAM Alicante"
-        case "murcia": return "Tranvía Murcia"
-        case "barcelona", "rodalies de catalunya": return "Tram Barcelona"
-        default: return "Tranvía"
-        }
+        dataService.networkDisplayName(for: .tram) ?? "Tranvía"
     }
 
     // MARK: - Numeric Line Sorting
