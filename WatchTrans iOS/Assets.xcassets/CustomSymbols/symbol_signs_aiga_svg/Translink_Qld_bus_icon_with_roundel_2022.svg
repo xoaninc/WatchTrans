@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="40mm"
+   height="40mm"
+   viewBox="0 0 40 40"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (1:1.4.2+202505120737+ebf0e940d0)"
+   sodipodi:docname="Translink Bus 2022.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="2.9110285"
+     inkscape:cx="111.47263"
+     inkscape:cy="94.46833"
+     inkscape:window-width="1580"
+     inkscape:window-height="1021"
+     inkscape:window-x="0"
+     inkscape:window-y="1"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1">
+    <inkscape:grid
+       id="grid1"
+       units="mm"
+       originx="0"
+       originy="0"
+       spacingx="0.99999998"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       enabled="true"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <path
+     id="Bus Roundel-7-3-4-3-3-4"
+     d="m 20,1.75 c 4.97,0 9.47,2.015 12.728,5.272 A 17.943,17.943 0 0 1 38,19.75 c 0,6.401 -3.341,12.023 -8.376,15.214 A 17.918,17.918 0 0 1 20,37.75 c -4.97,0 -9.47,-2.015 -12.728,-5.272 A 17.943,17.943 0 0 1 2,19.75 C 2,14.78 4.015,10.28 7.272,7.022 A 17.944,17.944 0 0 1 20,1.75 Z"
+     fill-rule="evenodd"
+     fill="#ef60a3"
+     stroke-width="3"
+     stroke="#ffffff"
+     style="display:inline;fill:#ef60a3;fill-opacity:0.999976;stroke:none;stroke-opacity:1"
+     transform="matrix(1.1111101,0,0,1.1087974,-2.2222027,-1.9403785)"
+     inkscape:label="Bus Roundel" />
+  <path
+     id="Bus-9-6-3-9-9-5"
+     d="m 25.545639,28.459952 v 1.616501 c 0,1.96457 2.908399,1.96457 2.908399,0 v -1.616501 c 1.8316,0 1.778151,-1.480924 1.778151,-1.480924 v -7.970392 l -0.08213,-0.80825 -0.968596,-7.43069 C 28.911612,9.4230459 28.02384,8.8846475 26.73064,8.3462481 25.438742,7.807849 22.287869,7.1886249 19.999999,7.1612487 17.710825,7.1873212 14.561256,7.807849 13.268054,8.3475517 11.948781,8.8846475 11.087082,9.4230459 10.817231,10.769696 l -0.9685967,7.43069 -0.08083,0.80825 v 7.970392 c 0,0 -0.05345,1.480924 1.7768477,1.480924 v 1.616501 c 0,1.96457 2.907093,1.96457 2.907093,0 v -1.616501 z m 1.454852,-3.204322 a 1.3844548,1.3844548 0 0 1 -1.400099,-1.372722 c 0,-0.754802 0.619224,-1.374026 1.400099,-1.374026 0.780874,0 1.400098,0.619224 1.400098,1.374026 0,0.753497 -0.619224,1.372722 -1.400098,1.372722 z M 15.718878,10.231297 c -0.80825,0 -0.80825,-1.2123754 0,-1.2123754 h 8.507488 c 0.808251,0 0.808251,1.2123754 0,1.2123754 z m 10.77059,1.238449 c 0.860396,0 1.102871,0.430197 1.183696,1.076798 l 0.700049,5.41267 c 0.08083,0.511023 -0.08082,1.023349 -0.80825,1.023349 H 12.352907 c -0.726122,0 -0.886468,-0.512326 -0.806947,-1.023349 l 0.700049,-5.41267 c 0.108201,-0.646601 0.323301,-1.076798 1.186303,-1.076798 H 26.490771 Z M 11.570729,23.855532 c 0,-0.753499 0.619224,-1.372723 1.400099,-1.372723 0.780873,0 1.400098,0.619224 1.400098,1.372723 0,0.753497 -0.619225,1.372721 -1.400098,1.372721 a 1.351864,1.351864 0 0 1 -1.400099,-1.372721 z"
+     fill="#242b4c"
+     style="display:inline;stroke-width:1.30363"
+     transform="matrix(1.1111101,0,0,1.1087974,-2.2222027,-1.9403785)"
+     inkscape:label="Bus Icon" />
+</svg>

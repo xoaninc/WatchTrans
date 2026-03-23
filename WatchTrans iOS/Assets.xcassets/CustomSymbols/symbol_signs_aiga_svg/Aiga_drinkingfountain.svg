@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="AIGA_drinking_fountain" width="391.2" height="474.9" version="1.0" viewBox="0 0 367 445">
+  <path id="human_body" d="M129 55c25-13 61 11 61 38v85l41 45c18 21-11 49-32 29l-46-51c-3-3-5-6-5-14v-41l-80 44v217c0 49-67 48-66 0V150c-1-15 5-29 20-37l107-58z"/>
+  <path id="drinking_fountain_body" d="M295 276h71V147H224c-19 0-26 20-14 34l85 95z"/>
+  <circle id="human_head" cx="231.8" cy="45.9" r="45.1" fill="#000" stroke="none"/>
+  <g id="drinking_fountain_water" fill="#000" stroke="none">
+    <circle id="drop_o1" cx="254.4" cy="135.7" r="5.6"/>
+    <circle id="drop_i1" cx="268.9" cy="136.6" r="5.6"/>
+    <circle id="drop_i2" cx="269.6" cy="120.5" r="5.6"/>
+    <circle id="drop_o2" cx="255.4" cy="119.5" r="5.6"/>
+    <circle id="drop_o3" cx="260" cy="104" r="5.9"/>
+    <circle id="drop_i3" cx="277.9" cy="107" r="5.9"/>
+    <circle id="drop_o4" cx="271.7" cy="92" r="5.9"/>
+    <circle id="drop_i4" cx="292.1" cy="101.4" r="6.3"/>
+    <circle id="drop_o5" cx="285.8" cy="86.5" r="6.3"/>
+    <circle id="drop_o6" cx="301.8" cy="85.8" r="6.9"/>
+    <circle id="drop_o7" cx="317.1" cy="93.6" r="7.1"/>
+    <circle id="drop_i5" cx="306.9" cy="106.6" r="7.1"/>
+    <circle id="drop_o8" cx="330.9" cy="106.5" r="7.8"/>
+    <circle id="drop_i6" cx="317.7" cy="119.5" r="7.6"/>
+  </g>
+</svg>

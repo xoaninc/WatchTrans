@@ -34,9 +34,15 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 ### ISO 7001 (Wikimedia Commons, recreación comunitaria)
 
-| Asset | Qué es | Para qué se usa | Dónde en la app |
-|-------|--------|-----------------|-----------------|
-| `FunicularSymbol` | Funicular (tren inclinado subiendo pendiente con vagones) | Indicar que la parada es de funicular. | `StopDetailView` badge "Funicular" |
+Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
+
+| Asset | SVG original | Qué es | Para qué se usa | Estado |
+|-------|-------------|--------|-----------------|--------|
+| `MetroSymbol` | `ISO_7001_PI_TF_003.svg` | Metro/underground (tren entrando en túnel con pasajeros) | Indicar que la parada/línea es de metro. Sustituye SF Symbol `tram.tunnel.fill`. | **Pendiente integrar en código** |
+| `TrenSymbol` | `ISO_7001_PI_TF_002.svg` | Tren/ferrocarril (locomotora con vagón) | Indicar que la parada/línea es de tren (cercanías, regional). Sustituye SF Symbol `tram.fill`. | **Pendiente integrar en código** |
+| `TramSymbol` | `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar (tranvía con catenaria) | Indicar que la parada/línea es de tranvía. Sustituye SF Symbol `lightrail.fill`. | **Pendiente integrar en código** |
+| `BusSymbol` | `ISO_7001_PI_TF_006.svg` | Autobús (bus visto de lado) | Indicar que la parada/línea es de bus. Sustituye SF Symbol `bus.fill`. | **Pendiente integrar en código** |
+| `FunicularSymbol` | `ISO_7001_PI_TF_012.svg` | Funicular (tren inclinado subiendo pendiente) | Indicar que la parada es de funicular. | ✅ Integrado en `StopDetailView` |
 
 ### Otros (revisar licencia)
 
@@ -50,12 +56,12 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `tram.fill` | Tranvía/tren relleno | Icono genérico de transporte ferroviario. Se usa como icono por defecto para tren. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView` (mapa, badge "Tren"), `FullMapView`, `TrainAnnotationView`, `NativeAnimatedMapView`, `LogoImageView`, `SettingsView`, `PlanRouteIntent`, widgets iOS/Watch, `LiveActivityWidget`, Watch `ArrivalCard` |
-| `tram.tunnel.fill` | Tren saliendo de túnel | Indicar metro (subterráneo). | `StopDetailView` badge "Metro", `FullMapView` (tipo metro), `LogoImageView`, `SettingsView` (credits) |
-| `lightrail.fill` | Tren ligero relleno | Indicar tranvía/tram. | `StopDetailView` badge "Tram", `FullMapView` (tipo tram), `NativeAnimatedMapView`, `LogoImageView`, `Journey` model (modo metro ligero) |
-| `tram` | Tranvía sin relleno | Modo de transporte tranvía en el planificador de rutas. | `Journey` model (modo tranvía) |
-| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo cercanías en planificador. | `TrainDetailView` badge "Vía", `StopDetailView` Acerca "Andén", `NativeAnimatedMapView`, `Journey` model (modo cercanías), Watch `TrainDetailView` |
-| `bus.fill` | Autobús relleno | Indicar parada de bus o servicio alternativo por autobús. | `StopDetailView` badge "Bus", `ArrivalRowView` (servicio alternativo), `LinesListView`, `FullMapView`, `NativeAnimatedMapView`, `Journey` model (modo bus) |
+| `tram.fill` | Tranvía/tren relleno | **Será sustituido por `TrenSymbol` (ISO 7001)**. Icono genérico de transporte ferroviario. | `ArrivalRowView`, `TrainDetailView`, `StopDetailView`, `FullMapView`, `TrainAnnotationView`, `NativeAnimatedMapView`, `LogoImageView`, `SettingsView`, `PlanRouteIntent`, widgets, Watch |
+| `tram.tunnel.fill` | Tren saliendo de túnel | **Será sustituido por `MetroSymbol` (ISO 7001)**. Indicar metro. | `StopDetailView` badge "Metro", `FullMapView`, `LogoImageView`, `SettingsView` |
+| `lightrail.fill` | Tren ligero relleno | **Será sustituido por `TramSymbol` (ISO 7001)**. Indicar tranvía/tram. | `StopDetailView` badge "Tram", `FullMapView`, `NativeAnimatedMapView`, `LogoImageView`, `Journey` model |
+| `tram` | Tranvía sin relleno | **Será sustituido por `TramSymbol` (ISO 7001)**. Journey planner. | `Journey` model (modo tranvía) |
+| `train.side.front.car` | Tren visto de lado | Indicar vía/andén de un tren. Modo cercanías en planificador. | `TrainDetailView` badge "Vía", `StopDetailView` Acerca "Andén", `NativeAnimatedMapView`, `Journey` model, Watch `TrainDetailView` |
+| `bus.fill` | Autobús relleno | **Será sustituido por `BusSymbol` (ISO 7001)**. Indicar bus o servicio alternativo. | `StopDetailView` badge "Bus", `ArrivalRowView`, `LinesListView`, `FullMapView`, `NativeAnimatedMapView`, `Journey` model |
 
 ### Accesibilidad
 
@@ -91,35 +97,15 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
 ## Fuentes completas disponibles
 
-### AIGA/DOT Symbol Signs (68 archivos EPS)
+### AIGA/DOT Symbol Signs (82 archivos SVG)
 
-Carpeta: `symbol_signs_aiga_eps/`
+Carpeta: `symbol_signs_aiga_svg/`
 
-Set completo de 50 pictogramas + flechas direccionales descargado de https://www.aiga.org/resources/symbol-signs
+Set completo de ~50 pictogramas + variantes descargados como SVG de https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 
-Relevantes para transporte y accesibilidad:
+**No se usan para transporte** (se eligió ISO 7001 para metro/tren/tram/bus). Sí se usan para equipamiento (elevator, escalator, stairs).
 
-| Archivo | Qué es |
-|---------|--------|
-| `ss_09_Escalator.eps` | Escalera mecánica |
-| `ss_10_Escalator-down.eps` | Escalera mecánica bajada |
-| `ss_11_Escalator-up.eps` | Escalera mecánica subida |
-| `ss_12_Stairs.eps` | Escaleras |
-| `ss_13_Stairs-down.eps` | Escaleras bajada |
-| `ss_14_Stairs-up.eps` | Escaleras subida |
-| `ss_15_Elevator.eps` | Ascensor |
-| `ss_24_Air-Transportation.eps` | Transporte aéreo |
-| `ss_25_Heliport.eps` | Helipuerto |
-| `ss_26_Taxi.eps` | Taxi |
-| `ss_27_Bus.eps` | Autobús |
-| `ss_28_Ground-transportation.eps` | Transporte terrestre |
-| `ss_29_Rail-Transportation.eps` | Transporte ferroviario |
-| `ss_30_Water-Transportation.eps` | Transporte marítimo |
-| `ss_39_TicketPurchase.eps` | Compra de billetes |
-| `ss_46_Parking.eps` | Parking |
-| `ss_50_Exit.eps` | Salida |
-
-**Licencia**: Descrito como dominio público (US Government work, 1974). **Marco legal pendiente de verificar** — ver KNOWN_ISSUES.md.
+**Licencia**: Dominio público (US Government work, 1974). **Marco legal pendiente de verificar** — ver KNOWN_ISSUES.md.
 
 ### ISO 7001 (Wikimedia Commons)
 
@@ -167,6 +153,21 @@ Símbolos de transporte relevantes (PI TF):
 - **ISO 7001 (Wikimedia)**: Recreaciones comunitarias, licencia por archivo. Originales copyright ISO (~$30/símbolo). **Marco legal pendiente.**
 - **StairClimbingSymbol**: Fuente por determinar. Revisar licencia antes de publicar.
 - **SF Symbols**: Incluidos con iOS/watchOS. Uso permitido en apps Apple.
+
+## Migración pendiente: SF Symbols → ISO 7001 custom assets
+
+Decisión tomada: usar ISO 7001 (Wikimedia) para los 5 modos de transporte. Assets creados, pendiente integrar en código.
+
+| SF Symbol actual | Sustituir por | Archivos afectados (aprox) |
+|-----------------|---------------|---------------------------|
+| `tram.fill` | `TrenSymbol` | ~15 archivos (iOS + Watch + widgets) |
+| `tram.tunnel.fill` | `MetroSymbol` | ~5 archivos |
+| `lightrail.fill` / `tram` | `TramSymbol` | ~5 archivos |
+| `bus.fill` | `BusSymbol` | ~5 archivos |
+
+**Nota:** `train.side.front.car` NO se sustituye — se usa para "Vía/Andén", no como modo de transporte.
+
+**Impacto:** Cada `Image(systemName: "xxx")` o `Label("", systemImage: "xxx")` necesita cambiar a `Image("XxxSymbol").renderingMode(.template).resizable().scaledToFit()` con frame explícito.
 
 ## Bugs / datos de la API sin símbolo
 
