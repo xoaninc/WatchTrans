@@ -171,6 +171,21 @@ Decisión tomada: usar ISO 7001 (Wikimedia) para los 5 modos de transporte. Asse
 
 **Impacto:** Cada `Image(systemName: "xxx")` o `Label("", systemImage: "xxx")` necesita cambiar a `Image("XxxSymbol").renderingMode(.template).resizable().scaledToFit()` con frame explícito.
 
+## Símbolos en el código que NO existen en la API
+
+Los siguientes pathway modes están mapeados a iconos en `PathwayRow` pero **ninguna estación de la API los devuelve actualmente**. Se añadieron preventivamente para cubrir la spec GTFS:
+
+| Pathway mode | Icono actual | Existe en API |
+|-------------|-------------|---------------|
+| `walkway` | `figure.walk` (SF) | ✅ Sí (TMB, Metro Madrid) |
+| `stairs` | `StairsSymbol` (AIGA) | ✅ Sí (TMB) |
+| `moving_sidewalk` | `arrow.left.arrow.right` (SF) | ❌ No |
+| `escalator` | `EscalatorSymbol` (AIGA) | ❌ No (en pathways; sí en EquipmentStatus) |
+| `elevator` | `ElevatorSymbol` (AIGA) | ❌ No (en pathways; sí en EquipmentStatus) |
+| `fare_gate` | `creditcard` (SF) | ❌ No |
+
+**Pendiente:** Decidir si quitar los que no se usan o mantenerlos como código defensivo.
+
 ## Bugs / datos de la API sin símbolo
 
 ### `corBus` — correspondencia bus no se muestra
