@@ -655,18 +655,6 @@ struct StopHeaderView: View {
                         Label("Tram", systemImage: "lightrail.fill")
                             .font(.caption)
                             .foregroundStyle(.blue)
-                    case .metroLigero:
-                        Label("Metro Ligero", systemImage: "tram.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    case .fgc:
-                        Label("FGC", systemImage: "tram.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    case .euskotren:
-                        Label("Euskotren", systemImage: "tram.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
                     case .bus:
                         Label("Bus", systemImage: "bus.fill")
                             .font(.caption)
