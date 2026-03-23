@@ -106,7 +106,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 |-----------|--------|-----------------|-----------------|
 | `number` | Símbolo # | Código operativo del tren (ej: "75106"). | `TrainDetailView` |
 | `repeat` | Flechas circulares | Composición doble (Doble). | `TrainDetailView` |
-| `cablecar.fill` | Teleférico | Modo de transporte teleférico/cable en animación de mapa. | `NativeAnimatedMapView` |
+| `cablecar.fill` | Teleférico | **Bug:** Usado para `.tranvia` en `NativeAnimatedMapView:427` — debería ser `TramSymbol`. Un tranvía no es un teleférico. |
 
 ### UI general
 
