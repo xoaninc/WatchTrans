@@ -77,7 +77,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 
 | SF Symbol | Qué es | Para qué se usa | Dónde en la app |
 |-----------|--------|-----------------|-----------------|
-| `door.left.hand.open` | Puerta abierta | Entrada en journey planner. Vestíbulo en Acerca PMR (Acerca no terminado). **Bug: sigue en mapa de pins de accesos** (`StopDetailView:97`) — todos los pins deberían usar `StairClimbingSymbol` (es una entrada). La accesibilidad se indica aparte, no con el icono del pin. | `JourneyPlannerView` (entrada), `StopDetailView` mapa accesos (**pendiente corregir**), `StopDetailView` Acerca (no terminado) |
+| `door.left.hand.open` | Puerta abierta | Entrada en journey planner. Vestíbulo en Acerca PMR (Acerca no terminado). **Bug: sigue en mapa de pins de accesos** (`StopDetailView:97`) — debería usar `StairClimbingSymbol`/`ElevatorSymbol` como en `AccessRow`. | `JourneyPlannerView` (entrada), `StopDetailView` mapa accesos (**pendiente corregir**), `StopDetailView` Acerca (no terminado) |
 | `door.right.hand.open` | Puerta abierta (derecha) | Salida de estación en journey planner. | `JourneyPlannerView` |
 | `creditcard` | Tarjeta | Torniquete/fare gate en recorridos. | `PathwayRow` |
 | `arrow.left.arrow.right` | Flechas izq-der | Pasillo mecánico/cinta en recorridos. | `PathwayRow` |
