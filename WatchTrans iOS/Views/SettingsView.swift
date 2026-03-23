@@ -68,78 +68,24 @@ struct SettingsView: View {
         let color: Color
     }
 
-    /// Credits relevant to the current province
+    /// Credits derived from loaded networks
     private var relevantCredits: [CreditItem] {
-        let province = dataService.currentLocation?.provinceName.lowercased() ?? ""
-
         var credits: [CreditItem] = []
-
-        switch province {
-        case "madrid":
-            credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
-            credits.append(CreditItem(name: "Metro de Madrid", icon: "tram.tunnel.fill", color: .red))
-            if dataService.lines.contains(where: { $0.type == .metro }) {
-                credits.append(CreditItem(name: "Metro Ligero", icon: "tram.fill", color: .blue))
+        let loadedTypes = Set(dataService.lines.map { $0.type })
+        for network in dataService.networks {
+            let type = dataService.networkTransportType(network)
+            guard loadedTypes.contains(type) else { continue }
+            let icon: String
+            let color: Color
+            switch type {
+            case .metro: icon = "tram.tunnel.fill"; color = .red
+            case .tren: icon = "tram.fill"; color = .cyan
+            case .tram: icon = "tram"; color = .green
+            case .bus: icon = "bus.fill"; color = .orange
+            case .funicular: icon = "cablecar"; color = .brown
             }
-
-        case "barcelona", "rodalies de catalunya":
-            credits.append(CreditItem(name: "Rodalies de Catalunya", icon: "tram.fill", color: .purple))
-            credits.append(CreditItem(name: "TMB Metro Barcelona", icon: "tram.tunnel.fill", color: .red))
-            credits.append(CreditItem(name: "FGC", icon: "tram.fill", color: .orange))
-            if dataService.lines.contains(where: { $0.type == .tram }) {
-                credits.append(CreditItem(name: "Tram Barcelona", icon: "tram", color: .green))
-            }
-
-        case "sevilla":
-            credits.append(CreditItem(name: "Cercanías Sevilla", icon: "tram.fill", color: .cyan))
-            credits.append(CreditItem(name: "Metro Sevilla", icon: "tram.tunnel.fill", color: .red))
-
-        case "valencia":
-            credits.append(CreditItem(name: "Cercanías Valencia", icon: "tram.fill", color: .cyan))
-            credits.append(CreditItem(name: "Metrovalencia", icon: "tram.tunnel.fill", color: .red))
-
-        case "vizcaya", "bilbao":
-            credits.append(CreditItem(name: "Cercanías Bilbao", icon: "tram.fill", color: .cyan))
-            credits.append(CreditItem(name: "Metro Bilbao", icon: "tram.tunnel.fill", color: .red))
-
-        case "málaga", "malaga":
-            credits.append(CreditItem(name: "Cercanías Málaga", icon: "tram.fill", color: .cyan))
-            credits.append(CreditItem(name: "Metro Málaga", icon: "tram.tunnel.fill", color: .red))
-
-        case "asturias":
-            credits.append(CreditItem(name: "Cercanías Asturias", icon: "tram.fill", color: .cyan))
-
-        case "cantabria", "santander":
-            credits.append(CreditItem(name: "Cercanías Santander", icon: "tram.fill", color: .cyan))
-
-        case "murcia":
-            credits.append(CreditItem(name: "Cercanías Murcia", icon: "tram.fill", color: .cyan))
-            if dataService.lines.contains(where: { $0.type == .tram }) {
-                credits.append(CreditItem(name: "Tranvía Murcia", icon: "tram", color: .green))
-            }
-
-        case "cádiz", "cadiz":
-            credits.append(CreditItem(name: "Cercanías Cádiz", icon: "tram.fill", color: .cyan))
-
-        case "zaragoza":
-            credits.append(CreditItem(name: "Tranvía Zaragoza", icon: "tram", color: .green))
-
-        case "alicante":
-            credits.append(CreditItem(name: "TRAM Alicante", icon: "tram", color: .green))
-
-        default:
-            // Fallback: show based on available transport types
-            if dataService.lines.contains(where: { $0.type == .tren }) {
-                credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
-            }
-            if dataService.lines.contains(where: { $0.type == .metro }) {
-                credits.append(CreditItem(name: "Metro", icon: "tram.tunnel.fill", color: .red))
-            }
-            if dataService.lines.contains(where: { $0.type == .tram }) {
-                credits.append(CreditItem(name: "Tranvía", icon: "tram", color: .green))
-            }
+            credits.append(CreditItem(name: network.name, icon: icon, color: color))
         }
-
         return credits
     }
 
