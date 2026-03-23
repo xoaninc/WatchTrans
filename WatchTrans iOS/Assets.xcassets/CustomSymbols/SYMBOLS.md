@@ -83,6 +83,31 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 | `arrow.left.arrow.right` | Flechas izq-der | Pasillo mecánico/cinta en recorridos. | `PathwayRow` |
 | `moon.zzz.fill` | Luna con zzz | Equipos apagados por cierre nocturno. | `EquipmentStatusSection` |
 
+### Calidad del aire (Metro Sevilla)
+
+| SF Symbol | Qué es | Para qué se usa | Dónde en la app |
+|-----------|--------|-----------------|-----------------|
+| `aqi.medium` | Indicador calidad aire | Indicar calidad del aire del tren. | `ArrivalRowView` (badge), `TrainDetailView` (sección calidad del aire) |
+| `thermometer.medium` | Termómetro | Temperatura dentro del tren. | `TrainDetailView` (calidad del aire) |
+| `humidity` | Gota de agua | Humedad dentro del tren. | `TrainDetailView` (calidad del aire) |
+| `leaf.fill` | Hoja | Nivel de CO2 / calidad general. | `TrainDetailView` (calidad del aire) |
+
+### Ocupación (TMB Metro)
+
+| SF Symbol | Qué es | Para qué se usa | Dónde en la app |
+|-----------|--------|-----------------|-----------------|
+| `person` | 1 persona | Ocupación baja. | `ArrivalRowView` (badge ocupación) |
+| `person.2` | 2 personas | Ocupación media. | `ArrivalRowView` (badge ocupación) |
+| `person.3` | 3 personas | Ocupación alta. | `ArrivalRowView` (badge ocupación) |
+
+### Tren / Viaje
+
+| SF Symbol | Qué es | Para qué se usa | Dónde en la app |
+|-----------|--------|-----------------|-----------------|
+| `number` | Símbolo # | Código operativo del tren (ej: "75106"). | `TrainDetailView` |
+| `repeat` | Flechas circulares | Composición doble (Doble). | `TrainDetailView` |
+| `cablecar.fill` | Teleférico | Modo de transporte teleférico/cable en animación de mapa. | `NativeAnimatedMapView` |
+
 ### UI general
 
 | SF Symbol | Qué es | Para qué se usa |
