@@ -81,11 +81,11 @@ struct LinesView: View {
     // Get Metro Ligero lines for the current location
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .metroLigero }.sorted { compareLineWithType($0, $1) }
+            return dataService.lines.filter { $0.type == .metro }.sorted { compareLineWithType($0, $1) }
         }
 
         return dataService.lines
-            .filter { $0.type == .metroLigero && $0.nucleo.lowercased() == province }
+            .filter { $0.type == .metro && $0.nucleo.lowercased() == province }
             .sorted { compareLineWithType($0, $1) }
     }
 
@@ -103,11 +103,11 @@ struct LinesView: View {
     // Get FGC (Ferrocarrils) lines for Barcelona
     var fgcLines: [Line] {
         guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .fgc }.sorted { compareLineWithType($0, $1) }
+            return dataService.lines.filter { $0.type == .tren }.sorted { compareLineWithType($0, $1) }
         }
 
         return dataService.lines
-            .filter { $0.type == .fgc && $0.nucleo.lowercased() == province }
+            .filter { $0.type == .tren && $0.nucleo.lowercased() == province }
             .sorted { compareLineWithType($0, $1) }
     }
 
@@ -125,7 +125,7 @@ struct LinesView: View {
         let numericPart: String
 
         // Special handling for FGC lines
-        if type == .fgc {
+        if type == .tren {
             if lowered.hasPrefix("l") {
                 prefixOrder = 1  // L lines first (urban)
                 numericPart = String(lowered.dropFirst(1))
@@ -317,7 +317,7 @@ struct LinesView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
                             LogoImageView(
-                                logoType: .metroLigero,
+                                logoType: .metro,
                                 height: 14  // Smaller height for diamond shape
                             )
 

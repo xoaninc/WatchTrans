@@ -362,7 +362,7 @@ struct LineHeaderView: View {
 
     /// Metro Ligero uses inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        line.type == .metroLigero
+        line.type == .metro
     }
 
     var body: some View {

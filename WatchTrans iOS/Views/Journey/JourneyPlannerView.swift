@@ -390,15 +390,8 @@ struct JourneyPlannerView: View {
             return stop.corMetro
         case .tren:
             return stop.corTren
-        case .metroLigero:
-            return stop.corMl
         case .tram:
             return stop.corTranvia
-        case .fgc:
-            // FGC doesn't have a specific corFgc field, show all FGC-related
-            return nil
-        case .euskotren:
-            return nil  // No correspondence field for Euskotren
         case .bus:
             return stop.corBus
         case .funicular:
@@ -425,21 +418,27 @@ struct JourneyPlannerView: View {
         for type in enabledTypes {
             switch type {
             case .metro:
-                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) { return true }
-            case .metroLigero:
-                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) { return true }
+                if network == "METRO" || network == "ML" || network == "TMB_METRO"
+                    || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
+                    return true
+                }
             case .tren:
-                if network == "RENFE" || (stop.corTren != nil && !stop.corTren!.isEmpty) { return true }
+                if network == "RENFE" || network == "FGC" || network == "EUSKOTREN"
+                    || (stop.corTren != nil && !stop.corTren!.isEmpty) {
+                    return true
+                }
             case .tram:
-                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) { return true }
-            case .fgc:
-                if network == "FGC" { return true }
-            case .euskotren:
-                if network == "EUSKOTREN" { return true }
+                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) {
+                    return true
+                }
             case .bus:
-                if network == "BUS" || (stop.corBus != nil && !stop.corBus!.isEmpty) { return true }
+                if network == "BUS" || (stop.corBus != nil && !stop.corBus!.isEmpty) {
+                    return true
+                }
             case .funicular:
-                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) { return true }
+                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) {
+                    return true
+                }
             }
         }
         return false

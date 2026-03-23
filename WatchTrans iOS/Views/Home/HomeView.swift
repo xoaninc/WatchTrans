@@ -274,6 +274,7 @@ struct FrequentStopCardView: View {
 
 
     @State private var arrivals: [Arrival] = []
+    @State private var airQualityData: [String: TrainAirQuality] = [:]
     @State private var isLoading = false
     @State private var hasLoadedOnce = false
 
@@ -322,7 +323,7 @@ struct FrequentStopCardView: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(arrivals.prefix(2)) { arrival in
-                        ArrivalRowView(arrival: arrival, dataService: dataService)
+                        ArrivalRowView(arrival: arrival, dataService: dataService, airQuality: arrival.trainCode.flatMap { airQualityData[$0] })
                     }
                 }
             }
@@ -354,6 +355,11 @@ struct FrequentStopCardView: View {
         arrivals = fresh
         hasLoadedOnce = true
         isLoading = false
+
+        // Fetch air quality for Metro Sevilla stops
+        if stop.id.hasPrefix("METRO_SEVILLA_") {
+            airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
+        }
     }
 }
 
@@ -389,27 +395,17 @@ struct NearbyStopsSectionView: View {
         for type in enabledTypes {
             switch type {
             case .metro:
-                if network == "METRO" || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
-                    return true
-                }
-            case .metroLigero:
-                if network == "ML" || (stop.corMl != nil && !stop.corMl!.isEmpty) {
+                if network == "METRO" || network == "ML" || network == "TMB_METRO"
+                    || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
                     return true
                 }
             case .tren:
-                if network == "RENFE" || (stop.corTren != nil && !stop.corTren!.isEmpty) {
+                if network == "RENFE" || network == "FGC" || network == "EUSKOTREN"
+                    || (stop.corTren != nil && !stop.corTren!.isEmpty) {
                     return true
                 }
             case .tram:
                 if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) {
-                    return true
-                }
-            case .fgc:
-                if network == "FGC" {
-                    return true
-                }
-            case .euskotren:
-                if network == "EUSKOTREN" {
                     return true
                 }
             case .bus:
@@ -512,6 +508,7 @@ struct StopCardView: View {
 
 
     @State private var arrivals: [Arrival] = []
+    @State private var airQualityData: [String: TrainAirQuality] = [:]
     @State private var isLoading = false
     @State private var hasLoadedOnce = false
     @State private var showFavoriteAlert = false
@@ -597,8 +594,8 @@ struct StopCardView: View {
                             return dataService.getLine(by: arrival.lineId)?.color ?? .blue
                         }()
 
-                        NavigationLink(destination: TrainDetailView(arrival: arrival, lineColor: lineColor, dataService: dataService, locationService: locationService, favoritesManager: favoritesManager)) {
-                            ArrivalRowView(arrival: arrival, dataService: dataService)
+                        NavigationLink(destination: TrainDetailView(arrival: arrival, lineColor: lineColor, dataService: dataService, locationService: locationService, favoritesManager: favoritesManager, airQuality: arrival.trainCode.flatMap { airQualityData[$0] })) {
+                            ArrivalRowView(arrival: arrival, dataService: dataService, airQuality: arrival.trainCode.flatMap { airQualityData[$0] })
                         }
                         .buttonStyle(.plain)
                     }
@@ -638,6 +635,11 @@ struct StopCardView: View {
         DebugLog.log("📱 [StopCard] \(stop.name): \(fresh.count) llegadas frescas")
         hasLoadedOnce = true
         isLoading = false
+
+        // Fetch air quality for Metro Sevilla stops
+        if stop.id.hasPrefix("METRO_SEVILLA_") {
+            airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
+        }
     }
 }
 

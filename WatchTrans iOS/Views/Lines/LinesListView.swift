@@ -113,13 +113,14 @@ struct LinesListView: View {
             .filter { $0.type == .metro && $0.nucleo.lowercased() == province })
     }
 
-    // Get Metro Ligero lines for the current location
+    // Get Metro Ligero lines for the current location (filtered by ID prefix)
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .metroLigero })
+            return sortedNumerically(dataService.filteredLines
+                .filter { $0.id.hasPrefix("METRO_LIGERO_") || $0.id.hasPrefix("ML_") })
         }
         return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .metroLigero && $0.nucleo.lowercased() == province })
+            .filter { ($0.id.hasPrefix("METRO_LIGERO_") || $0.id.hasPrefix("ML_")) && $0.nucleo.lowercased() == province })
     }
 
     // Get Tram lines for the current location
@@ -131,13 +132,14 @@ struct LinesListView: View {
             .filter { $0.type == .tram && $0.nucleo.lowercased() == province })
     }
 
-    // Get FGC lines for Barcelona
+    // Get FGC lines for Barcelona (filtered by ID prefix)
     var fgcLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .fgc })
+            return sortedNumerically(dataService.filteredLines
+                .filter { $0.id.uppercased().hasPrefix("FGC") })
         }
         return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .fgc && $0.nucleo.lowercased() == province })
+            .filter { $0.id.uppercased().hasPrefix("FGC") && $0.nucleo.lowercased() == province })
     }
 
     var body: some View {
@@ -214,7 +216,7 @@ struct LinesListView: View {
                                 height: 18
                             ),
                             title: "Metro Ligero",
-                            onShowPlan: { showingPlanFor = .metroLigero }
+                            onShowPlan: { showingPlanFor = .metro }
                         )
                     }
                 }
@@ -264,7 +266,7 @@ struct LinesListView: View {
                                 height: 22
                             ),
                             title: "Ferrocarrils (FGC)",
-                            onShowPlan: { showingPlanFor = .fgc }
+                            onShowPlan: { showingPlanFor = .tren } // TODO: FGC-specific plan routing
                         )
                     }
                 }
@@ -349,7 +351,7 @@ struct LineRowView: View {
 
     /// Metro Ligero and Ramal use inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        line.type == .metroLigero || line.name == "R"
+        (line.id.hasPrefix("METRO_LIGERO_") || line.id.hasPrefix("ML_")) || line.name == "R"
     }
 
     var body: some View {
@@ -513,12 +515,6 @@ struct NetworkPlanView: View {
             default:
                 path = nil
             }
-        case .metroLigero:
-            path = "metro_ligero/madrid_metro_ligero.pdf"
-        case .euskotren:
-            path = nil  // No map available
-        case .bus:
-            path = nil  // No map available
         case .tren:
             switch nucleoLower {
             case "madrid":
@@ -548,8 +544,6 @@ struct NetworkPlanView: View {
             default:
                 path = nil
             }
-        case .fgc:
-            path = "fgc/barcelona_fgc.pdf"
         case .tram:
             switch nucleoLower {
             case "parla", "madrid":
@@ -569,6 +563,8 @@ struct NetworkPlanView: View {
             default:
                 path = nil
             }
+        case .bus:
+            path = nil  // No map available
         case .funicular:
             path = nil  // No map available
         }
@@ -752,12 +748,9 @@ struct NetworkPlanView: View {
 
     private var planTitle: String {
         switch lineType {
-        case .tren: return "Plano Cercanías"
         case .metro: return "Plano Metro"
-        case .metroLigero: return "Plano Metro Ligero"
+        case .tren: return "Plano Cercanías"
         case .tram: return "Plano Tranvía"
-        case .fgc: return "Plano FGC"
-        case .euskotren: return "Plano Euskotren"
         case .bus: return "Plano Bus"
         case .funicular: return "Plano Funicular"
         }

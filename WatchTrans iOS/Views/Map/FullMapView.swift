@@ -179,11 +179,8 @@ struct FullMapView: View {
         let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
         switch type {
         case .metro: return "Metro de \(capitalized)"
-        case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .tren: return "Cercanías \(capitalized)"
+        case .tren: return "Tren de \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
-        case .fgc: return "FGC"
-        case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
         case .funicular: return "Funicular de \(capitalized)"
         }
@@ -192,11 +189,8 @@ struct FullMapView: View {
     private func transportIcon(_ type: TransportType) -> String {
         switch type {
         case .metro: return "tram.tunnel.fill"
-        case .metroLigero: return "tram.fill"
         case .tren: return "tram.fill"
         case .tram: return "lightrail.fill"
-        case .fgc: return "tram.fill"
-        case .euskotren: return "tram.fill"
         case .bus: return "bus.fill"
         case .funicular: return "tram.fill"
         }
@@ -443,11 +437,8 @@ struct LineFilterSheet: View {
         let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
         switch type {
         case .metro: return "Metro de \(capitalized)"
-        case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .tren: return "Cercanías \(capitalized)"
+        case .tren: return "Tren de \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
-        case .fgc: return "FGC"
-        case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
         case .funicular: return "Funicular de \(capitalized)"
         }

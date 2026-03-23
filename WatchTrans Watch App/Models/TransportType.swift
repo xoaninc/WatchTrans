@@ -9,10 +9,8 @@ import Foundation
 
 enum TransportType: String, Codable {
     case metro = "Metro"
-    case metroLigero = "Metro Ligero"
     case tren = "Tren"
     case tram = "Tram"
-    case fgc = "FGC"  // Ferrocarrils de la Generalitat de Catalunya
     case bus = "Bus"
     case funicular = "Funicular"
 

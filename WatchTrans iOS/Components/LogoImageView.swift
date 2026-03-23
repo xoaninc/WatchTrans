@@ -220,22 +220,16 @@ extension LogoImageView {
         switch type {
         case .metro:
             self.logoType = .metro(nucleo: nucleo)
-        case .metroLigero:
-            self.logoType = .metroLigero
         case .tram:
             self.logoType = .tram(nucleo: nucleo)
-        case .fgc:
-            self.logoType = .fgc
-        case .euskotren:
-            self.logoType = .euskotren
-        case .bus:
-            self.logoType = .metro(nucleo: nucleo)  // Default to metro logo for bus
         case .tren:
             if nucleo.lowercased() == "rodalies de catalunya" {
                 self.logoType = .rodalies
             } else {
                 self.logoType = .tren
             }
+        case .bus:
+            self.logoType = .metro(nucleo: nucleo)  // Default to metro logo for bus
         case .funicular:
             self.logoType = .tren  // No logo for funicular, fallback to tren
         }

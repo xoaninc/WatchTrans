@@ -1243,7 +1243,7 @@ class DataService {
         if line.longName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
 
         // Metro/Tram: if API doesn't provide A - B, derive from endpoints
-        if line.type == .metro || line.type == .tram || line.type == .metroLigero {
+        if line.type == .metro || line.type == .tram || line.type == .metro {
             return true
         }
 
@@ -1907,7 +1907,7 @@ class DataService {
         let upper = trimmed.uppercased()
 
         if upper.hasPrefix("ML") {
-            return .metroLigero
+            return .metro
         }
         if upper.hasPrefix("L"), upper.count > 1 {
             return .metro
@@ -1923,7 +1923,7 @@ class DataService {
             return .tren
         }
         if upper.hasPrefix("FGC") {
-            return .fgc
+            return .tren
         }
         return nil
     }

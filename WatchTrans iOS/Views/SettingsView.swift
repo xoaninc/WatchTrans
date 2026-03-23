@@ -78,7 +78,7 @@ struct SettingsView: View {
         case "madrid":
             credits.append(CreditItem(name: "RENFE Cercanías", icon: "tram.fill", color: .cyan))
             credits.append(CreditItem(name: "Metro de Madrid", icon: "tram.tunnel.fill", color: .red))
-            if dataService.lines.contains(where: { $0.type == .metroLigero }) {
+            if dataService.lines.contains(where: { $0.type == .metro }) {
                 credits.append(CreditItem(name: "Metro Ligero", icon: "tram.fill", color: .blue))
             }
 
@@ -135,14 +135,8 @@ struct SettingsView: View {
             if dataService.lines.contains(where: { $0.type == .metro }) {
                 credits.append(CreditItem(name: "Metro", icon: "tram.tunnel.fill", color: .red))
             }
-            if dataService.lines.contains(where: { $0.type == .metroLigero }) {
-                credits.append(CreditItem(name: "Metro Ligero", icon: "tram.fill", color: .blue))
-            }
             if dataService.lines.contains(where: { $0.type == .tram }) {
                 credits.append(CreditItem(name: "Tranvía", icon: "tram", color: .green))
-            }
-            if dataService.lines.contains(where: { $0.type == .fgc }) {
-                credits.append(CreditItem(name: "FGC", icon: "tram.fill", color: .orange))
             }
         }
 
@@ -485,11 +479,8 @@ struct SettingsView: View {
         let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
         switch type {
         case .metro: return "Metro de \(capitalized)"
-        case .metroLigero: return "Metro Ligero de \(capitalized)"
-        case .tren: return "Cercanías \(capitalized)"
+        case .tren: return "Tren de \(capitalized)"
         case .tram: return "Tranvía de \(capitalized)"
-        case .fgc: return "FGC"
-        case .euskotren: return "Euskotren"
         case .bus: return "Bus \(capitalized)"
         case .funicular: return "Funicular de \(capitalized)"
         }
@@ -498,19 +489,13 @@ struct SettingsView: View {
     private func colorForTransportType(_ type: TransportType) -> Color {
         switch type {
         case .metro:
-            return .red
-        case .metroLigero:
-            return .blue
+            return .orange
         case .tren:
-            return .purple
+            return .blue
         case .tram:
             return .green
-        case .fgc:
-            return .orange
-        case .euskotren:
-            return .red
         case .bus:
-            return .blue
+            return .red
         case .funicular:
             return .brown
         }

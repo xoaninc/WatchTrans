@@ -111,7 +111,11 @@ struct LogoImageView: View {
                 default:
                     return nil  // Usar SF Symbol en vez de logo incorrecto
                 }
-            case .tram:
+            case .tram(let nucleo):
+                // Fallback local para Sevilla si falla el remoto
+                if nucleo.lowercased() == "sevilla" {
+                    return "MetroSevillaLogo"
+                }
                 // No tenemos logos específicos de tram por ciudad
                 return nil  // Usar SF Symbol
             case .fgc:
@@ -158,7 +162,7 @@ struct LogoImageView: View {
             localImage
         }
     }
-    
+
     // Legacy load logic removed in favor of Kingfisher
 
     @ViewBuilder
@@ -215,18 +219,18 @@ extension LogoImageView {
         switch type {
         case .metro:
             self.logoType = .metro(nucleo: nucleo)
-        case .metroLigero:
-            self.logoType = .metroLigero
         case .tram:
             self.logoType = .tram(nucleo: nucleo)
-        case .fgc:
-            self.logoType = .fgc
         case .tren:
             if nucleo.lowercased() == "rodalies de catalunya" {
                 self.logoType = .rodalies
             } else {
                 self.logoType = .tren
             }
+        case .bus:
+            self.logoType = .metro(nucleo: nucleo)  // Default to metro logo for bus
+        case .funicular:
+            self.logoType = .tren  // No logo for funicular, fallback to tren
         }
     }
 }
