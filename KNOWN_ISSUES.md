@@ -142,7 +142,7 @@ Colores actuales (decididos por el usuario): metro=.orange, tren=.blue, tram=.gr
 
 ### Mapa de accesos: door.left.hand.open pendiente sustituir
 
-`StopDetailView.swift:97` — Los pins del mapa de accesos usan `door.left.hand.open` para accesos no accesibles y `figure.roll` para accesibles. Debería usar `StairClimbingSymbol`/`ElevatorSymbol` como ya se hace en `AccessRow` de `StationInteriorSection`.
+`StopDetailView.swift:97` — Los pins del mapa de accesos usan `door.left.hand.open` para accesos no accesibles y `figure.roll` para accesibles. Todos los pins deberían usar `StairClimbingSymbol` (es una entrada/acceso). La accesibilidad (wheelchair) se indica aparte, no con el icono del pin.
 
 ### Pathway modes sin datos en la API
 
