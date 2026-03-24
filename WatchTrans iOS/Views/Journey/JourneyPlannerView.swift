@@ -883,9 +883,15 @@ struct SegmentRowView: View {
                         .fill(iconBackgroundColor)
                         .frame(width: 36, height: 36)
 
-                    Image(systemName: segment.transportMode.icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(iconColor)
+                    Group {
+                        if segment.transportMode.isCustomAsset {
+                            SymbolView(name: segment.transportMode.icon, size: 18)
+                        } else {
+                            Image(systemName: segment.transportMode.icon)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .foregroundStyle(iconColor)
                 }
 
                 if !isLast {

@@ -121,10 +121,16 @@ struct Journey3DAnimationView: View {
                     .fill(segmentColor(segment))
                     .frame(width: 44, height: 44)
 
-                Image(systemName: segment.transportMode.icon)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
+                Group {
+                    if segment.transportMode.isCustomAsset {
+                        SymbolView(name: segment.transportMode.icon, size: 22)
+                    } else {
+                        Image(systemName: segment.transportMode.icon)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                }
+                .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -145,7 +151,7 @@ struct Journey3DAnimationView: View {
 
                 HStack(spacing: 8) {
                     if segment.type == .transit {
-                        Label("\(segment.stopCount) paradas", systemImage: "tram.fill")
+                        Label("\(segment.stopCount) paradas", systemImage: "mappin.circle.fill")
                     }
                     Label("\(segment.durationMinutes) min", systemImage: "clock")
                 }

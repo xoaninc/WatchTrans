@@ -416,15 +416,15 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             case .walking:
                 iconName = "figure.walk"
             case .metro:
-                iconName = "tram.tunnel.fill"
+                iconName = "MetroSymbol"
             case .tren:
-                iconName = "tram.fill"
+                iconName = "TrenSymbol"
             case .tranvia:
-                iconName = "lightrail.fill"
+                iconName = "TramSymbol"
             case .metroLigero:
-                iconName = "lightrail.fill"
+                iconName = "MetroSymbol"
             case .bus:
-                iconName = "bus.fill"
+                iconName = "BusSymbol"
             }
             
             // RENDERER: Crear un "Pill" (Burbuja alargada con Logo + Nombre)
@@ -455,7 +455,8 @@ struct NativeAnimatedMapView: UIViewRepresentable {
                 
                 if let logoName = localLogoName, let logoImg = UIImage(named: logoName) {
                     logoImg.draw(in: iconRect)
-                } else {
+                } else if segment.transportMode == .walking {
+                    // SF Symbol for walking
                     let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .bold)
                     if let symbol = UIImage(systemName: iconName, withConfiguration: config)?.withTintColor(lineColor, renderingMode: .alwaysOriginal) {
                         let symbolRect = CGRect(
@@ -465,6 +466,17 @@ struct NativeAnimatedMapView: UIViewRepresentable {
                             height: symbol.size.height
                         )
                         symbol.draw(in: symbolRect)
+                    }
+                } else {
+                    // Custom asset for transport modes
+                    if let assetImage = UIImage(named: iconName)?.withRenderingMode(.alwaysTemplate).withTintColor(lineColor, renderingMode: .alwaysOriginal) {
+                        let scaledRect = CGRect(
+                            x: iconRect.midX - iconRect.width / 2,
+                            y: iconRect.midY - iconRect.height / 2,
+                            width: iconRect.width,
+                            height: iconRect.height
+                        )
+                        assetImage.draw(in: scaledRect)
                     }
                 }
                 

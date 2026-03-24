@@ -136,13 +136,18 @@ enum TransportMode: String, CaseIterable {
 
     var icon: String {
         switch self {
-        case .metro: return "tram.fill"
-        case .tren: return "train.side.front.car"
-        case .metroLigero: return "lightrail.fill"
-        case .tranvia: return "tram"
-        case .bus: return "bus.fill"
+        case .metro: return "MetroSymbol"
+        case .tren: return "TrenSymbol"
+        case .metroLigero: return "MetroSymbol"
+        case .tranvia: return "TramSymbol"
+        case .bus: return "BusSymbol"
         case .walking: return "figure.walk"
         }
+    }
+
+    /// Whether this mode uses a custom asset (true) or SF Symbol (false)
+    var isCustomAsset: Bool {
+        self != .walking
     }
 
     var displayName: String {
