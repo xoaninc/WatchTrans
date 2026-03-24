@@ -30,7 +30,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:AIGA_symbol_signs
 | `EscalatorSymbol` | Escalera mecánica (persona en escalera con pasamanos, sin dirección) | Mostrar escaleras mecánicas sin dirección conocida. En pathways indica que el recorrido incluye una escalera mecánica. | `EquipmentStatusSection` (escaleras mecánicas sin dirección), `PathwayRow` (recorridos) |
 | `EscalatorUpSymbol` | Escalera mecánica subiendo (persona en escalera + flecha arriba) | Mostrar escalera mecánica que sube, con estado operativo RT. | `EquipmentStatusSection` (escalera mecánica dirección subida) |
 | `EscalatorDownSymbol` | Escalera mecánica bajando (persona en escalera + flecha abajo) | Mostrar escalera mecánica que baja, con estado operativo RT. | `EquipmentStatusSection` (escalera mecánica dirección bajada) |
-| `StairsSymbol` | Escaleras normales (persona subiendo peldaños) | **Será sustituido por `StairClimbingSymbol`** en PathwayRow. | `PathwayRow` — **pendiente sustituir** |
+| `StairsSymbol` | Escaleras normales (persona subiendo peldaños) | **Ya no se usa** — sustituido por `StairClimbingSymbol`. Pendiente eliminar imageset. | — |
 
 ### ISO 7001 (Wikimedia Commons, recreación comunitaria)
 
@@ -38,18 +38,19 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 
 | Asset | SVG original | Qué es | Para qué se usa | Estado |
 |-------|-------------|--------|-----------------|--------|
-| `MetroSymbol` | `ISO_7001_PI_TF_003.svg` | Metro/underground (tren entrando en túnel con pasajeros) | Indicar que la parada/línea es de metro. Sustituye SF Symbol `tram.tunnel.fill`. | **Pendiente integrar en código** |
-| `TrenSymbol` | `ISO_7001_PI_TF_002.svg` | Tren/ferrocarril (locomotora con vagón) | Indicar que la parada/línea es de tren (cercanías, regional). Sustituye SF Symbol `tram.fill`. | **Pendiente integrar en código** |
-| `TramSymbol` | `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar (tranvía con catenaria) | Indicar que la parada/línea es de tranvía. Sustituye SF Symbol `lightrail.fill`. | **Pendiente integrar en código** |
-| `BusSymbol` | `ISO_7001_PI_TF_006.svg` | Autobús (bus visto de lado) | Indicar que la parada/línea es de bus. Sustituye SF Symbol `bus.fill`. | **Pendiente integrar en código** |
-| `FunicularSymbol` | `ISO_7001_PI_TF_012.svg` | Funicular (tren inclinado subiendo pendiente) | Indicar que la parada es de funicular. | ✅ Integrado en `StopDetailView` |
-| `WheelchairSymbol` | `ISO_7001_PI_PF_006.svg` | Persona en silla de ruedas | Indicar accesibilidad. Sustituye SF Symbol `figure.roll`. Colores via `.foregroundStyle()`: verde=accesible, azul=header/badge. Cuando NO es accesible: overlay `ISO_7001_-_Red_Cross.svg` superpuesto. | **Pendiente integrar en código** |
+| `MetroSymbol` | `ISO_7001_PI_TF_003.svg` | Metro/underground | Parada/línea de metro. Sustituye `tram.tunnel.fill`. | ✅ Integrado |
+| `TrenSymbol` | `ISO_7001_PI_TF_002.svg` | Tren/ferrocarril | Parada/línea de tren (cercanías, regional). Sustituye `tram.fill`. | ✅ Integrado |
+| `TramSymbol` | `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar | Parada/línea de tranvía. Sustituye `lightrail.fill`. | ✅ Integrado |
+| `BusSymbol` | `ISO_7001_PI_TF_006.svg` | Autobús | Parada/línea de bus. Sustituye `bus.fill`. | ✅ Integrado |
+| `FunicularSymbol` | `ISO_7001_PI_TF_012.svg` | Funicular | Parada de funicular. | ✅ Integrado |
+| `WheelchairSymbol` | `ISO_7001_PI_PF_006.svg` | Persona en silla de ruedas | Accesibilidad. Verde=accesible, azul=header. No accesible: overlay `RedCrossOverlay`. | ✅ Integrado |
+| `RedCrossOverlay` | `ISO_7001_-_Red_Cross.svg` | Cruz roja | Overlay "NO ES" sobre cualquier símbolo. No para fuera de servicio ni inexistente. | ✅ Integrado |
 
 ### Otros (revisar licencia)
 
 | Asset | Qué es | Para qué se usa | Dónde en la app |
 |-------|--------|-----------------|-----------------|
-| `StairClimbingSymbol` | Monigote subiendo escaleras (silueta lateral) | Indicar escaleras en todos los contextos: accesos y recorridos. | `AccessRow` (accesos), `PathwayRow` (recorridos — **pendiente sustituir StairsSymbol**) |
+| `StairClimbingSymbol` | Monigote subiendo escaleras (silueta lateral) | Indicar escaleras en todos los contextos: accesos y recorridos. | `AccessRow` (accesos), `PathwayRow` (recorridos), `StopDetailView` (mapa pins) |
 
 ## SF Symbols (Apple, incluidos con iOS)
 
@@ -180,23 +181,22 @@ Símbolos de transporte relevantes (PI TF):
 - **StairClimbingSymbol**: Fuente por determinar. Revisar licencia antes de publicar.
 - **SF Symbols**: Incluidos con iOS/watchOS. Uso permitido en apps Apple.
 
-## Migración pendiente: SF Symbols → ISO 7001 custom assets
+## Migración completada: SF Symbols → ISO 7001 custom assets ✅
 
-Decisión tomada: usar ISO 7001 (Wikimedia) para los 5 modos de transporte. Assets creados, pendiente integrar en código.
+| SF Symbol | Sustituido por | Estado |
+|-----------|---------------|--------|
+| `tram.fill` | `TrenSymbol` | ✅ (excepto AppShortcuts — requiere SF Symbol) |
+| `tram.tunnel.fill` | `MetroSymbol` | ✅ |
+| `lightrail.fill` / `tram` | `TramSymbol` | ✅ |
+| `bus.fill` | `BusSymbol` | ✅ (excepto AlternativeTransport.icon — API siempre null) |
+| `figure.roll` | `WheelchairSymbol` + `NegatedSymbolView` | ✅ |
+| `cablecar.fill` | `TramSymbol` (era bug) | ✅ |
+| `StairsSymbol` | `StairClimbingSymbol` | ✅ |
+| Map pins `door.left.hand.open` | `StairClimbingSymbol` | ✅ |
 
-| SF Symbol actual | Sustituir por | Archivos afectados (aprox) |
-|-----------------|---------------|---------------------------|
-| `tram.fill` | `TrenSymbol` | ~15 archivos (iOS + Watch + widgets) |
-| `tram.tunnel.fill` | `MetroSymbol` | ~5 archivos |
-| `lightrail.fill` / `tram` | `TramSymbol` | ~5 archivos |
-| `bus.fill` | `BusSymbol` | ~5 archivos |
-| `figure.roll` | `WheelchairSymbol` + overlay `Red Cross` (ISO 7001) cuando NO es accesible | ~10 archivos |
+**Helper:** `SymbolView(name:size:)` y `NegatedSymbolView(name:size:)` en `Components/SymbolView.swift` (iOS + Watch).
 
-**Overlay Red Cross:** `ISO_7001_-_Red_Cross.svg` se superpone sobre cualquier símbolo para indicar que algo **NO ES** (ej: tren no accesible). No se usa para "fuera de servicio" (eso es color rojo) ni para "no existe" (no se muestra icono).
-
-**Nota:** `train.side.front.car` NO se sustituye — se usa para "Vía/Andén", no como modo de transporte.
-
-**Impacto:** Cada `Image(systemName: "xxx")` o `Label("", systemImage: "xxx")` necesita cambiar a `Image("XxxSymbol").renderingMode(.template).resizable().scaledToFit()` con frame explícito.
+**Red Cross overlay:** Solo para "NO ES" (ej: tren no accesible). No para fuera de servicio (color rojo) ni inexistente (sin icono).
 
 ## Símbolos en el código que NO existen en la API
 

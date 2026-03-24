@@ -46,13 +46,13 @@ Los iconos AIGA provienen del set AIGA Symbol Signs (dominio público, US Govern
 
 Colores actuales: metro=.orange, tren=.blue, tram=.green, bus=.red, funicular=.brown.
 
-### Mapa de accesos: door.left.hand.open pendiente sustituir
+### ~~Mapa de accesos: door.left.hand.open pendiente sustituir~~ ✅ RESUELTO
 
-Todos los pins deberían usar `StairClimbingSymbol`. La accesibilidad se indica aparte.
+Todos los pins usan `StairClimbingSymbol`.
 
-### Pathway modes sin datos en la API
+### ~~Pathway modes sin datos en la API~~ ✅ RESUELTO
 
-Iconos para `moving_sidewalk`, `escalator`, `elevator`, `fare_gate` existen pero la API solo devuelve `walkway` y `stairs`.
+`moving_sidewalk` y `fare_gate` eliminados del código. `escalator` y `elevator` mantenidos como código defensivo.
 
 ---
 

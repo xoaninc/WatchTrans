@@ -73,8 +73,7 @@ struct StopDetailView: View {
                 longitude: stop.longitude
             )) {
                 VStack(spacing: 2) {
-                    Image(systemName: "tram.fill")
-                        .font(.title2)
+                    SymbolView(name: "TrenSymbol", size: 22)
                         .foregroundStyle(.white)
                         .padding(8)
                         .background(Circle().fill(Color.blue))

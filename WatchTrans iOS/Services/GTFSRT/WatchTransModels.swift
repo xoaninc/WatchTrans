@@ -584,7 +584,7 @@ struct AlternativeTransport: Codable, Identifiable {
 
     var icon: String {
         switch type {
-        case "bus_replacement": return "bus.fill"
+        case "bus_replacement": return "bus.fill" // SF Symbol — alternativeTransport API always null, mixed with other SF Symbols
         case "reroute_via_line": return "arrow.triangle.branch"
         default: return "info.circle"
         }
