@@ -191,7 +191,6 @@ struct SettingsView: View {
                                 HStack(spacing: 10) {
                                     LogoImageView(
                                         type: network.type,
-                                        nucleo: network.nucleo,
                                         height: 22
                                     )
                                     .frame(width: 28)

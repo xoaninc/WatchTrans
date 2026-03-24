@@ -286,7 +286,6 @@ struct FrequentStopCardView: View {
                     HStack(spacing: 6) {
                         LogoImageView(
                             type: stop.transportType,
-                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
                             height: 18
                         )
                         Text(stop.name)
@@ -522,7 +521,6 @@ struct StopCardView: View {
                     HStack(spacing: 6) {
                         LogoImageView(
                             type: stop.transportType,
-                            nucleo: dataService.currentLocation?.provinceName ?? "Madrid",
                             height: 18
                         )
                         Text(stop.name)

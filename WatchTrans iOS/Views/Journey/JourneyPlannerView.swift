@@ -339,7 +339,6 @@ struct JourneyPlannerView: View {
                         // Transport logo
                         LogoImageView(
                             type: stop.transportType,
-                            nucleo: dataService.currentLocation?.provinceName ?? (stop.province ?? ""),
                             height: 24
                         )
                         .frame(width: 28)

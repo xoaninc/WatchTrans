@@ -403,7 +403,6 @@ struct LineFilterSheet: View {
                             HStack(spacing: 8) {
                                 LogoImageView(
                                     type: group.type,
-                                    nucleo: group.nucleo,
                                     height: 22
                                 )
                                 Text(networkName(type: group.type, nucleo: group.nucleo))

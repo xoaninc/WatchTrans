@@ -336,7 +336,6 @@ struct SearchResultRow: View {
             // Transport logo from API
             LogoImageView(
                 type: display.transportType,
-                nucleo: dataService.currentLocation?.provinceName ?? (display.stop.province ?? ""),
                 height: 28
             )
             .frame(width: 40)

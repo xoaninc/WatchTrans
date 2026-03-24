@@ -16,126 +16,29 @@ struct LogoImageView: View {
     private static let baseURL = APIConfiguration.logosBaseURL
 
     enum LogoType {
-        case tren
-        case rodalies
-        case metro(nucleo: String)
-        case metroLigero
-        case tram(nucleo: String)
-        case fgc
-        case euskotren
-        case sfm
+        case network(code: String)  // Use network code directly for remote logo
+        case sfSymbol(name: String) // Fallback SF Symbol
 
-        /// Remote logo filename (without extension)
+        /// Remote logo filename derived from network code
         var remoteFilename: String? {
             switch self {
-            case .tren:
-                return "cercanias"
-            case .rodalies:
-                return "rodalies"
-            case .metro(let nucleo):
-                switch nucleo.lowercased() {
-                case "madrid":
-                    return "metro_madrid"
-                case "sevilla":
-                    return "metro_sevilla"
-                case "bilbao", "vizcaya":
-                    return "metro_bilbao"
-                case "valencia":
-                    return "metro_valencia"
-                case "málaga", "malaga":
-                    return "metro_malaga"
-                case "granada":
-                    return "metro_granada"
-                case "barcelona":
-                    return "tmb_metro"
-                case "mallorca", "palma":
-                    return "sfm_mallorca"
-                // Tenerife no tiene metro, tiene tranvía
-                default:
-                    return nil
-                }
-            case .metroLigero:
-                return "metro_ligero_madrid"
-            case .tram(let nucleo):
-                switch nucleo.lowercased() {
-                case "zaragoza":
-                    return "tranvia_zaragoza"
-                case "murcia", "murcia/alicante":
-                    return "tranvia_murcia"
-                case "alicante":
-                    return "tram_alicante"
-                case "barcelona":
-                    return "tram_bcn"
-                case "sevilla":
-                    return "tranvia_sevilla"
-                case "tenerife":
-                    return "tranvia_tenerife"
-                default:
-                    return nil
-                }
-            case .fgc:
-                return "fgc"
-            case .euskotren:
-                return "euskotren"
-            case .sfm:
-                return "sfm_mallorca"
+            case .network(let code):
+                // The API serves logos at /logos/{code}.png
+                return code.lowercased()
+            case .sfSymbol:
+                return nil
             }
         }
 
-        /// File extension (all .png - webp not well supported on watchOS)
-        var fileExtension: String {
-            return "png"
-        }
+        var fileExtension: String { "png" }
 
-        /// Local asset name - only return if we have the CORRECT logo for this city
-        /// Returns nil if we should use SF Symbol instead (to avoid showing wrong city's logo)
-        var localAssetName: String? {
-            switch self {
-            case .tren:
-                return "CercaniasLogo"  // RENFE es igual en toda España
-            case .rodalies:
-                return "RodaliesLogo"   // Rodalies de Catalunya
-            case .metroLigero:
-                return "MetroLigeroLogo"  // Metro Ligero Madrid
-            case .metro(let nucleo):
-                // Solo devolver logo si tenemos el correcto para esa ciudad
-                switch nucleo.lowercased() {
-                case "madrid":
-                    return "MetroLogo"  // El MetroLogo es el rombo de Madrid
-                case "sevilla":
-                    return "MetroSevillaLogo"
-                // TODO: Añadir cuando tengamos los logos:
-                // case "barcelona": return "MetroBarcelonaLogo"
-                // case "valencia": return "MetroValenciaLogo"
-                // case "bilbao": return "MetroBilbaoLogo"
-                default:
-                    return nil  // Usar SF Symbol en vez de logo incorrecto
-                }
-            case .tram(let nucleo):
-                // Fallback local para Sevilla si falla el remoto
-                if nucleo.lowercased() == "sevilla" {
-                    return "MetroSevillaLogo"
-                }
-                // No tenemos logos específicos de tram por ciudad
-                return nil  // Usar SF Symbol
-            case .fgc:
-                return nil  // Usar SF Symbol - no tenemos logo FGC
-            case .euskotren:
-                return nil  // Usar SF Symbol - no tenemos logo Euskotren
-            case .sfm:
-                return nil  // Usar SF Symbol - no tenemos logo SFM Mallorca
-            }
-        }
-
-        /// SF Symbol for ultimate fallback
+        /// SF Symbol fallback
         var sfSymbol: String {
             switch self {
-            case .tren, .rodalies, .fgc, .euskotren, .sfm:
+            case .network:
                 return "tram.fill"
-            case .metro, .metroLigero:
-                return "tram.tunnel.fill"
-            case .tram:
-                return "lightrail.fill"
+            case .sfSymbol(let name):
+                return name
             }
         }
     }
@@ -149,7 +52,6 @@ struct LogoImageView: View {
         if let url = remoteURL {
             KFImage(url)
                 .placeholder {
-                    // Show SF Symbol while loading
                     Image(systemName: logoType.sfSymbol)
                         .font(.system(size: height * 0.6))
                         .foregroundStyle(.secondary)
@@ -160,23 +62,6 @@ struct LogoImageView: View {
                 .scaledToFit()
                 .frame(height: height)
         } else {
-            localImage
-        }
-    }
-    
-    // Legacy load logic removed in favor of Kingfisher
-
-    @ViewBuilder
-    private var localImage: some View {
-        if let assetName = logoType.localAssetName,
-           let uiImage = UIImage(named: assetName) {
-            // We have the correct logo for this city
-            Image(uiImage: uiImage)
-                .resizable()
-                .scaledToFit()
-                .frame(height: height)
-        } else {
-            // Use SF Symbol - better than showing wrong city's logo
             Image(systemName: logoType.sfSymbol)
                 .font(.system(size: height * 0.8))
                 .foregroundStyle(.secondary)
@@ -187,61 +72,32 @@ struct LogoImageView: View {
 // MARK: - Convenience initializers
 
 extension LogoImageView {
-    /// Create logo view from agency_id
-    init(agencyId: String, nucleo: String, height: CGFloat) {
+    /// Create logo view from network code (preferred)
+    init(networkCode: String, height: CGFloat) {
         self.height = height
-
-        // Determine logo type from agency_id
-        if agencyId == "METRO_LIGERO" {
-            self.logoType = .metroLigero
-        } else if agencyId == "TMB_METRO" {
-            self.logoType = .metro(nucleo: "Barcelona")
-        } else if agencyId == "FGC" {
-            self.logoType = .fgc
-        } else if agencyId.hasPrefix("EUSKOTREN") {
-            self.logoType = .euskotren
-        } else if agencyId.hasPrefix("SFM_MALLORCA") {
-            self.logoType = .sfm
-        } else if agencyId.hasPrefix("METRO_") {
-            self.logoType = .metro(nucleo: nucleo)
-        } else if agencyId.hasPrefix("TRANVIA_") || agencyId.hasPrefix("TRAM_") {
-            self.logoType = .tram(nucleo: nucleo)
-        } else if nucleo.lowercased() == "rodalies de catalunya" {
-            self.logoType = .rodalies
-        } else {
-            self.logoType = .tren
-        }
+        self.logoType = .network(code: networkCode)
     }
 
-    /// Create logo view from TransportType
-    init(type: TransportType, nucleo: String, height: CGFloat) {
+    /// Create logo view from TransportType with SF Symbol fallback
+    init(type: TransportType, height: CGFloat) {
         self.height = height
-
+        let symbol: String
         switch type {
-        case .metro:
-            self.logoType = .metro(nucleo: nucleo)
-        case .tram:
-            self.logoType = .tram(nucleo: nucleo)
-        case .tren:
-            if nucleo.lowercased() == "rodalies de catalunya" {
-                self.logoType = .rodalies
-            } else {
-                self.logoType = .tren
-            }
-        case .bus:
-            self.logoType = .metro(nucleo: nucleo)  // Default to metro logo for bus
-        case .funicular:
-            self.logoType = .tren  // No logo for funicular, fallback to tren
+        case .metro: symbol = "tram.tunnel.fill"
+        case .tren: symbol = "tram.fill"
+        case .tram: symbol = "lightrail.fill"
+        case .bus: symbol = "bus.fill"
+        case .funicular: symbol = "cablecar"
         }
+        self.logoType = .sfSymbol(name: symbol)
     }
 }
 
 #Preview {
     VStack(spacing: 20) {
-        LogoImageView(logoType: .tren, height: 20)
-        LogoImageView(logoType: .metro(nucleo: "Madrid"), height: 20)
-        LogoImageView(logoType: .metro(nucleo: "Sevilla"), height: 20)
-        LogoImageView(logoType: .tram(nucleo: "Zaragoza"), height: 20)
-        LogoImageView(type: .metro, nucleo: "Barcelona", height: 20)
+        LogoImageView(networkCode: "METRO_SEVILLA", height: 20)
+        LogoImageView(networkCode: "RENFE_C4", height: 20)
+        LogoImageView(type: .metro, height: 20)
+        LogoImageView(type: .tren, height: 20)
     }
 }

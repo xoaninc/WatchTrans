@@ -141,7 +141,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: isRodalies ? .rodalies : .tren,
+                                type: .tren,
                                 height: 22
                             ),
                             title: isRodalies ? "Rodalies" : "Cercanías",
@@ -166,7 +166,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? ""),
+                                type: .metro,
                                 height: 18
                             ),
                             title: metroSectionTitle,
@@ -191,7 +191,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: .metroLigero,
+                                type: .metro,
                                 height: 18
                             ),
                             title: "Metro Ligero",
@@ -216,7 +216,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: .tram(nucleo: dataService.currentLocation?.provinceName ?? ""),
+                                type: .tram,
                                 height: 18
                             ),
                             title: tramSectionTitle,
@@ -241,7 +241,7 @@ struct LinesListView: View {
                     } header: {
                         SectionHeaderWithPlan(
                             logo: LogoImageView(
-                                logoType: .fgc,
+                                type: .tren,
                                 height: 22
                             ),
                             title: "Ferrocarrils (FGC)",

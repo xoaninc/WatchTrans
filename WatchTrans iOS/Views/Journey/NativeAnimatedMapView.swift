@@ -408,30 +408,23 @@ struct NativeAnimatedMapView: UIViewRepresentable {
             let lineColor = segment.lineColor.flatMap { UIColor(hex: $0) } ?? .systemBlue
             let lineName = segment.lineName ?? ""
             
-            // Determine logo/icon
+            // Determine icon (SF Symbol only, no hardcoded logo selection)
             let iconName: String
-            let localLogoName: String?
-            let province = segment.origin.province?.lowercased() ?? "madrid"
-            
+            let localLogoName: String? = nil
+
             switch segment.transportMode {
             case .walking:
                 iconName = "figure.walk"
-                localLogoName = nil
             case .metro:
-                iconName = "tram.fill"
-                localLogoName = province == "sevilla" ? "MetroSevillaLogo" : "MetroLogo"
+                iconName = "tram.tunnel.fill"
             case .tren:
-                iconName = "train.side.front.car"
-                localLogoName = province.contains("catalunya") || province.contains("barcelona") ? "RodaliesLogo" : "CercaniasLogo"
+                iconName = "tram.fill"
             case .tranvia:
-                iconName = "cablecar.fill"
-                localLogoName = "TramLogo"
+                iconName = "lightrail.fill"
             case .metroLigero:
                 iconName = "lightrail.fill"
-                localLogoName = "MetroLigeroLogo"
             case .bus:
                 iconName = "bus.fill"
-                localLogoName = nil
             }
             
             // RENDERER: Crear un "Pill" (Burbuja alargada con Logo + Nombre)
