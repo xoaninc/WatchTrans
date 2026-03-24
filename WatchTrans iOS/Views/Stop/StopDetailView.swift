@@ -324,7 +324,8 @@ struct StopDetailView: View {
         !(stop.corMl?.isEmpty ?? true) ||
         !(stop.corTren?.isEmpty ?? true) ||
         !(stop.corTranvia?.isEmpty ?? true) ||
-        !(stop.corFunicular?.isEmpty ?? true)
+        !(stop.corFunicular?.isEmpty ?? true) ||
+        !(stop.corBus?.isEmpty ?? true)
     }
 
     // MARK: - Auto Refresh
@@ -960,7 +961,7 @@ struct ConnectionsSectionView: View {
         let kind: TransportKind
     }
 
-    /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía → Funicular
+    /// All badges ordered: Cercanías → Metro → Metro Ligero → Tranvía → Funicular → Bus
     private var allBadges: [ConnectionBadge] {
         var badges: [ConnectionBadge] = []
 
@@ -991,6 +992,11 @@ struct ConnectionsSectionView: View {
         // 5. Funicular
         for line in stop.correspondences?.funicular ?? parseLines(stop.corFunicular) {
             badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Funicular"), colorHex: "#000000", kind: .funicular))
+        }
+
+        // 6. Bus
+        for line in stop.correspondences?.bus ?? parseLines(stop.corBus) {
+            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Bus"), colorHex: "#E23131", kind: .bus))
         }
 
         return badges

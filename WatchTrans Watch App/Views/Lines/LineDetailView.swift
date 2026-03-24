@@ -368,6 +368,12 @@ struct AllConnectionBadges: View {
             badges.append((formatBadgeName(line, type: "Funicular"), defaultFunicularColor))
         }
 
+        // 6. Bus
+        let busLines = stop.correspondences?.bus ?? parseLines(stop.corBus)
+        for line in busLines {
+            badges.append((formatBadgeName(line, type: "Bus"), "#E23131"))
+        }
+
         return badges
     }
 
