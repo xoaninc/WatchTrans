@@ -626,8 +626,11 @@ struct WatchTransSmallView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header: Station Name & Icon
             HStack {
-                Image(systemName: "tram.fill")
-                    .font(.caption)
+                Image("TrenSymbol")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 12, height: 12)
                     .foregroundStyle(.secondary)
                 Text(entry.stopName ?? "Station")
                     .font(.caption)

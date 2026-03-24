@@ -34,7 +34,14 @@ struct TrainLiveActivityWidget: Widget {
                     .scaleEffect(x: 1, y: 1.5, anchor: .center)
                 
                 HStack {
-                    Label(context.state.currentStop, systemImage: "tram.fill")
+                    HStack(spacing: 4) {
+                        Image("TrenSymbol")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 12, height: 12)
+                        Text(context.state.currentStop)
+                    }
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
