@@ -290,7 +290,8 @@ struct LinesListView: View {
             .fullScreenCover(item: $showingPlanFor) { lineType in
                 NetworkPlanView(
                     lineType: lineType,
-                    nucleo: dataService.currentLocation?.provinceName ?? "madrid"
+                    nucleo: dataService.currentLocation?.provinceName ?? "madrid",
+                    dataService: dataService
                 )
             }
         }
@@ -449,6 +450,7 @@ struct SectionHeaderWithPlan<Logo: View>: View {
 struct NetworkPlanView: View {
     let lineType: TransportType
     let nucleo: String
+    let dataService: DataService
 
     @Environment(\.dismiss) private var dismiss
     @State private var scale: CGFloat = 1.0
@@ -461,97 +463,24 @@ struct NetworkPlanView: View {
 
     private let baseURL = APIConfiguration.planosBaseURL
 
-    /// Static plan URLs from the server
-    /// Some are images (viewable in-app), others are PDFs (open in Safari)
+    /// Plan URL from the server — uses network code to build path
+    /// The server serves plans at {baseURL}/{type}/{code}.pdf
     private var planInfo: (url: URL, isPDF: Bool)? {
-        let nucleoLower = nucleo.lowercased()
-        DebugLog.log("🗺️ [Plan] Getting plan for lineType=\(lineType), nucleo='\(nucleo)' -> '\(nucleoLower)'")
+        let networkCode = dataService.findNetworkCode(nucleo: nucleo, type: lineType)
+        guard let code = networkCode else { return nil }
+        let codeLower = code.lowercased()
 
-        let path: String?
-        var isPDF = true
-
+        let typePath: String
         switch lineType {
-        case .metro:
-            switch nucleoLower {
-            case "málaga", "malaga":
-                path = "metro/malaga_metro.pdf"
-            case "bilbao", "vizcaya":
-                path = "metro/bilbao_metro.pdf"
-            case "madrid":
-                path = "metro/madrid_metro.pdf"
-            case "barcelona":
-                path = "metro/barcelona_metro.pdf"
-            case "sevilla":
-                path = "metro/sevilla_metro.png"
-                isPDF = false
-            case "granada":
-                path = "metro/granada_metro.pdf"
-            case "valencia":
-                path = "metro/valencia_metro.pdf"
-            case "tenerife":
-                path = "metro/tenerife_metro.png"
-                isPDF = false
-            default:
-                path = nil
-            }
-        case .tren:
-            switch nucleoLower {
-            case "madrid":
-                path = "cercanias/madrid_cercanias.pdf"
-            case "barcelona", "rodalies de catalunya":
-                path = "cercanias/barcelona_cercanias.pdf"
-            case "sevilla":
-                path = "cercanias/sevilla_cercanias.pdf"
-            case "valencia":
-                path = "cercanias/valencia_cercanias.pdf"
-            case "bilbao", "vizcaya":
-                path = "cercanias/bilbao_cercanias.pdf"
-            case "málaga", "malaga":
-                path = "cercanias/malaga_cercanias.pdf"
-            case "san sebastián", "san sebastian", "guipúzcoa", "guipuzcoa", "donostia":
-                path = "cercanias/san_sebastian_cercanias.pdf"
-            case "santander", "cantabria":
-                path = "cercanias/santander_cercanias.pdf"
-            case "asturias", "oviedo", "gijón", "gijon":
-                path = "cercanias/asturias_cercanias.pdf"
-            case "murcia", "alicante", "murcia/alicante":
-                path = "cercanias/murcia_alicante_cercanias.pdf"
-            case "zaragoza", "aragón", "aragon":
-                path = "cercanias/zaragoza_cercanias.pdf"
-            case "cádiz", "cadiz":
-                path = "cercanias/cadiz_cercanias.pdf"
-            default:
-                path = nil
-            }
-        case .tram:
-            switch nucleoLower {
-            case "parla", "madrid":
-                path = "tranvia/parla_tranvia.pdf"
-            case "zaragoza":
-                path = "tranvia/zaragoza_tranvia.pdf"
-            case "barcelona":
-                path = "tranvia/barcelona_tranvia.pdf"
-            case "tenerife":
-                path = "tranvia/tenerife_tranvia.pdf"
-            case "sevilla":
-                path = "tranvia/sevilla_tranvia.pdf"
-            case "murcia":
-                path = "tranvia/murcia_tranvia.pdf"
-            case "alicante":
-                path = "tranvia/alicante_tranvia.pdf"
-            default:
-                path = nil
-            }
-        case .bus:
-            path = nil  // No map available
-        case .funicular:
-            path = nil  // No map available
+        case .metro: typePath = "metro"
+        case .tren: typePath = "cercanias"
+        case .tram: typePath = "tranvia"
+        case .bus, .funicular: return nil
         }
 
-        guard let path = path, let url = URL(string: "\(baseURL)/\(path)") else {
-            return nil
-        }
-        return (url, isPDF)
+        let path = "\(typePath)/\(codeLower).pdf"
+        guard let url = URL(string: "\(baseURL)/\(path)") else { return nil }
+        return (url, true)
     }
 
     var body: some View {
@@ -726,13 +655,7 @@ struct NetworkPlanView: View {
     }
 
     private var planTitle: String {
-        switch lineType {
-        case .metro: return "Plano Metro"
-        case .tren: return "Plano Cercanías"
-        case .tram: return "Plano Tranvía"
-        case .bus: return "Plano Bus"
-        case .funicular: return "Plano Funicular"
-        }
+        "Plano \(dataService.networkDisplayName(for: lineType) ?? lineType.rawValue)"
     }
 }
 

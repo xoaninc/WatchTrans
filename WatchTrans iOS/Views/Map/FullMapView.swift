@@ -176,14 +176,7 @@ struct FullMapView: View {
     }
 
     private func networkDisplayName(type: TransportType, nucleo: String) -> String {
-        let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
-        switch type {
-        case .metro: return "Metro de \(capitalized)"
-        case .tren: return "Tren de \(capitalized)"
-        case .tram: return "Tranvía de \(capitalized)"
-        case .bus: return "Bus \(capitalized)"
-        case .funicular: return "Funicular de \(capitalized)"
-        }
+        dataService.networkDisplayName(for: type) ?? type.rawValue
     }
 
     private func transportIcon(_ type: TransportType) -> String {
@@ -433,14 +426,7 @@ struct LineFilterSheet: View {
     }
 
     private func networkName(type: TransportType, nucleo: String) -> String {
-        let capitalized = nucleo.prefix(1).uppercased() + nucleo.dropFirst()
-        switch type {
-        case .metro: return "Metro de \(capitalized)"
-        case .tren: return "Tren de \(capitalized)"
-        case .tram: return "Tranvía de \(capitalized)"
-        case .bus: return "Bus \(capitalized)"
-        case .funicular: return "Funicular de \(capitalized)"
-        }
+        dataService.networkDisplayName(for: type) ?? type.rawValue
     }
 }
 
