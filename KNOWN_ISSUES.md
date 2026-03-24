@@ -42,9 +42,9 @@ Filtrar paradas por tipo de transporte. Pendiente decidir ubicación en la UI.
 
 Los iconos AIGA provienen del set AIGA Symbol Signs (dominio público, US Government 1974). StairClimbingSymbol de otra fuente sin verificar. Ver `CustomSymbols/SYMBOLS.md`.
 
-### Colores de TransportType por revisar
+### ~~Colores de TransportType por revisar~~ ✅ RESUELTO
 
-Colores actuales: metro=.orange, tren=.blue, tram=.green, bus=.red, funicular=.brown.
+Colores decididos: metro=.orange, tren=.blue, tram=.green, bus=.red, funicular=.brown.
 
 ### ~~Mapa de accesos: door.left.hand.open pendiente sustituir~~ ✅ RESUELTO
 
