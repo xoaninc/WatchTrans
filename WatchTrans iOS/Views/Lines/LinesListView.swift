@@ -395,8 +395,7 @@ struct LineRowView: View {
                     // Alternative service (bus replacement)
                     if line.isAlternativeService == true {
                         HStack(spacing: 4) {
-                            Image(systemName: "bus.fill")
-                                .font(.caption2)
+                            SymbolView(name: "BusSymbol", size: 10)
                             if let replaced = line.alternativeForShortName, !replaced.isEmpty {
                                 Text("Sustituye \(replaced)")
                                     .font(.caption2)

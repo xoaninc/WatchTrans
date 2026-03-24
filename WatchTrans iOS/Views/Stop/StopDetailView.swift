@@ -642,28 +642,36 @@ struct StopHeaderView: View {
                     // Transport type of this stop
                     switch stop.transportType {
                     case .tren:
-                        Label("Tren", systemImage: "tram.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "TrenSymbol", size: 12)
+                            Text("Tren")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.blue)
                     case .metro:
-                        Label("Metro", systemImage: "tram.tunnel.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "MetroSymbol", size: 12)
+                            Text("Metro")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.blue)
                     case .tram:
-                        Label("Tram", systemImage: "lightrail.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "TramSymbol", size: 12)
+                            Text("Tram")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.blue)
                     case .bus:
-                        Label("Bus", systemImage: "bus.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "BusSymbol", size: 12)
+                            Text("Bus")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                     case .funicular:
                         HStack(spacing: 4) {
-                            Image("FunicularSymbol")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 12)
+                            SymbolView(name: "FunicularSymbol", size: 12)
                             Text("Funicular")
                         }
                         .font(.caption)
@@ -671,9 +679,12 @@ struct StopHeaderView: View {
                     }
 
                     if stop.hasBusConnection {
-                        Label("Bus", systemImage: "bus.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "BusSymbol", size: 12)
+                            Text("Bus")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                     }
 
                     if stop.hasParking {

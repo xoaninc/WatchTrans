@@ -181,11 +181,11 @@ struct FullMapView: View {
 
     private func transportIcon(_ type: TransportType) -> String {
         switch type {
-        case .metro: return "tram.tunnel.fill"
-        case .tren: return "tram.fill"
-        case .tram: return "lightrail.fill"
-        case .bus: return "bus.fill"
-        case .funicular: return "tram.fill"
+        case .metro: return "MetroSymbol"
+        case .tren: return "TrenSymbol"
+        case .tram: return "TramSymbol"
+        case .bus: return "BusSymbol"
+        case .funicular: return "FunicularSymbol"
         }
     }
 

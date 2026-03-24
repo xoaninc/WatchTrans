@@ -97,8 +97,7 @@ struct ArrivalRowView: View {
                 // Train position (if available)
                 if arrival.hasTrainPosition {
                     HStack(spacing: 4) {
-                        Image(systemName: "tram.fill")
-                            .font(.caption2)
+                        SymbolView(name: "TrenSymbol", size: 10)
                             .foregroundStyle(.blue)
                         if let statusText = arrival.trainStatusText, let stopName = arrival.trainCurrentStop {
                             Text("\(statusText) \(stopName)")
@@ -264,8 +263,7 @@ struct ArrivalRowView: View {
                         .foregroundStyle(.green)
                 }
                 if arrival.isAlternativeService {
-                    Image(systemName: "bus.fill")
-                        .font(.caption)
+                    SymbolView(name: "BusSymbol", size: 12)
                         .foregroundStyle(.orange)
                 }
                 if arrival.pmrWarning {

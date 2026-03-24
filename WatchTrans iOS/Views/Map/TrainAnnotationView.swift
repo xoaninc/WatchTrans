@@ -11,10 +11,7 @@ struct TrainAnnotationView: View {
                     .frame(width: 20, height: 20)
                     .shadow(radius: 2)
                 
-                Image(systemName: "tram.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 12, height: 12)
+                SymbolView(name: "TrenSymbol", size: 12)
                     .foregroundStyle(Color.blue) // Podríamos usar el color de la línea si estuviera disponible
             }
             

@@ -301,8 +301,7 @@ struct TrainDetailView: View {
                         // Vehicle label
                         if let label = arrival.vehicleLabel {
                             HStack(spacing: 6) {
-                                Image(systemName: "tram.fill")
-                                    .font(.caption)
+                                SymbolView(name: "TrenSymbol", size: 12)
                                     .foregroundStyle(.secondary)
                                 Text("Unidad \(label)")
                                     .font(.caption)
@@ -324,8 +323,7 @@ struct TrainDetailView: View {
 
                     if arrival.hasTrainPosition {
                         HStack(spacing: 16) {
-                            Image(systemName: "tram.fill")
-                                .font(.system(size: 32))
+                            SymbolView(name: "TrenSymbol", size: 32)
                                 .foregroundStyle(lineColor)
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -697,8 +695,7 @@ struct JourneyStopsListView: View {
                         .frame(width: 24, height: 24)
 
                     if status == .current {
-                        Image(systemName: "tram.fill")
-                            .font(.system(size: 12))
+                        SymbolView(name: "TrenSymbol", size: 12)
                             .foregroundStyle(.white)
                     } else if status == .passed {
                         Image(systemName: "checkmark")
