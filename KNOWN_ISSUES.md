@@ -48,6 +48,10 @@ El servidor ya reemplaza "CIVIS" por la última parada. `is_express=true` y `exp
 
 ## ACTIVOS
 
+### ~~Hardcoded province→operator mappings~~ ✅ RESUELTO
+
+Eliminados switch cases de metroSectionTitle, tramSectionTitle, isRodalies (LinesListView), relevantCredits (SettingsView), isCercaniasLine (Arrival). Ahora usan network.name y network.transportType de la API. LogoImageView, NativeAnimatedMapView y PDF paths se mantienen (asset selection, no datos de operador). city eliminado de NetworkResponse.
+
 ### CompactDepartureResponse: no existe modelo
 
 La API tiene `?compact=true` para departures con esquema reducido. No hay modelo en la app. Necesario para Widgets iOS y Siri Shortcuts.

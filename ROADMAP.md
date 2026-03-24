@@ -2,7 +2,7 @@
 
 Features pendientes, bugs y mejoras técnicas.
 
-**Última actualización:** 2026-03-21
+**Última actualización:** 2026-03-24
 
 ---
 
