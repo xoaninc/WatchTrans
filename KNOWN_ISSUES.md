@@ -48,6 +48,14 @@ El servidor ya reemplaza "CIVIS" por la última parada. `is_express=true` y `exp
 
 ## ACTIVOS
 
+### Backend: Metro Madrid Route Planner no funciona
+
+RAPTOR devuelve "No journeys found" para estaciones de Metro Madrid. Hipótesis: el backend no ha cargado stop_times o transfers para Metro Madrid. Cercanías sí funciona.
+
+### Backend: Equipment status solo Metro Sevilla
+
+`equipment-status` solo tiene datos RT para Metro Sevilla (fuente TCE). Cuando otros operadores tengan feed RT de equipos, el endpoint los expondrá automáticamente. No requiere cambios en la app.
+
 ### ~~Hardcoded province→operator mappings~~ ✅ RESUELTO
 
 Eliminados switch cases de metroSectionTitle, tramSectionTitle, isRodalies (LinesListView), relevantCredits (SettingsView), isCercaniasLine (Arrival). Ahora usan network.name y network.transportType de la API. LogoImageView, NativeAnimatedMapView y PDF paths se mantienen (asset selection, no datos de operador). city eliminado de NetworkResponse.
