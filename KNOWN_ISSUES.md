@@ -54,9 +54,15 @@ La app construye URLs de planos como `{baseURL}/{type}/{network_code}.pdf`. Los 
 
 Segmented control `[Salir a las | Llegar a las]` añadido en JourneyPlannerView. Envía `arrive_by` a la API. Pendiente verificar que el backend lo soporta correctamente.
 
-### AIGA symbols: marco legal pendiente
+### Marco legal de símbolos — investigado
 
-Los iconos AIGA provienen del set AIGA Symbol Signs (dominio público, US Government 1974). StairClimbingSymbol de otra fuente sin verificar. Ver `CustomSymbols/SYMBOLS.md`.
+**AIGA/DOT (Elevator, Escalator, Stairs):** ✅ Dominio público. US Government work (17 U.S.C. §105). Sin restricciones, sin atribución. SEGD confirma: "copyright-free symbols within the public domain". Wikimedia metadata: `Copyrighted: False`. **Seguro para App Store.**
+
+**ISO 7001 Wikimedia (Metro, Tren, Tram, Bus, Funicular, Wheelchair, RedCross):** SVGs creados por usuario "Clemenspool" bajo CC0 (dominio público). Sin atribución requerida. ISO reclama copyright sobre los diseños originales (~$30/símbolo), pero los pictogramas son figuras geométricas simples que probablemente no pasan el umbral de originalidad para copyright (Feist v. Rural). **Riesgo muy bajo para app indie.**
+
+**StairClimbingSymbol:** Fuente sin verificar (descargado por el usuario desde internet). **Pendiente verificar licencia antes de publicar.**
+
+Fuentes: [SEGD](https://segd.org/resources/aiga-dot-symbols-for-transportation/), [Wikipedia DOT pictograms](https://en.wikipedia.org/wiki/DOT_pictograms), [ISO Copyright](https://www.iso.org/copyright.html), [Wikimedia CC0](https://commons.wikimedia.org/wiki/Category:ISO_7001_icons).
 
 ---
 
