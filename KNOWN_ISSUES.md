@@ -38,21 +38,25 @@ Alertas de noticias de Metro Sevilla tienen `content` (HTML) e `image_url`. La a
 
 Filtrar paradas por tipo de transporte. Pendiente decidir ubicación en la UI.
 
+### corBus — correspondencia bus sin badges
+
+El campo `cor_bus` se envía en stops pero la app no muestra badges de correspondencia bus en `ConnectionsSectionView`.
+
+### transport_type en /networks pendiente backend
+
+La app usa `dataService.networkDisplayName(for:)` y `networkTransportType(_:)` que dependen de `transport_type` en `/networks`. El backend aún no lo manda — sin este campo las secciones de líneas no agrupan correctamente. Ver `docs/api-requests-pending.md`.
+
+### PDFs de planos: naming por network code pendiente backend
+
+La app construye URLs de planos como `{baseURL}/{type}/{network_code}.pdf`. Los PDFs en el servidor usan nombres legacy (`metro/sevilla_metro.pdf`). Hay que renombrarlos o añadir `plan_url` a `/networks`.
+
+### arrive_by implementado pero no verificado
+
+Segmented control `[Salir a las | Llegar a las]` añadido en JourneyPlannerView. Envía `arrive_by` a la API. Pendiente verificar que el backend lo soporta correctamente.
+
 ### AIGA symbols: marco legal pendiente
 
 Los iconos AIGA provienen del set AIGA Symbol Signs (dominio público, US Government 1974). StairClimbingSymbol de otra fuente sin verificar. Ver `CustomSymbols/SYMBOLS.md`.
-
-### ~~Colores de TransportType por revisar~~ ✅ RESUELTO
-
-Colores decididos: metro=.orange, tren=.blue, tram=.green, bus=.red, funicular=.brown.
-
-### ~~Mapa de accesos: door.left.hand.open pendiente sustituir~~ ✅ RESUELTO
-
-Todos los pins usan `StairClimbingSymbol`.
-
-### ~~Pathway modes sin datos en la API~~ ✅ RESUELTO
-
-`moving_sidewalk` y `fare_gate` eliminados del código. `escalator` y `elevator` mantenidos como código defensivo.
 
 ---
 
@@ -88,5 +92,8 @@ Todos los pins usan `StairClimbingSymbol`.
 - ~~PMR warning per-departure~~ ✅
 - ~~parkingBicis como parking genérico~~ ✅
 - ~~Fases de alertas~~ ✅
+- ~~Colores de TransportType~~ ✅
+- ~~Mapa de accesos door.left.hand.open~~ ✅
+- ~~Pathway modes sin datos~~ ✅
 
 </details>
