@@ -67,3 +67,29 @@ Campo existe en el modelo Swift y la UI está implementada. Pero la API siempre 
 ## GET /api/gtfs-rt/alerts — `content` + `image_url`
 
 Alertas de noticias de Metro Sevilla. La app solo muestra `headerText`/`descriptionText`. Si estos campos se populan, la app podría mostrar contenido rico e imágenes.
+
+---
+
+## Ya implementado en la API
+
+### `route_type` en stops ✅
+- Endpoints: `/stops?search=`, `/stops/by-coordinates`, `/stops/{id}`
+- Campo: `route_type: Int?` (0=tram, 1=metro, 2=rail, 3=bus, 7=funicular)
+- La app ya lo consume para determinar `TransportType`.
+
+### `wheelchair_accessible` como Int ✅
+- Endpoint: `/stops/{id}/departures`
+- Campo: `wheelchair_accessible: Int?` (null=sin dato, 1=desconocido, 2=accesible, 3=no accesible)
+- La app ya lo consume con prioridad RT → fallback static.
+
+---
+
+## No requiere cambio de API (bugs de la app)
+
+### `corBus` — correspondencia bus sin badges
+- El campo `cor_bus` se envía en stops pero la app no muestra badges de correspondencia bus.
+- Falta implementar en `StopDetailView` allBadges.
+
+### Pathway modes incompletos
+- `/stops/{id}/station-interior` solo devuelve `walkway` y `stairs`.
+- La app tiene código defensivo para `escalator`, `elevator`, `moving_sidewalk`, `fare_gate` pero ninguna estación los devuelve.
