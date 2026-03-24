@@ -38,9 +38,9 @@ Alertas de noticias de Metro Sevilla tienen `content` (HTML) e `image_url`. La a
 
 Filtrar paradas por tipo de transporte. Pendiente decidir ubicación en la UI.
 
-### corBus — correspondencia bus sin badges
+### ~~corBus — correspondencia bus sin badges~~ ✅ RESUELTO
 
-El campo `cor_bus` se envía en stops pero la app no muestra badges de correspondencia bus en `ConnectionsSectionView`.
+Badges de bus implementados en iOS `StopDetailView` y Watch `LineDetailView`.
 
 ### transport_type en /networks pendiente backend
 
