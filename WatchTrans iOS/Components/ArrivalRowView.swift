@@ -206,17 +206,11 @@ struct ArrivalRowView: View {
                 
                 // Wheelchair accessibility indicator
                 if arrival.wheelchairAccessible {
-                    Image(systemName: "figure.roll")
-                        .font(.caption)
+                    SymbolView(name: "WheelchairSymbol", size: 12)
                         .foregroundStyle(.green)
                 } else if arrival.wheelchairInaccessible {
-                    ZStack {
-                        Image(systemName: "figure.roll")
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .light))
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                    NegatedSymbolView(name: "WheelchairSymbol", size: 12)
+                        .foregroundStyle(.red)
                 }
 
                 // Offline indicator
@@ -258,17 +252,11 @@ struct ArrivalRowView: View {
                         .cornerRadius(4)
                 }
                 if arrival.wheelchairAccessible {
-                    Image(systemName: "figure.roll")
-                        .font(.caption)
+                    SymbolView(name: "WheelchairSymbol", size: 12)
                         .foregroundStyle(.green)
                 } else if arrival.wheelchairInaccessible {
-                    ZStack {
-                        Image(systemName: "figure.roll")
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .light))
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                    NegatedSymbolView(name: "WheelchairSymbol", size: 12)
+                        .foregroundStyle(.red)
                 }
                 if arrival.bikesAllowed == 1 {
                     Image(systemName: "bicycle")
@@ -284,8 +272,7 @@ struct ArrivalRowView: View {
                     HStack(spacing: 1) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 8))
-                        Image(systemName: "figure.roll")
-                            .font(.system(size: 10))
+                        SymbolView(name: "WheelchairSymbol", size: 10)
                     }
                     .foregroundStyle(.orange)
                 }

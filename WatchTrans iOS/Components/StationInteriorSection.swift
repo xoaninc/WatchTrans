@@ -141,11 +141,7 @@ private struct AccessRow: View {
                     .cornerRadius(8)
             } else if access.wheelchair == false {
                 HStack(spacing: 2) {
-                    ZStack {
-                        Image(systemName: "figure.roll")
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .light))
-                    }
+                    NegatedSymbolView(name: "WheelchairSymbol", size: 10)
                     Text("No accesible")
                 }
                 .font(.caption2)

@@ -94,8 +94,7 @@ struct StopDetailView: View {
                     latitude: access.lat,
                     longitude: access.lon
                 )) {
-                    Image(systemName: access.wheelchair == true ? "figure.roll" : "door.left.hand.open")
-                        .font(.caption)
+                    SymbolView(name: "StairClimbingSymbol", size: 12)
                         .foregroundStyle(.white)
                         .padding(4)
                         .background(Circle().fill(Color.green))
@@ -559,8 +558,7 @@ struct NearestAccessSectionView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 if nearest.access.wheelchair == true {
-                                    Image(systemName: "figure.roll")
-                                        .font(.caption)
+                                    SymbolView(name: "WheelchairSymbol", size: 12)
                                         .foregroundStyle(.blue)
                                 }
                                 Text(nearest.access.address)
@@ -685,16 +683,15 @@ struct StopHeaderView: View {
                     }
 
                     if stop.wheelchairBoarding == 1 {
-                        Label("Accesible", systemImage: "figure.roll")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            SymbolView(name: "WheelchairSymbol", size: 12)
+                            Text("Accesible")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.blue)
                     } else if stop.wheelchairBoarding == 2 {
                         HStack(spacing: 2) {
-                            ZStack {
-                                Image(systemName: "figure.roll")
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 18, weight: .light))
-                            }
+                            NegatedSymbolView(name: "WheelchairSymbol", size: 12)
                             Text("No accesible")
                         }
                         .font(.caption)
@@ -706,7 +703,7 @@ struct StopHeaderView: View {
                 if let acerca = stop.acercaService {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Image(systemName: "figure.roll")
+                            SymbolView(name: "WheelchairSymbol", size: 14)
                                 .foregroundStyle(.blue)
                             Text("Servicio Acerca PMR")
                                 .font(.subheadline)

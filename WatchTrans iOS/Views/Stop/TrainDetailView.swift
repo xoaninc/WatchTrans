@@ -101,8 +101,7 @@ struct TrainDetailView: View {
                         // Wheelchair accessibility indicator
                         if arrival.wheelchairAccessible {
                             HStack(spacing: 4) {
-                                Image(systemName: "figure.roll")
-                                    .font(.subheadline)
+                                SymbolView(name: "WheelchairSymbol", size: 14)
                                 Text("Accesible")
                                     .font(.caption)
                                     .fontWeight(.semibold)
@@ -116,12 +115,7 @@ struct TrainDetailView: View {
                             )
                         } else if arrival.wheelchairInaccessible {
                             HStack(spacing: 4) {
-                                ZStack {
-                                    Image(systemName: "figure.roll")
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 16, weight: .light))
-                                }
-                                .font(.subheadline)
+                                NegatedSymbolView(name: "WheelchairSymbol", size: 14)
                                 Text("No accesible")
                                     .font(.caption)
                                     .fontWeight(.semibold)

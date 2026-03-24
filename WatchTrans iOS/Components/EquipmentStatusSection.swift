@@ -30,7 +30,7 @@ struct EquipmentStatusSection: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack {
-                Image(systemName: "figure.roll")
+                SymbolView(name: "WheelchairSymbol", size: 16)
                     .foregroundStyle(.blue)
                 Text("Accesibilidad")
                     .font(.headline)
