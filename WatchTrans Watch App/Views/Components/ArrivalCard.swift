@@ -107,8 +107,7 @@ struct ArrivalCard: View {
             // Train position indicator (if available)
             if arrival.hasTrainPosition {
                 HStack(spacing: 4) {
-                    Image(systemName: "tram.fill")
-                        .font(.caption2)
+                    SymbolView(name: "TrenSymbol", size: 12)
                         .foregroundStyle(.blue)
 
                     if let statusText = arrival.trainStatusText, let stopName = arrival.trainCurrentStop {

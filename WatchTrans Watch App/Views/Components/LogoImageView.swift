@@ -127,15 +127,15 @@ struct LogoImageView: View {
             }
         }
 
-        /// SF Symbol for ultimate fallback
-        var sfSymbol: String {
+        /// Custom asset name for ultimate fallback
+        var fallbackAsset: String {
             switch self {
             case .tren, .rodalies, .fgc, .euskotren, .sfm:
-                return "tram.fill"
+                return "TrenSymbol"
             case .metro, .metroLigero:
-                return "tram.tunnel.fill"
+                return "MetroSymbol"
             case .tram:
-                return "lightrail.fill"
+                return "TramSymbol"
             }
         }
     }
@@ -149,9 +149,8 @@ struct LogoImageView: View {
         if let url = remoteURL {
             KFImage(url)
                 .placeholder {
-                    // Show SF Symbol while loading
-                    Image(systemName: logoType.sfSymbol)
-                        .font(.system(size: height * 0.6))
+                    // Show custom asset while loading
+                    SymbolView(name: logoType.fallbackAsset, size: height * 0.6)
                         .foregroundStyle(.secondary)
                 }
                 .cacheOriginalImage()
@@ -175,9 +174,8 @@ struct LogoImageView: View {
                 .scaledToFit()
                 .frame(height: height)
         } else {
-            // Use SF Symbol - better than showing wrong city's logo
-            Image(systemName: logoType.sfSymbol)
-                .font(.system(size: height * 0.8))
+            // Use custom asset - better than showing wrong city's logo
+            SymbolView(name: logoType.fallbackAsset, size: height * 0.8)
                 .foregroundStyle(.secondary)
         }
     }

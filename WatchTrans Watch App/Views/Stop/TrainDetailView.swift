@@ -51,8 +51,7 @@ struct TrainDetailView: View {
                         // Wheelchair accessibility indicator
                         if arrival.wheelchairAccessible {
                             HStack(spacing: 2) {
-                                Image(systemName: "figure.roll")
-                                    .font(.caption2)
+                                SymbolView(name: "WheelchairSymbol", size: 12)
                                 Text("Accesible")
                                     .font(.caption2)
                                     .fontWeight(.medium)
@@ -66,12 +65,7 @@ struct TrainDetailView: View {
                             )
                         } else if arrival.wheelchairInaccessible {
                             HStack(spacing: 2) {
-                                ZStack {
-                                    Image(systemName: "figure.roll")
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .light))
-                                }
-                                .font(.caption2)
+                                NegatedSymbolView(name: "WheelchairSymbol", size: 12)
                                 Text("No accesible")
                                     .font(.caption2)
                                     .fontWeight(.medium)
@@ -164,8 +158,7 @@ struct TrainDetailView: View {
                         // Status and current stop
                         if let currentStop = arrival.trainCurrentStop {
                             HStack {
-                                Image(systemName: "tram.fill")
-                                    .font(.body)
+                                SymbolView(name: "TrenSymbol", size: 18)
                                     .foregroundStyle(lineColor)
 
                                 VStack(alignment: .leading, spacing: 2) {
