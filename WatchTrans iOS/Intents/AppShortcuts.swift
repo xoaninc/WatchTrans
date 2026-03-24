@@ -29,6 +29,7 @@ struct AppShortcuts: AppShortcutsProvider {
                 "Departures from \(\.$stop) with \(.applicationName)"
             ],
             shortTitle: "Next Train",
+            // AppShortcuts requires SF Symbol — cannot use custom asset
             systemImageName: "tram.fill"
         )
 

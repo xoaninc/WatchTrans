@@ -142,10 +142,16 @@ struct SiriSegmentRow: View {
     var body: some View {
         HStack(spacing: 10) {
             // Icon
-            Image(systemName: segment.type == "transit" ? "tram.fill" : "figure.walk")
-                .font(.caption)
-                .foregroundStyle(segment.type == "transit" ? lineColor : .secondary)
-                .frame(width: 20)
+            if segment.type == "transit" {
+                SymbolView(name: "TrenSymbol", size: 14)
+                    .foregroundStyle(lineColor)
+                    .frame(width: 20)
+            } else {
+                Image(systemName: "figure.walk")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {

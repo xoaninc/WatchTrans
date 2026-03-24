@@ -66,6 +66,7 @@ struct SettingsView: View {
         let name: String
         let icon: String
         let color: Color
+        let isCustomAsset: Bool
     }
 
     /// Credits derived from loaded networks
@@ -78,13 +79,13 @@ struct SettingsView: View {
             let icon: String
             let color: Color
             switch type {
-            case .metro: icon = "tram.tunnel.fill"; color = .red
-            case .tren: icon = "tram.fill"; color = .cyan
-            case .tram: icon = "tram"; color = .green
-            case .bus: icon = "bus.fill"; color = .orange
-            case .funicular: icon = "cablecar"; color = .brown
+            case .metro: icon = "MetroSymbol"; color = .red
+            case .tren: icon = "TrenSymbol"; color = .cyan
+            case .tram: icon = "TramSymbol"; color = .green
+            case .bus: icon = "BusSymbol"; color = .orange
+            case .funicular: icon = "FunicularSymbol"; color = .brown
             }
-            credits.append(CreditItem(name: network.name, icon: icon, color: color))
+            credits.append(CreditItem(name: network.name, icon: icon, color: color, isCustomAsset: true))
         }
         return credits
     }
@@ -95,8 +96,7 @@ struct SettingsView: View {
                 // About section
                 Section {
                     HStack {
-                        Image(systemName: "tram.fill")
-                            .font(.largeTitle)
+                        SymbolView(name: "TrenSymbol", size: 34)
                             .foregroundStyle(.blue)
                         VStack(alignment: .leading) {
                             Text("WatchTrans")
@@ -307,8 +307,13 @@ struct SettingsView: View {
 
                             ForEach(relevantCredits) { credit in
                                 HStack {
-                                    Image(systemName: credit.icon)
-                                        .foregroundStyle(credit.color)
+                                    if credit.isCustomAsset {
+                                        SymbolView(name: credit.icon, size: 16)
+                                            .foregroundStyle(credit.color)
+                                    } else {
+                                        Image(systemName: credit.icon)
+                                            .foregroundStyle(credit.color)
+                                    }
                                     Text(credit.name)
                                 }
                             }
