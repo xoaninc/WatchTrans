@@ -203,15 +203,6 @@ struct ArrivalRowView: View {
                     )
                 }
                 
-                // Wheelchair accessibility indicator
-                if arrival.wheelchairAccessible {
-                    SymbolView(name: "WheelchairSymbol", size: 12)
-                        .foregroundStyle(.green)
-                } else if arrival.wheelchairInaccessible {
-                    NegatedSymbolView(name: "WheelchairSymbol", size: 12)
-                        .foregroundStyle(.red)
-                }
-
                 // Offline indicator
                 if arrival.isOfflineData {
                     HStack(spacing: 2) {
