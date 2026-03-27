@@ -7,8 +7,10 @@
     <path id="d" stroke-width="1.60000002" d="M218.87387 143.61918a24.01902 27.39011 0 1 1-35.0891-31.7775"/>
   </defs>
   <g transform="translate(-71.511642 -217.15952)">
-    <rect width="299.18427" height="297.49875" x="209.20844" y="441.14871" rx="36.481171" ry="36.481171"/>
-    <rect width="216.17117" height="214.90701" x="251.34706" y="482.86597" fill="#fff" ry="0"/>
+    <path fill-rule="evenodd" shape-rendering="crispEdges" d="
+      M209,478 A36,36 0 0,1 245,441 H472 A36,36 0 0,1 508,478 V702 A36,36 0 0,1 472,739 H245 A36,36 0 0,1 209,702 Z
+      M251,483 H467 V698 H251 Z
+    "/>
     <g stroke="#000" stroke-linecap="square" stroke-linejoin="round">
       <use xlink:href="#a" stroke-width="1.60000002" transform="matrix(.7846 0 0 .66195 188.9583 244.23362)"/>
       <use xlink:href="#b" stroke-width="1.60000002" transform="matrix(.83273 0 0 .68409 124.34249 315.60749)"/>
