@@ -131,10 +131,17 @@ class GTFSRealtimeMapper {
 
     // MARK: - Wheelchair
 
-    /// Resolve wheelchair accessibility: RT (2/3) takes priority, fallback to static
+    /// Resolve wheelchair accessibility: RT (protobuf scale) takes priority, fallback to static (GTFS scale).
+    /// RT: 2=accessible, 3=not accessible. Static: 1=accessible, 2=not accessible.
+    /// Returns normalized to RT scale: 2=accessible, 3=not accessible, nil=no data.
     static func wheelchairValue(rt: Int?, static staticVal: Int?) -> Int? {
+        // RT (protobuf): 2=accessible, 3=not accessible
         if let rt, rt == 2 || rt == 3 { return rt }
-        if let staticVal, staticVal == 2 || staticVal == 3 { return staticVal }
+        // Static (GTFS): 1=accessible, 2=not accessible — normalize to RT scale
+        if let staticVal {
+            if staticVal == 1 { return 2 }  // accessible → RT 2
+            if staticVal == 2 { return 3 }  // not accessible → RT 3
+        }
         return nil
     }
 
