@@ -43,7 +43,7 @@ Fuente: https://commons.wikimedia.org/wiki/Category:ISO_7001_icons
 | `TramSymbol` | `ISO_7001_PI_TF_007.svg` | Tranvía/streetcar | Parada/línea de tranvía. Sustituye `lightrail.fill`. | ✅ Integrado |
 | `BusSymbol` | `ISO_7001_PI_TF_006.svg` | Autobús | Parada/línea de bus. Sustituye `bus.fill`. | ✅ Integrado |
 | `FunicularSymbol` | `ISO_7001_PI_TF_012.svg` | Funicular | Parada de funicular. | ✅ Integrado |
-| `WheelchairSymbol` | `ISO_7001_PI_PF_006.svg` | Persona en silla de ruedas | Accesibilidad. Verde=accesible, azul=header. No accesible: overlay `RedCrossOverlay`. | ✅ Integrado |
+| `WheelchairSymbol` | `ISO_7001_PI_PF_006.svg` | Persona en silla de ruedas | Accesibilidad. Verde=accesible, azul=header. No accesible: overlay `RedCrossOverlay`. Valores: RT protobuf (2=accesible, 3=no), static GTFS (1=accesible, 2=no). `wheelchairValue()` normaliza static→RT. | ✅ Integrado |
 | `RedCrossOverlay` | `ISO_7001_-_Red_Cross.svg` | Cruz roja | Overlay "NO ES" sobre cualquier símbolo. No para fuera de servicio ni inexistente. | ✅ Integrado |
 
 ### Otros (revisar licencia)
