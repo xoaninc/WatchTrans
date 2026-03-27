@@ -1,45 +1,229 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="577.78485" height="578.97675" version="1.0">
-  <defs>
-    <path id="a" stroke-width="1.60000002" d="M208.53936 113.37186a22.326078 26.754066 0 1 1-34.03915 29.5347"/>
-    <path id="b" stroke-width="1.60000002" d="M216.23704 120.80847a24.01902 27.39011 0 1 1-42.16141 3.32709"/>
-    <path id="c" stroke-width="1.60000002" d="M173.4785 125.77371a24.01902 27.39011 0 0 1 42.99241-4.53536"/>
-    <path id="d" stroke-width="1.60000002" d="M218.87387 143.61918a24.01902 27.39011 0 1 1-35.0891-31.7775"/>
+<svg
+   width="301.50385"
+   height="489.513"
+   version="1.0"
+   id="svg18"
+   sodipodi:docname="elevator.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview18"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
+  <defs
+     id="defs1">
+    <path
+       id="a"
+       stroke-width="1.6"
+       d="m 208.53936,113.37186 a 22.326078,26.754066 0 1 1 -34.03915,29.5347" />
+    <path
+       id="b"
+       stroke-width="1.6"
+       d="m 216.23704,120.80847 a 24.01902,27.39011 0 1 1 -42.16141,3.32709" />
+    <path
+       id="c"
+       stroke-width="1.6"
+       d="m 173.4785,125.77371 a 24.01902,27.39011 0 0 1 42.99241,-4.53536" />
+    <path
+       id="d"
+       stroke-width="1.6"
+       d="m 218.87387,143.61918 a 24.01902,27.39011 0 1 1 -35.0891,-31.7775" />
   </defs>
-  <g transform="translate(-71.511642 -217.15952)">
-    <path fill-rule="evenodd" shape-rendering="crispEdges" d="
-      M209,478 A36,36 0 0,1 245,441 H472 A36,36 0 0,1 508,478 V702 A36,36 0 0,1 472,739 H245 A36,36 0 0,1 209,702 Z
-      M251,483 H467 V698 H251 Z
-    "/>
-    <g stroke="#000" stroke-linecap="square" stroke-linejoin="round">
-      <use xlink:href="#a" stroke-width="1.60000002" transform="matrix(.7846 0 0 .66195 188.9583 244.23362)"/>
-      <use xlink:href="#b" stroke-width="1.60000002" transform="matrix(.83273 0 0 .68409 124.34249 315.60749)"/>
-      <use xlink:href="#c" stroke-width="1.60000002" transform="matrix(.68812 0 0 .55728 152.46715 190.5677)"/>
-      <rect width="99.277641" height="34.652412" x="-114.34281" y="374.90018" stroke-width="1.59614193" ry="8.317997" transform="matrix(.6374 -.77054 .76744 .64112 0 0)"/>
-      <rect width="102.2452" height="34.815559" x="-483.82874" y="31.089006" stroke-width="1.59614193" ry="9.8207321" transform="matrix(-.64195 -.76674 .76984 -.63823 0 0)"/>
-      <use xlink:href="#d" stroke-width="1.60000002" transform="matrix(.72905 0 0 .66277 90.146547 244.19724)"/>
-      <rect width="125.00758" height="39.519062" x="-413.78915" y="268.87262" stroke-width="1.9489578" ry="9.4316044" transform="matrix(.00315 -1 .99995 .00985 0 0)"/>
+  <g
+     transform="translate(-208.98611,-249.48701)"
+     id="g18">
+    <path
+       fill-rule="evenodd"
+       shape-rendering="crispEdges"
+       d="m 209,478 a 36,36 0 0 1 36,-37 h 227 a 36,36 0 0 1 36,37 v 224 a 36,36 0 0 1 -36,37 H 245 a 36,36 0 0 1 -36,-37 z m 42,5 H 467 V 698 H 251 Z"
+       id="path1" />
+    <g
+       stroke="#000000"
+       stroke-linecap="square"
+       stroke-linejoin="round"
+       id="g5">
+      <use
+         xlink:href="#a"
+         stroke-width="1.6"
+         transform="matrix(0.7846,0,0,0.66195,188.9583,244.23362)"
+         id="use1" />
+      <use
+         xlink:href="#b"
+         stroke-width="1.6"
+         transform="matrix(0.83273,0,0,0.68409,124.34249,315.60749)"
+         id="use2" />
+      <use
+         xlink:href="#c"
+         stroke-width="1.6"
+         transform="matrix(0.68812,0,0,0.55728,152.46715,190.5677)"
+         id="use3" />
+      <rect
+         width="99.277641"
+         height="34.652412"
+         x="-114.34281"
+         y="374.90018"
+         stroke-width="1.59614"
+         ry="8.317997"
+         transform="matrix(0.6374,-0.77054,0.76744,0.64112,0,0)"
+         id="rect3" />
+      <rect
+         width="102.2452"
+         height="34.815559"
+         x="-483.82874"
+         y="31.089006"
+         stroke-width="1.59614"
+         ry="9.8207321"
+         transform="matrix(-0.64195,-0.76674,0.76984,-0.63823,0,0)"
+         id="rect4" />
+      <use
+         xlink:href="#d"
+         stroke-width="1.6"
+         transform="matrix(0.72905,0,0,0.66277,90.146547,244.19724)"
+         id="use4" />
+      <rect
+         width="125.00758"
+         height="39.519062"
+         x="-413.78915"
+         y="268.87262"
+         stroke-width="1.94896"
+         ry="9.4316044"
+         transform="matrix(0.00315,-1,0.99995,0.00985,0,0)"
+         id="rect5" />
     </g>
-    <g stroke="#000200" stroke-linecap="square" stroke-linejoin="round" transform="rotate(-179.83 362.69660675 338.41298287)">
-      <use xlink:href="#a" stroke-width="1.60000002" transform="matrix(.7846 0 0 .66195 188.9583 244.23362)"/>
-      <use xlink:href="#b" stroke-width="1.60000002" transform="matrix(.83273 0 0 .68409 124.34249 315.60749)"/>
-      <use xlink:href="#c" stroke-width="1.60000002" transform="matrix(.68812 0 0 .55728 152.46715 190.5677)"/>
-      <rect width="99.277641" height="34.652412" x="-114.34281" y="374.90018" stroke-width="1.59614193" ry="8.317997" transform="matrix(.6374 -.77054 .76744 .64112 0 0)"/>
-      <rect width="102.2452" height="34.815559" x="-483.82874" y="31.089006" stroke-width="1.59614193" ry="9.8207321" transform="matrix(-.64195 -.76674 .76984 -.63823 0 0)"/>
-      <use xlink:href="#d" stroke-width="1.60000002" transform="matrix(.72905 0 0 .66277 90.146547 244.19724)"/>
-      <rect width="125.00758" height="39.519062" x="-413.78915" y="268.87262" stroke-width="1.9489578" ry="9.4316044" transform="matrix(.00315 -1 .99995 .00985 0 0)"/>
+    <g
+       stroke="#000200"
+       stroke-linecap="square"
+       stroke-linejoin="round"
+       transform="rotate(-179.83,362.69661,338.41298)"
+       id="g9">
+      <use
+         xlink:href="#a"
+         stroke-width="1.6"
+         transform="matrix(0.7846,0,0,0.66195,188.9583,244.23362)"
+         id="use5" />
+      <use
+         xlink:href="#b"
+         stroke-width="1.6"
+         transform="matrix(0.83273,0,0,0.68409,124.34249,315.60749)"
+         id="use6" />
+      <use
+         xlink:href="#c"
+         stroke-width="1.6"
+         transform="matrix(0.68812,0,0,0.55728,152.46715,190.5677)"
+         id="use7" />
+      <rect
+         width="99.277641"
+         height="34.652412"
+         x="-114.34281"
+         y="374.90018"
+         stroke-width="1.59614"
+         ry="8.317997"
+         transform="matrix(0.6374,-0.77054,0.76744,0.64112,0,0)"
+         id="rect7" />
+      <rect
+         width="102.2452"
+         height="34.815559"
+         x="-483.82874"
+         y="31.089006"
+         stroke-width="1.59614"
+         ry="9.8207321"
+         transform="matrix(-0.64195,-0.76674,0.76984,-0.63823,0,0)"
+         id="rect8" />
+      <use
+         xlink:href="#d"
+         stroke-width="1.6"
+         transform="matrix(0.72905,0,0,0.66277,90.146547,244.19724)"
+         id="use8" />
+      <rect
+         width="125.00758"
+         height="39.519062"
+         x="-413.78915"
+         y="268.87262"
+         stroke-width="1.94896"
+         ry="9.4316044"
+         transform="matrix(0.00315,-1,0.99995,0.00985,0,0)"
+         id="rect9" />
     </g>
-    <path d="M290.0646778 511.85263462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
-    <rect width="62.78656" height="69.950119" x="265.45734" y="542.35376" ry="8.4277267"/>
-    <rect width="18.119612" height="89.755287" x="277.25613" y="601.34778" ry="9.0598059"/>
-    <rect width="18.119612" height="89.755287" x="298.42447" y="601.5332" ry="9.0598059"/>
-    <path d="M356.1110048 511.82735462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
-    <rect width="62.78656" height="69.950119" x="331.71396" y="542.32843" ry="8.4277267"/>
-    <rect width="18.119612" height="89.755287" x="343.0914" y="601.5332" ry="9.0598059"/>
-    <rect width="18.119612" height="89.755287" x="364.16074" y="601.5332" ry="9.0598059"/>
-    <path d="M422.2686548 511.82735462a13.90567025 14.32708488 0 1 1-.0432568.02605579l7.03987727 12.35540677z"/>
-    <rect width="62.78656" height="69.950119" x="397.45023" y="542.32843" ry="8.4277267"/>
-    <rect width="18.119612" height="89.755287" x="409.24908" y="601.11182" ry="9.0598059"/>
-    <rect width="18.119612" height="89.755287" x="430.31836" y="601.5332" ry="9.0598059"/>
+    <path
+       d="m 290.06468,511.85263 a 13.90567,14.327085 0 1 1 -0.0433,0.0261 l 7.03988,12.35541 z"
+       id="path9" />
+    <rect
+       width="62.78656"
+       height="69.950119"
+       x="265.45734"
+       y="542.35376"
+       ry="8.4277267"
+       id="rect10" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="277.25613"
+       y="601.34778"
+       ry="9.0598059"
+       id="rect11" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="298.42447"
+       y="601.5332"
+       ry="9.0598059"
+       id="rect12" />
+    <path
+       d="m 356.111,511.82735 a 13.90567,14.327085 0 1 1 -0.0433,0.0261 l 7.03988,12.35541 z"
+       id="path12" />
+    <rect
+       width="62.78656"
+       height="69.950119"
+       x="331.71396"
+       y="542.32843"
+       ry="8.4277267"
+       id="rect13" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="343.0914"
+       y="601.5332"
+       ry="9.0598059"
+       id="rect14" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="364.16074"
+       y="601.5332"
+       ry="9.0598059"
+       id="rect15" />
+    <path
+       d="m 422.26865,511.82735 a 13.90567,14.327085 0 1 1 -0.0433,0.0261 l 7.03988,12.35541 z"
+       id="path15" />
+    <rect
+       width="62.78656"
+       height="69.950119"
+       x="397.45023"
+       y="542.32843"
+       ry="8.4277267"
+       id="rect16" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="409.24908"
+       y="601.11182"
+       ry="9.0598059"
+       id="rect17" />
+    <rect
+       width="18.119612"
+       height="89.755287"
+       x="430.31836"
+       y="601.5332"
+       ry="9.0598059"
+       id="rect18" />
   </g>
 </svg>
