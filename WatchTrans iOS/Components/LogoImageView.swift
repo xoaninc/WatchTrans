@@ -16,29 +16,41 @@ struct LogoImageView: View {
     private static let baseURL = APIConfiguration.logosBaseURL
 
     enum LogoType {
-        case network(code: String)  // Use network code directly for remote logo
-        case sfSymbol(name: String) // Fallback custom asset (e.g. MetroSymbol, TrenSymbol)
+        /// Remote logo by network code, with transport type for fallback icon
+        case network(code: String, transportType: TransportType)
+        /// Custom asset icon only (no remote logo)
+        case customAsset(name: String)
 
         /// Remote logo filename derived from network code
         var remoteFilename: String? {
             switch self {
-            case .network(let code):
-                // The API serves logos at /logos/{code}.png
+            case .network(let code, _):
                 return code.lowercased()
-            case .sfSymbol:
+            case .customAsset:
                 return nil
             }
         }
 
         var fileExtension: String { "png" }
 
-        /// Custom asset name for fallback rendering
-        var assetName: String {
+        /// Fallback custom asset name matching the transport type
+        var fallbackAssetName: String {
             switch self {
-            case .network:
-                return "TrenSymbol"
-            case .sfSymbol(let name):
+            case .network(_, let transportType):
+                return Self.assetName(for: transportType)
+            case .customAsset(let name):
                 return name
+            }
+        }
+
+        /// Map TransportType to ISO 7001 custom asset
+        static func assetName(for type: TransportType) -> String {
+            switch type {
+            case .metro: return "MetroSymbol"
+            case .tren: return "TrenSymbol"
+            case .tram: return "TramSymbol"
+            case .bus: return "BusSymbol"
+            case .funicular: return "FunicularSymbol"
             }
         }
     }
@@ -52,11 +64,7 @@ struct LogoImageView: View {
         if let url = remoteURL {
             KFImage(url)
                 .placeholder {
-                    Image(logoType.assetName)
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: height * 0.6)
+                    SymbolView(name: logoType.fallbackAssetName, size: height * 0.6)
                         .foregroundStyle(.secondary)
                 }
                 .fade(duration: 0.25)
@@ -65,11 +73,7 @@ struct LogoImageView: View {
                 .scaledToFit()
                 .frame(height: height)
         } else {
-            Image(logoType.assetName)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(height: height * 0.8)
+            SymbolView(name: logoType.fallbackAssetName, size: height * 0.8)
                 .foregroundStyle(.secondary)
         }
     }
@@ -78,32 +82,31 @@ struct LogoImageView: View {
 // MARK: - Convenience initializers
 
 extension LogoImageView {
-    /// Create logo view from network code (preferred)
-    init(networkCode: String, height: CGFloat) {
+    /// Create logo view from network code + transport type (for correct fallback icon)
+    init(networkCode: String, type: TransportType, height: CGFloat) {
         self.height = height
-        self.logoType = .network(code: networkCode)
+        self.logoType = .network(code: networkCode, transportType: type)
     }
 
-    /// Create logo view from TransportType with custom asset fallback
+    /// Create logo view from network code only (fallback defaults to TrenSymbol)
+    init(networkCode: String, height: CGFloat) {
+        self.height = height
+        self.logoType = .network(code: networkCode, transportType: .tren)
+    }
+
+    /// Create logo view from TransportType only (no remote logo, just the icon)
     init(type: TransportType, height: CGFloat) {
         self.height = height
-        let assetName: String
-        switch type {
-        case .metro: assetName = "MetroSymbol"
-        case .tren: assetName = "TrenSymbol"
-        case .tram: assetName = "TramSymbol"
-        case .bus: assetName = "BusSymbol"
-        case .funicular: assetName = "FunicularSymbol"
-        }
-        self.logoType = .sfSymbol(name: assetName)
+        self.logoType = .customAsset(name: LogoType.assetName(for: type))
     }
 }
 
 #Preview {
     VStack(spacing: 20) {
-        LogoImageView(networkCode: "METRO_SEVILLA", height: 20)
-        LogoImageView(networkCode: "RENFE_C4", height: 20)
+        LogoImageView(networkCode: "METRO_SEVILLA", type: .metro, height: 20)
+        LogoImageView(networkCode: "RENFE_C4", type: .tren, height: 20)
         LogoImageView(type: .metro, height: 20)
         LogoImageView(type: .tren, height: 20)
+        LogoImageView(type: .bus, height: 20)
     }
 }
