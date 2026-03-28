@@ -261,7 +261,97 @@ IsoCountryCodes.searchByCurrency("EUR")    // 31 países
 
 ---
 
-## Gonzalo Fuentes — Perfil
+---
+
+## Apps y proyectos de transporte (competencia/referencia)
+
+### MadridTransporte — App de transporte público Madrid
+
+**Para qué sirve:** App web/PWA que muestra tiempos reales y localización de vehículos del transporte público de Madrid. Competidor directo / referencia.
+
+**Fuente:** https://github.com/xBaank/MadridTransporte (GPL-3.0)
+
+**Redes:** EMT Madrid (buses), Metro de Madrid, Cercanías Renfe Madrid, buses interurbanos.
+
+**Features:**
+- Tiempos de llegada reales (no countdown)
+- Localización de buses en mapa
+- Favoritos con nombres custom
+- Push notifications minuto a minuto
+- Alertas de incidencias
+- Búsqueda por GPS
+
+**Stack:** Frontend web (PWA) + backend separados (submodules). Android APK disponible.
+
+**Diferencias con WatchTrans:** Es web/PWA, nosotros somos nativos iOS/watchOS. Ellos solo Madrid, nosotros toda España. Su API subyacente "se cae frecuentemente" (según su README). No tiene Apple Watch.
+
+---
+
+### MCP Madrid Public Transport — MCP server para Claude
+
+**Para qué sirve:** Servidor MCP que da ETAs de transporte de Madrid a Claude Desktop. Puedes preguntar "¿cuándo llega el próximo metro a Sol?" y Claude responde con datos reales.
+
+**Fuente:** https://github.com/dieguezz/mcp-madrid-public-transport (TypeScript, 3 stars)
+
+**Redes:** Metro de Madrid, EMT Buses, Renfe Cercanías.
+
+**Cómo obtiene datos:**
+- Metro: API oficial de teleindicadores (sin auth)
+- EMT: OpenAPI con OAuth (Client ID + Pass Key gratuitos)
+- Renfe: GTFS Realtime público (posiciones de vehículos)
+
+**Stack:** TypeScript, Clean Architecture, SQLite para cache GTFS, LRU caching.
+
+**Relevancia:** Referencia de cómo consumir las mismas APIs que usamos nosotros. La API de Metro es la de "teleindicadores" que no conocíamos. El approach de cache GTFS en SQLite puede ser útil para offline.
+
+---
+
+### CRTM-NFC/Mifare-Desfire — Research tarjetas NFC Metro Madrid
+
+**Para qué sirve:** Investigación de seguridad sobre cómo funcionan las tarjetas NFC del transporte público de Madrid (Tarjeta Multi).
+
+**Fuente:** https://github.com/CRTM-NFC/Mifare-Desfire
+
+**Descubrimientos:**
+- Tarjetas usan Mifare DESfire EV1 (NXP MF3ICD41)
+- 2 aplicaciones (AIDs 0x00 y 0x01), múltiples archivos
+- Hasta 14 keys criptográficas por aplicación
+- Auth con DES encryption, sessions con JSESSIONID
+- Contienen: perfil usuario, info tarifaria, fechas validez, saldo
+
+**Relevancia:** Si algún día queremos leer la tarjeta de transporte con NFC del iPhone para mostrar saldo o títulos de viaje.
+
+---
+
+### cercanias-renfe-android — App histórica Cercanías
+
+**Para qué sirve:** App Android histórica de Cercanías Renfe. Retirada de Google Play en 2012 por queja de Renfe (marca registrada). Tuvo +100K instalaciones.
+
+**Fuente:** https://github.com/jonseg/cercanias-renfe-android (código archivado)
+
+**Cómo obtenía datos:** Web scraping de la web de Renfe vía parser PHP en backend propio.
+
+**Relevancia:** Histórica — ejemplo de los problemas legales de usar la marca Renfe. No mantenido desde 2012.
+
+---
+
+### gtfs-to-geojson — Convertir GTFS a GeoJSON
+
+**Para qué sirve:** Convertir datos GTFS (feeds de transporte) a GeoJSON para mapas interactivos. Genera líneas de rutas + puntos de paradas.
+
+**Fuente:** https://github.com/BlinkTagInc/gtfs-to-geojson
+
+**Instalación:** `npm install gtfs-to-geojson -g`
+
+**Formatos de salida:** Líneas + paradas, polígonos de cobertura, buffers alrededor de rutas, elementos individuales.
+
+**Relevancia:** Si necesitamos generar mapas estáticos o visualizaciones de cobertura de redes desde nuestros datos GTFS.
+
+---
+
+## Perfiles de desarrolladores
+
+### Gonzalo Fuentes — Perfil
 
 **Quién es:** iOS Developer, fundador de Metrociego Madrid. Software Engineer en GMV (satélites Meteosat).
 
@@ -273,3 +363,21 @@ IsoCountryCodes.searchByCurrency("EUR")    // 31 países
 - `dimeApp` — Expense tracker iOS, referencia de diseño (fork, GPL)
 - `ServerSetup` — Scripts Shell para configurar servidores
 - `MovieBrowser` — Ejemplo de app con API externa
+
+### xBaank
+
+**Quién es:** Desarrollador de MadridTransporte (app competidora de transporte Madrid).
+
+**GitHub:** https://github.com/xBaank
+
+**Repos relevantes:**
+- `MadridTransporte` — App transporte público Madrid (web/PWA + Android)
+- `UnmaskedLeague` — App para League of Legends
+
+### dieguezz (Diego Segura)
+
+**GitHub:** https://github.com/dieguezz
+
+**Repos relevantes:**
+- `mcp-madrid-public-transport` — MCP server para transporte Madrid con Claude
+- `terraform-gcp-vpn` — Infraestructura VPN en GCP
