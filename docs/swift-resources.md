@@ -81,6 +81,52 @@ struct MiView: View {
 
 ---
 
+## AppMRR — Leaderboard de Revenue con RevenueCat
+
+**Para qué sirve:** Plataforma open source que muestra un leaderboard transparente de ingresos de apps iOS. Los developers comparten voluntariamente sus métricas de RevenueCat (MRR y revenue 28 días). Referencia para integrar RevenueCat en WatchTrans cuando implementemos funcionalidades de pago.
+
+**Fuente:** https://github.com/GonzaloFuentes28/AppMRR (MIT)
+
+**Stack:** Astro + TypeScript + Supabase/PostgreSQL + Vercel
+
+**Cómo integra RevenueCat:**
+- Usa RevenueCat API v2 con API keys de solo lectura
+- Keys encriptadas con AES-256-GCM + PBKDF2 (100k iteraciones)
+- Cron job diario a medianoche UTC descifra keys, consulta RevenueCat, actualiza métricas
+- Rate limiting: 3 submissions/hora/IP
+
+**Archivos clave:**
+- `/src/lib/revenuecat.ts` — Cliente de RevenueCat API
+- `/src/lib/encryption.ts` — Encriptación AES-256-GCM
+- `/src/pages/api/add-startup` — Validación de submissions
+
+**Relevancia para WatchTrans:** Ejemplo real de integración con RevenueCat para métricas de revenue. Cuando implementemos suscripciones/compras in-app, este repo muestra cómo funciona la API de RevenueCat.
+
+---
+
+## dimeApp — Expense Tracker iOS (referencia de diseño)
+
+**Para qué sirve:** App de finanzas personales 100% gratuita, hecha con SwiftUI siguiendo las guías de diseño de Apple. Buena referencia de patrones de UI, widgets, iCloud sync, y biometría.
+
+**Fuente:** https://github.com/GonzaloFuentes28/dimeApp (fork, GPL v3)
+
+**Features relevantes para WatchTrans:**
+- **iCloud Sync** — Sincronización entre dispositivos (nosotros usamos iCloudSyncService)
+- **Widgets Home/Lock screen** — Implementación de widgets (nosotros tenemos WatchTransWidget)
+- **Quick Actions** — Acciones rápidas desde home screen
+- **Biometría** — Autenticación con Face ID/Touch ID
+- **Dark mode** — Soporte completo
+- **Modular:** BudgetIntent, BudgetIntentUI, ExpenditureWidget — separación negocio/presentación
+
+**Dependencias interesantes:**
+- SwiftUI Introspect — Acceder a UIKit desde SwiftUI
+- CloudKitSyncMonitor — Monitorear estado de sync iCloud
+- ConfettiSwiftUI — Animaciones de confetti
+
+**Relevancia para WatchTrans:** Referencia de cómo estructurar widgets, iCloud sync, y quick actions en una app SwiftUI real.
+
+---
+
 ## Gonzalo Fuentes — Perfil
 
 **Quién es:** iOS Developer, fundador de Metrociego Madrid. Software Engineer en GMV (satélites Meteosat).
@@ -88,6 +134,8 @@ struct MiView: View {
 **GitHub:** https://github.com/GonzaloFuentes28
 
 **Repos útiles:**
-- `LiquidGlassCheatsheet` — iOS 26 Liquid Glass
+- `LiquidGlassCheatsheet` — iOS 26 Liquid Glass (168 stars)
+- `AppMRR` — Revenue leaderboard con RevenueCat (MIT)
+- `dimeApp` — Expense tracker iOS, referencia de diseño (fork, GPL)
+- `ServerSetup` — Scripts Shell para configurar servidores
 - `MovieBrowser` — Ejemplo de app con API externa
-- `AppMRR` — Leaderboard de revenue apps iOS (RevenueCat)
