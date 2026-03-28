@@ -742,14 +742,7 @@ struct LineStopRowView: View {
             badges.append((formatLineName(line, type: "Metro"), color, false))
         }
 
-        // 3. Metro Ligero connections
-        let mlLines = stop.correspondences?.ml ?? parseLines(stop.corMl)
-        for line in mlLines {
-            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
-            badges.append((formatLineName(line, type: "ML"), color, true))  // isMetroLigero = true
-        }
-
-        // 4. Tranvía connections
+        // 3. Tranvía connections
         let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
         for line in tramLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red

@@ -342,17 +342,7 @@ struct AllConnectionBadges: View {
             }
         }
 
-        // 3. Metro Ligero
-        let mlLines = stop.correspondences?.ml ?? parseLines(stop.corMl)
-        for line in mlLines {
-            let normalized = normalizeLineName(line)
-            if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
-                let color = dataService.getLine(by: line)?.colorHex ?? defaultMlColor
-                badges.append((formatBadgeName(line, type: "ML"), color))
-            }
-        }
-
-        // 4. Tranvía
+        // 3. Tranvía
         let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
         for line in tramLines {
             let normalized = normalizeLineName(line)
@@ -439,13 +429,11 @@ struct AllConnectionBadges: View {
 /// View showing Metro and Metro Ligero connection badges
 struct MetroConnectionBadges: View {
     let corMetro: String?
-    let corMl: String?
     let dataService: DataService
 
     var body: some View {
         AllConnectionBadges(
             corMetro: corMetro,
-            corMl: corMl,
             corTren: nil,
             corTranvia: nil,
             dataService: dataService
@@ -461,7 +449,6 @@ struct CercaniasConnectionBadges: View {
     var body: some View {
         AllConnectionBadges(
             corMetro: nil,
-            corMl: nil,
             corTren: corTren,
             corTranvia: nil,
             dataService: dataService
@@ -477,7 +464,6 @@ struct TranviaConnectionBadges: View {
     var body: some View {
         AllConnectionBadges(
             corMetro: nil,
-            corMl: nil,
             corTren: nil,
             corTranvia: corTranvia,
             dataService: dataService
@@ -576,8 +562,7 @@ struct StopRow: View {
 
     /// Check if stop has Metro or ML connections
     var hasMetroConnections: Bool {
-        (stop.corMetro != nil && !stop.corMetro!.isEmpty) ||
-        (stop.corMl != nil && !stop.corMl!.isEmpty)
+        (stop.corMetro != nil && !stop.corMetro!.isEmpty)
     }
 
     /// Check if stop has train connections (Cercanías, FEVE, etc.) (for Metro/ML stops)

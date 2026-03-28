@@ -596,7 +596,6 @@ class DataService {
                         hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                         isHub: response.isHub ?? false,
                         corMetro: response.corMetro,
-                        corMl: response.corMl,
                         corTren: response.corTren,
                         corTranvia: response.corTranvia,
                         corBus: response.corBus,
@@ -674,7 +673,6 @@ class DataService {
                 hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                 isHub: response.isHub ?? false,
                 corMetro: response.corMetro,
-                corMl: response.corMl,
                 corTren: response.corTren,
                 corTranvia: response.corTranvia,
                 corBus: response.corBus,
@@ -754,7 +752,7 @@ class DataService {
                     province: province,
                     accesibilidad: s.accesibilidad, hasParking: s.hasParking,
                     hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
-                    isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
+                    isHub: s.isHub, corMetro: s.corMetro,
                     corTren: s.corTren, corTranvia: s.corTranvia,
                     corBus: s.corBus, corFunicular: s.corFunicular,
                     wheelchairBoarding: s.wheelchairBoarding
@@ -1322,21 +1320,19 @@ class DataService {
                 
                 // ENRICHMENT: If API response lacks connection info, try to find it in our global stops cache
                 var metro = response.corMetro
-                var ml = response.corMl
                 var cerc = response.corTren
                 var tram = response.corTranvia
                 var bus = response.corBus
                 var funicular = response.corFunicular
-                
-                if (metro?.isEmpty ?? true) && (ml?.isEmpty ?? true) && (cerc?.isEmpty ?? true) && (tram?.isEmpty ?? true) && (bus?.isEmpty ?? true) && (funicular?.isEmpty ?? true) {
+
+                if (metro?.isEmpty ?? true) && (cerc?.isEmpty ?? true) && (tram?.isEmpty ?? true) && (bus?.isEmpty ?? true) && (funicular?.isEmpty ?? true) {
                     if let cached = self.getStop(by: response.id) {
                         metro = cached.corMetro
-                        ml = cached.corMl
                         cerc = cached.corTren
                         tram = cached.corTranvia
                         bus = cached.corBus
                         funicular = cached.corFunicular
-                        if metro != nil || ml != nil || cerc != nil || tram != nil || bus != nil || funicular != nil {
+                        if metro != nil || cerc != nil || tram != nil || bus != nil || funicular != nil {
                             DebugLog.log("🔗 [DataService] ✅ Enriched connections for '\(response.name)' from cache")
                         }
                     }
@@ -1354,7 +1350,6 @@ class DataService {
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     isHub: response.isHub ?? false,
                     corMetro: metro,
-                    corMl: ml,
                     corTren: cerc,
                     corTranvia: tram,
                     corBus: bus,
@@ -2059,7 +2054,6 @@ class DataService {
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     isHub: response.isHub ?? false,
                     corMetro: response.corMetro,
-                    corMl: response.corMl,
                     corTren: response.corTren,
                     corTranvia: response.corTranvia,
                     corBus: response.corBus,

@@ -321,7 +321,6 @@ struct StopDetailView: View {
     private var hasConnections: Bool {
         !transportModes.isEmpty ||
         !(stop.corMetro?.isEmpty ?? true) ||
-        !(stop.corMl?.isEmpty ?? true) ||
         !(stop.corTren?.isEmpty ?? true) ||
         !(stop.corTranvia?.isEmpty ?? true) ||
         !(stop.corFunicular?.isEmpty ?? true) ||
@@ -977,13 +976,7 @@ struct ConnectionsSectionView: View {
             badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Metro"), colorHex: color, kind: .metro))
         }
 
-        // 3. Metro Ligero
-        for line in stop.correspondences?.ml ?? parseLines(stop.corMl) {
-            let color = dataService.getLineColor(by: line) ?? ""
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "ML"), colorHex: color, kind: .metroLigero))
-        }
-
-        // 4. Tranvía
+        // 3. Tranvía
         for line in stop.correspondences?.tranvia ?? parseLines(stop.corTranvia) {
             let color = dataService.getLineColor(by: line) ?? ""
             badges.append(ConnectionBadge(name: formatBadgeName(line, type: "TRAM"), colorHex: color, kind: .tram))
@@ -1388,7 +1381,6 @@ struct CorrespondenceRow: View {
                 hasBusConnection: true,
                 hasMetroConnection: true,
                 corMetro: "L1",
-                corMl: nil,
                 corTren: "C1, C3, C4",
                 corTranvia: nil
             ),

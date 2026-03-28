@@ -24,7 +24,6 @@ struct Stop: Identifiable, Equatable, Hashable {
 
     // Connection details - Metro, Metro Ligero, Cercanías, and Tram line numbers
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
-    let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
     let corTren: String?       // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
@@ -40,7 +39,7 @@ struct Stop: Identifiable, Equatable, Hashable {
          province: String? = nil, accesibilidad: String? = nil,
          hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
          isHub: Bool = false,
-         corMetro: String? = nil, corMl: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
+         corMetro: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
          correspondences: StopCorrespondences? = nil, wheelchairBoarding: Int? = nil,
          acercaService: AcercaService? = nil, routeType: Int? = nil,
@@ -56,7 +55,6 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.hasMetroConnection = hasMetroConnection
         self.isHub = isHub
         self.corMetro = corMetro
-        self.corMl = corMl
         self.corTren = corTren
         self.corTranvia = corTranvia
         self.corBus = corBus
@@ -115,12 +113,6 @@ struct Stop: Identifiable, Equatable, Hashable {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
-        // Count metro ligero lines excluding current
-        let mlLines = corMl?
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
-
         // Count train lines (Cercanías, FEVE, etc.) excluding current
         let cercaniasLines = corTren?
             .split(separator: ",")
@@ -134,7 +126,7 @@ struct Stop: Identifiable, Equatable, Hashable {
             .filter { Self.normalizeLineName(String($0)) != normalizedCurrent && !$0.isEmpty } ?? []
 
         // Has correspondence if any other lines exist
-        return !metroLines.isEmpty || !mlLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty || (corFunicular != nil && !corFunicular!.isEmpty) || (corBus != nil && !corBus!.isEmpty) || correspondences != nil
+        return !metroLines.isEmpty || !cercaniasLines.isEmpty || !tramLines.isEmpty || (corFunicular != nil && !corFunicular!.isEmpty) || (corBus != nil && !corBus!.isEmpty) || correspondences != nil
     }
 
     /// Normalize line name for comparison (handles "L1" vs "1" vs "Línea 1" etc.)
@@ -173,7 +165,6 @@ extension Stop: Codable {
         case hasMetroConnection = "has_metro_connection"
         case isHub = "is_hub"
         case corMetro = "cor_metro"
-        case corMl = "cor_ml"
         case corTren = "cor_tren"
         case corTranvia = "cor_tranvia"
         case corBus = "cor_bus"
@@ -199,7 +190,6 @@ extension Stop: Codable {
         hasMetroConnection = try container.decodeIfPresent(Bool.self, forKey: .hasMetroConnection) ?? false
         isHub = try container.decodeIfPresent(Bool.self, forKey: .isHub) ?? false
         corMetro = try container.decodeIfPresent(String.self, forKey: .corMetro)
-        corMl = try container.decodeIfPresent(String.self, forKey: .corMl)
         corTren = try container.decodeIfPresent(String.self, forKey: .corTren)
         corTranvia = try container.decodeIfPresent(String.self, forKey: .corTranvia)
         corBus = try container.decodeIfPresent(String.self, forKey: .corBus)

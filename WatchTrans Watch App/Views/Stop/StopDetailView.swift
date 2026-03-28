@@ -293,7 +293,6 @@ struct StopDetailView: View {
                 hasBusConnection: true,
                 hasMetroConnection: true,
                 corMetro: "6, 8, 10",
-                corMl: nil,
                 corTren: nil
             ),
             dataService: DataService(),

@@ -301,7 +301,6 @@ actor OfflineLineService {
         let longitude: Double
         let province: String?
         let corMetro: String?
-        let corMl: String?
         let corTren: String?
         let corTranvia: String?
     }
@@ -349,7 +348,6 @@ actor OfflineLineService {
                     longitude: stop.longitude,
                     province: stop.province,
                     corMetro: stop.corMetro,
-                    corMl: stop.corMl,
                     corTren: stop.corTren,
                     corTranvia: stop.corTranvia
                 )
@@ -395,7 +393,6 @@ actor OfflineLineService {
                     hasMetroConnection: cached.corMetro != nil,
                     isHub: false,
                     corMetro: cached.corMetro,
-                    corMl: cached.corMl,
                     corTren: cached.corTren,
                     corTranvia: cached.corTranvia
                 )

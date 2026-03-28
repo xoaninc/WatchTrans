@@ -314,7 +314,6 @@ struct StopResponse: Codable, Identifiable {
     let parkingBicis: String?
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
-    let corMl: String?         // Metro Ligero connections: "ML1" or "ML2, ML3"
     let corTren: String?  // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
     let corTranvia: String?    // Tram connections: "T1"
     let corBus: String?        // Bus connections
@@ -335,7 +334,6 @@ struct StopResponse: Codable, Identifiable {
         case parkingBicis = "parking_bicis"
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
-        case corMl = "cor_ml"
         case corTren = "cor_tren"
         case corTranvia = "cor_tranvia"
         case corFunicular = "cor_funicular"
@@ -348,7 +346,7 @@ struct StopResponse: Codable, Identifiable {
     /// Build connection line IDs from cor_* fields (lineas field removed from API)
     var lineIds: [String] {
         var ids: [String] = []
-        for field in [corMetro, corMl, corTren, corTranvia, corFunicular] {
+        for field in [corMetro, corTren, corTranvia, corFunicular] {
             guard let value = field, !value.isEmpty else { continue }
             let parsed = value.split(separator: ",")
                 .map { String($0).trimmingCharacters(in: .whitespaces).lowercased() }
@@ -363,7 +361,6 @@ struct StopResponse: Codable, Identifiable {
 struct StopCorrespondences: Codable, Hashable {
     let metro: [String]?
     let tren: [String]?
-    let ml: [String]?
     let tranvia: [String]?
     let bus: [String]?
     let funicular: [String]?

@@ -311,12 +311,6 @@ struct SearchResultRow: View {
             badges.append((line, color))
         }
 
-        // Metro Ligero connections
-        for line in parseLines(display.stop.corMl) {
-            let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMlColor) ?? .blue
-            badges.append((line, color))
-        }
-
         // Tranvía connections
         for line in parseLines(display.stop.corTranvia) {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red

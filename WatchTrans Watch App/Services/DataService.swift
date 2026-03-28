@@ -566,7 +566,6 @@ class DataService {
                         hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                         isHub: response.isHub ?? false,
                         corMetro: response.corMetro,
-                        corMl: response.corMl,
                         corTren: response.corTren,
                         corTranvia: response.corTranvia,
                         corBus: response.corBus,
@@ -641,7 +640,6 @@ class DataService {
                 hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                 isHub: response.isHub ?? false,
                 corMetro: response.corMetro,
-                corMl: response.corMl,
                 corTren: response.corTren,
                 corTranvia: response.corTranvia,
                 corBus: response.corBus,
@@ -717,7 +715,7 @@ class DataService {
                     connectionLineIds: s.connectionLineIds, province: province,
                     accesibilidad: s.accesibilidad, hasParking: s.hasParking,
                     hasBusConnection: s.hasBusConnection, hasMetroConnection: s.hasMetroConnection,
-                    isHub: s.isHub, corMetro: s.corMetro, corMl: s.corMl,
+                    isHub: s.isHub, corMetro: s.corMetro,
                     corTren: s.corTren, corTranvia: s.corTranvia,
                     corBus: s.corBus, corFunicular: s.corFunicular
                 )
@@ -1286,29 +1284,26 @@ class DataService {
                 if isBranchJunction || (response.corMetro != nil && response.corMetro!.contains("B")) {
                     DebugLog.log("🔗 [BRANCH] Stop '\(response.name)' correspondences:")
                     DebugLog.log("🔗 [BRANCH]   metro=\(response.corMetro ?? "nil")")
-                    DebugLog.log("🔗 [BRANCH]   ml=\(response.corMl ?? "nil")")
                     DebugLog.log("🔗 [BRANCH]   tren=\(response.corTren ?? "nil")")
-                } else if response.corMetro != nil || response.corTren != nil || response.corTranvia != nil || response.corMl != nil {
-                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), tren=\(response.corTren ?? "nil"), tram=\(response.corTranvia ?? "nil"), ml=\(response.corMl ?? "nil")")
+                } else if response.corMetro != nil || response.corTren != nil || response.corTranvia != nil {
+                    DebugLog.log("🔗 [DataService] Stop '\(response.name)' has correspondences: metro=\(response.corMetro ?? "nil"), tren=\(response.corTren ?? "nil"), tram=\(response.corTranvia ?? "nil")")
                 }
                 
                 // ENRICHMENT: If API response lacks connection info, try to find it in our global stops cache
                 var metro = response.corMetro
-                var ml = response.corMl
                 var tren = response.corTren
                 var tram = response.corTranvia
                 var bus = response.corBus
                 var funicular = response.corFunicular
-                
-                if (metro?.isEmpty ?? true) && (ml?.isEmpty ?? true) && (tren?.isEmpty ?? true) && (tram?.isEmpty ?? true) && (bus?.isEmpty ?? true) && (funicular?.isEmpty ?? true) {
+
+                if (metro?.isEmpty ?? true) && (tren?.isEmpty ?? true) && (tram?.isEmpty ?? true) && (bus?.isEmpty ?? true) && (funicular?.isEmpty ?? true) {
                     if let cached = self.getStop(by: response.id) {
                         metro = cached.corMetro
-                        ml = cached.corMl
                         tren = cached.corTren
                         tram = cached.corTranvia
                         bus = cached.corBus
                         funicular = cached.corFunicular
-                        if metro != nil || ml != nil || tren != nil || tram != nil || bus != nil || funicular != nil {
+                        if metro != nil || tren != nil || tram != nil || bus != nil || funicular != nil {
                             DebugLog.log("🔗 [DataService] ✅ Enriched connections for '\(response.name)' from cache")
                         }
                     }
@@ -1327,7 +1322,6 @@ class DataService {
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     isHub: response.isHub ?? false,
                     corMetro: metro,
-                    corMl: ml,
                     corTren: tren,
                     corTranvia: tram,
                     corBus: bus,
@@ -2029,7 +2023,6 @@ class DataService {
                     hasMetroConnection: response.corMetro != nil && response.corMetro != "0",
                     isHub: response.isHub ?? false,
                     corMetro: response.corMetro,
-                    corMl: response.corMl,
                     corTren: response.corTren,
                     corTranvia: response.corTranvia,
                     corBus: response.corBus,

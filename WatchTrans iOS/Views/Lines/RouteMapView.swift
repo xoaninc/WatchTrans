@@ -489,9 +489,9 @@ struct FullScreenMapView: View {
             alternativeForShortName: nil
         ),
         stops: [
-            Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corMl: nil, corTren: nil, corTranvia: nil),
-            Stop(id: "2", name: "Bambu", latitude: 40.4768, longitude: -3.6764, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1", corMl: nil, corTren: nil, corTranvia: nil),
-            Stop(id: "3", name: "Chamartin", latitude: 40.4721, longitude: -3.6826, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L10", corMl: nil, corTren: "C3, C4", corTranvia: nil),
+            Stop(id: "1", name: "Pinar de Chamartin", latitude: 40.4801, longitude: -3.6668, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L4", corTren: nil, corTranvia: nil),
+            Stop(id: "2", name: "Bambu", latitude: 40.4768, longitude: -3.6764, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1", corTren: nil, corTranvia: nil),
+            Stop(id: "3", name: "Chamartin", latitude: 40.4721, longitude: -3.6826, province: "Madrid", accesibilidad: nil, hasParking: false, hasBusConnection: false, hasMetroConnection: true, corMetro: "L1, L10", corTren: "C3, C4", corTranvia: nil),
         ],
         dataService: DataService()
     )
