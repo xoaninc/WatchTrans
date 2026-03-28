@@ -127,6 +127,140 @@ struct MiView: View {
 
 ---
 
+## SwiftUI Agent Skill para Claude Code
+
+**Para qué sirve:** Skill que hace que Claude Code escriba mejor código SwiftUI — evita errores comunes de LLMs (APIs deprecated, botones invisibles a VoiceOver, problemas de performance). Creado por Paul Hudson (Hacking with Swift).
+
+**Fuente:** https://github.com/twostraws/SwiftUI-Agent-Skill (3.1K stars, MIT)
+
+**Instalación:**
+```bash
+npx skills add https://github.com/twostraws/swiftui-agent-skill --skill swiftui-pro
+```
+
+**Uso:** `/swiftui-pro` en Claude Code. Soporta también Codex, Gemini, Cursor.
+
+**Skills relacionados del mismo autor:** SwiftData Pro, Swift Concurrency Pro, Swift Testing Pro.
+
+---
+
+## App Store Connect CLI
+
+**Para qué sirve:** CLI para automatizar TODO el ciclo de publicación en App Store sin abrir la web. TestFlight, builds, submissions, screenshots, suscripciones, analytics.
+
+**Fuente:** https://github.com/rudrankriyam/App-Store-Connect-CLI (3.4K stars, MIT, Go)
+
+**Instalación:** `brew install asc`
+
+**Ejemplos:**
+```bash
+asc apps list                                    # Listar apps
+asc testflight crashes list --app "ID"           # Ver crashes TestFlight
+asc builds upload --app "ID" --ipa "path.ipa"   # Subir build
+asc release run --app "ID" --version "1.2.3"    # Release completo
+```
+
+**Relevancia:** Cuando publiquemos WatchTrans en App Store, automatiza TestFlight y submissions desde terminal/CI.
+
+---
+
+## Votice SDK — Feedback y votaciones in-app
+
+**Para qué sirve:** SDK nativo Swift para recoger sugerencias, feedback y votos dentro de la app. Sin Firebase, privacy-first, HMAC auth.
+
+**Fuente:** https://github.com/ArtCC/votice-sdk (12 stars, MIT)
+
+**Instalación:** SPM → `https://github.com/artcc/votice-sdk`
+
+**Uso:**
+```swift
+try Votice.configure(apiKey: "key", apiSecret: "secret", appId: "id")
+Votice.feedbackSheet(isPresented: $showFeedback)
+```
+
+**Features:** Temas personalizables, fuentes custom, localización, usuarios premium, comentarios.
+
+**Relevancia:** Si queremos que los usuarios sugieran features o reporten bugs dentro de WatchTrans.
+
+---
+
+## SwiftUI-SFSymbols — Type-safe SF Symbols
+
+**Para qué sirve:** Elimina string literals para SF Symbols. Validación en compile-time en vez de runtime.
+
+**Fuente:** https://github.com/Sedlacek-Solutions/SwiftUI-SFSymbols (58 stars, MIT)
+
+**Uso:**
+```swift
+extension SFSymbol {
+    static let star = SFSymbol(rawValue: "star")
+}
+Image(symbol: .star)  // En vez de Image(systemName: "star")
+```
+
+**Relevancia:** Ahora que hemos migrado a custom assets, menos útil. Pero para los SF Symbols que mantuvimos (clock, star, chevron, etc.) podría evitar typos.
+
+---
+
+## SwiftUI-Ratings — Pantalla "Valora la app"
+
+**Para qué sirve:** Pantalla elegante y personalizable para pedir al usuario que valore la app en el App Store. Muestra ratings actuales y reviews.
+
+**Fuente:** https://github.com/Sedlacek-Solutions/SwiftUI-Ratings (226 stars, MIT)
+
+**Uso:**
+```swift
+RatingRequestScreen(
+    appId: "APP_ID",
+    appRatingProvider: provider,
+    primaryButtonAction: { /* rate */ },
+    secondaryButtonAction: { /* later */ }
+)
+```
+
+**Relevancia:** Para cuando WatchTrans esté en App Store — pedir valoraciones a los usuarios.
+
+---
+
+## SystemNotification — Notificaciones estilo iOS nativo
+
+**Para qué sirve:** Mostrar notificaciones tipo "Silent Mode On" o "AirPods Connected" — la burbuja que baja desde arriba. Nativo SwiftUI.
+
+**Fuente:** https://github.com/danielsaidi/SystemNotification (891 stars, MIT)
+
+**Uso:**
+```swift
+.systemNotification(isActive: $isActive) {
+    SystemNotificationMessage(
+        icon: Text("👍"),
+        title: "Favorito añadido",
+        text: "Sol - Cercanías Madrid"
+    )
+}
+```
+
+**Relevancia:** Para feedback visual al añadir favoritos, activar/desactivar filtros, etc. Más elegante que un toast custom.
+
+---
+
+## IsoCountryCodes — Códigos ISO de países
+
+**Para qué sirve:** Lookup de países por código ISO (alpha-2, alpha-3, numérico). Devuelve nombre, moneda, código telefónico, continente, emoji bandera.
+
+**Fuente:** https://github.com/funky-monkey/IsoCountryCodes (143 stars, licencia permisiva)
+
+**Uso:**
+```swift
+IsoCountryCodes.find(key: "ES").name       // "Spain"
+IsoCountryCodes.find(key: "ES").currency   // "EUR"
+IsoCountryCodes.find(key: "ES").flag       // 🇪🇸
+IsoCountryCodes.searchByCurrency("EUR")    // 31 países
+```
+
+**Relevancia:** Si expandimos WatchTrans a otros países o necesitamos localización por país.
+
+---
+
 ## Gonzalo Fuentes — Perfil
 
 **Quién es:** iOS Developer, fundador de Metrociego Madrid. Software Engineer en GMV (satélites Meteosat).
