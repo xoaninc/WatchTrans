@@ -1,195 +1,71 @@
 # WatchTrans Roadmap
 
-Features pendientes, bugs y mejoras técnicas.
+Features pendientes, bugs y mejoras.
 
-**Última actualización:** 2026-03-24
+**Última actualización:** 2026-03-30
 
 ---
 
-## 1. BUGS ACTIVOS
+## Bugs activos
 
-### ~~1.1 Route Planner Metro Madrid~~ ✅ RESUELTO
-
-### 1.2 Bug MapKit: Polyline desaparece con rotación
+### Bug MapKit: Polyline desaparece con rotación
 Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
 **Workaround actual:** Heading fijo a 0.
 **Posible solución:** Usar `suggested_heading` de API para transiciones suaves.
 
-### ~~1.3 LineResponse CodingKeys desactualizados~~ ✅ RESUELTO
-
-### Bugs backend arreglados (2026-03-18)
-
-Estos bugs los arregló el compañero de la API, no requieren cambios en la app:
-
-- ~~`alternative_service_warning` per-stop en vez de per-ruta~~ ✅ Arreglado (KI #185). Ahora solo true cuando hay transporte alternativo REAL en la ruta del departure.
-- ~~`parking_bicis` faltaba en `/routes/{id}/stops`~~ ✅ Arreglado. Badge Parking Bici ahora visible en vista de línea.
-- ~~Campos faltantes en `/stops/{id}/full`, `/routes/{id}/stops`, `/routes/{id}`~~ ✅ Arreglado. Badges y estados consistentes en todas las vistas.
-- ~~`estimated_restoration_time` tipo datetime en vez de string~~ ✅ Arreglado. DB guarda texto humano.
-- ~~`wheelchair_boarding` siempre null en `/stops/{stop_id}`~~ ✅ Arreglado. Faltaba en el SELECT.
-- ~~Alertas accesibilidad asociadas a todas las rutas del núcleo~~ ✅ Arreglado. Ahora solo rutas que pasan por la parada.
-- ~~17 modelos Pydantic muertos en backend~~ ✅ Eliminados. App ya limpió `NetworkResponse`.
-
 ---
 
-## 2. FEATURES PENDIENTES
+## Features pendientes
 
-### 2.1 Integrar compact endpoint en Widgets/Siri
+### Compact endpoint en Widgets/Siri
 `GET /api/gtfs/stops/{stop_id}/departures?compact=true&limit=10`
-Modelo `CompactDepartureResponse` necesario: `line`, `color`, `dest`, `mins`, `plat`, `delay`, `exp`, `skip`, `alt_svc`, `occ_pct`, `occ_status`.
+Modelo `CompactDepartureResponse` necesario. Permite widgets más ligeros y Siri Shortcuts.
 
-### 2.2 Push Notifications para Alertas
+### Push Notifications para Alertas
 Notificar cuando una línea favorita tiene incidencias. Requiere APNs + servidor.
 
-### 2.3 Watch Independiente
+### Watch Independiente
 watchOS independiente con URLSession + sincronización de favoritos vía iCloud.
 
-### ~~2.4 Campos nuevos de DepartureResponse~~ ✅ RESUELTO
-Modelos sync + UI para express CIVIS y PMR warning.
+### Zona tarifaria en paradas
+`zone_id` disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView.
 
-### ~~2.5 Alertas multi-fase~~ ✅ RESUELTO
-`AlertActivePeriod` con fases temporales en `AlertBannerView`.
+### Mapa de vehículos en tiempo real
+`destination` campo en `/vehicles`. Pins en mapa RT con label "→ Luis de Morales". Requiere nueva vista.
 
----
+### Detalles de transporte alternativo en alertas
+`alternative_transport[]` tiene `type`, `route`, `frequency_minutes`. App solo usa boolean, no muestra detalles.
 
-## 3. ENDPOINTS DISPONIBLES (api.watch-trans.app)
-
-### Implementados ✅
-
-- **Departures** — `/stops/{id}/departures` — endpoint principal, hybrid board con RT
-- **Predicción de andén** — `/gtfs-rt/platforms/predictions` — badge naranja. Ambos targets.
-- **Ocupación de estación TMB** — `/gtfs-rt/station-occupancy` — barras de progreso (paradas `TMB_METRO_*`). Solo iOS.
-- **Búsqueda en rango horario** — `/route-planner/range` — rRAPTOR. Solo iOS.
-- **Alertas** — `/gtfs-rt/alerts` — con filtros route_id, stop_id, `AlertFilterHelper`, effects GTFS-RT, `AlternativeTransport`
-- **Alertas por parada** — badges en Home, inline en LineDetailView, sección en StopDetailView. iOS + Watch.
-- **Interior de estaciones** — `/stops/{id}/station-interior` — `StationInteriorSection` con accesos, recorridos, vestíbulos, niveles. Solo iOS.
-- **Equipment status** — `/gtfs-rt/equipment-status/{stop_id}` — `EquipmentStatusSection` con iconos AIGA, cierre nocturno automático via `/operating-hours`. Solo Metro Sevilla tiene datos. Solo iOS.
-- **Accesibilidad** — `wheelchairBoarding` badge, `wheelchairAccessible` per-tren, `AcercaService` PMR (Atendo), `pmrWarning` per-departure. Solo iOS.
-- **Train code** — código operativo del tren (`train_code`) en ArrivalRowView y TrainDetailView. Renfe, TMB, Metro Bilbao, Metro Sevilla, Tram Sevilla. Solo iOS.
-- **Correspondencias navegables** — badges tappable que navegan a la parada correspondiente (ej. Metro → Cercanías). Scroll-to-top + haptic si ya estás en la parada. Solo iOS.
-- **Journey stops navegables** — paradas del itinerario en TrainDetailView son tappable para abrir StopDetailView. Solo iOS.
-- **Express CIVIS** — badge con `expressName` + `expressColor` en departures. Solo iOS.
-- **Fases de alertas** — `AlertActivePeriod` con fechas y colores por efecto en `AlertBannerView`. Solo iOS.
-- **Parking Bici** — badge 🚲 "Parking Bici" en StopDetailView. Solo iOS.
-- **Tarifas** — sección de precios por zona en LineDetailView. Solo iOS.
-- **Trip updates** — delay preciso (min+seg) en TrainDetailView. Solo iOS.
-- **Ocupación de vehículos** — badge FGC en ArrivalRowView. Solo iOS.
-- **Servicio alternativo** — label bus en LinesListView. Solo iOS.
-- **Vehicle positions** — `/gtfs-rt/vehicles` — mapa de trenes
-- **Route planner** — `/route-planner` — RAPTOR journey planning
-- **Route shapes** — `/routes/{id}/shape` — polylines para mapa
-- **Correspondencias** — `/stops/{id}/correspondences` — estaciones cercanas a pie
-- **Plataformas** — `/stops/{id}/platforms` — coordenadas de andenes
-- **Accesos** — `/stops/{id}/accesses` — bocas de metro (fallback cuando no hay station-interior)
-
-### Metro Sevilla RT ✅
-
-- **Departures** — vehicleLabel, headsigns limpios, composición Simple/Doble, dirección fallback
-- **Equipment status** — iconos AIGA, verde/rojo. 19 estaciones, ~106 dispositivos
-- **Train position** — `current_stop_name`/`current_stop_id`, recorrido se colorea
-- **Alertas** — estándar via `/gtfs-rt/alerts?operator_id=metro_sevilla`
-
-### UI pendiente
-
-- **Selector de líneas del mapa** — cambiar `Menu` por `Sheet`/`Popover` con logos y badges de color
-- **Pathways en route planner** — `signposted_as` como texto principal
-
-### Pendiente replicar en Watch
-
-- **Metro Sevilla RT** (equipment status) — solo iOS. vehicleLabel ya replicado.
-- **Ocupación estación TMB** — solo iOS.
-- **Búsqueda en rango horario** — solo iOS.
-- **Interior de estaciones** — solo iOS.
-- **Accesibilidad** (badges, Acerca PMR) — solo iOS.
-- **Train code** — solo iOS.
-- **Correspondencias navegables** — solo iOS.
-- **Journey stops navegables** — solo iOS.
-
-### Pendientes de integrar
-
-#### ~~Modelos desactualizados~~ ✅ RESUELTO (Plan A + B)
-Todos los modelos sync con la API. Único pendiente: **CompactDepartureResponse** (modelo nuevo para Widgets/Siri, ver 2.1).
-
-#### ~~3.1 Tarifas~~ ✅ IMPLEMENTADO
-Sección en LineDetailView con precios por zona. Metro Bilbao (25 tarifas), Metro Sevilla (54), Metro Granada (1).
-
-#### ~~3.13 Retrasos de trenes~~ ✅ IMPLEMENTADO
-TrainDetailView muestra delay preciso (min + seg) desde trip-updates cuando disponible.
-
-#### ~~3.14 Ocupación de vehículos~~ ✅ IMPLEMENTADO
-Badge de ocupación (verde/amarillo/rojo) en ArrivalRowView para departures FGC.
-
-#### ~~3.19 Estado de servicio de rutas~~ ✅ IMPLEMENTADO
-Label "Servicio alternativo" con icono bus en LinesListView cuando `is_alternative_service == true`.
-
-#### ~~3.20 Campos nuevos de departures~~ ✅ IMPLEMENTADO
-`trip_short_name`, `wheelchair_accessible_static`, `bikes_allowed` — modelos + UI en TrainDetailView y ArrivalRowView.
-
-#### ~~3.23 Train code~~ ✅ IMPLEMENTADO (2026-03-21)
-`train_code` — código operativo del vehículo. Mostrado en gris junto al headsign en ArrivalRowView y con icono # en TrainDetailView. Disponible para Renfe ("75106"), TMB ("110"), Metro Bilbao ("510"), Metro Sevilla ("MS-07"), Tram Sevilla ("1309"). Null para FGC/Euskotren.
-
-#### 3.21 Zona tarifaria en paradas
-- `zone_id` — zona tarifaria (ej. "A", "B1"). Disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView junto al nombre.
-
-#### ~~3.22 Nombre de ruta sustituida~~ ✅ IMPLEMENTADO (2026-03-21)
-"Sustituye C1" en LinesListView cuando `alternative_for_short_name` disponible.
-
-#### ~~3.24 vehicle_composition campo dedicado~~ ✅ IMPLEMENTADO (2026-03-21)
-`vehicle_composition` decodificado. Mapper prefiere campo API, fallback a comma hack.
-
-#### ~~3.25 Endpoint dedicado de calidad de aire~~ ✅ IMPLEMENTADO (2026-03-21)
-`GET /api/gtfs-rt/air-quality/` integrado. Match por `train_code` ↔ `vehicle_id`. Reemplaza workaround `/vehicles?enrich=true`.
-
-#### 3.28 Mapa de vehículos en tiempo real (2026-03-21)
-- `destination` campo en `/vehicles` — headsign del vehículo. Útil para mostrar pins en mapa RT con label "→ Luis de Morales". Requiere nueva vista de mapa de vehículos.
-
-#### 3.26 Detalles de transporte alternativo en alertas (2026-03-21)
-- `alternative_transport[]` en alertas tiene `type`, `route`, `frequency_minutes`. App solo usa boolean `alternative_service_warning`, no muestra los detalles.
-
-#### 3.27 Contenido rico en alertas Metro Sevilla (2026-03-21)
-- `content` (HTML) e `image_url` en alertas de noticias Metro Sevilla. Baja prioridad.
-
-### Particularidades por operador (info nueva del API doc)
-
-| Operador | Notas para la app |
-|---|---|
-| **Renfe** | 3 prefijos (`RENFE_C_`, `RENFE_FEVE_`, `RENFE_PROX_`). Express CIVIS (`is_express`). PMR Tipo B alerts. FEVE León incluye buses (route_type=3). |
-| **TMB** | Tablero híbrido. Único con `station_occupancy`. Trip IDs sintéticos. Filtra solo metro+funicular. |
-| **FGC** | Ocupación por vagón (`per-car`). Límite 5,000 req/día. |
-| **Metro Madrid** | Estaciones COMPLEX (padre → sub-estaciones). Interior fuente `crtm_extensions`. Tablero híbrido. |
-| **Euskotren** | IDs con trailing colon (URL-encode `%3A`). Headsign triple fuente (SIRI ET → NeTEx → última parada). Interior `gtfs_pathways`. |
-| **Metro Bilbao** | Interior limitado (`gtfs_entrances`, solo bocas). Colores: L1=#1F1E21, L2=#F1592A, L3=#D10074. |
-| **Metro Sevilla** | Equipment status (TCE). Shapes NAP parcheados. Ahora en `ALLOWED_RT_OPERATORS` (2026-03-21). `vehicle_composition`, `train_code`, air quality dedicado. |
-| **Tram Sevilla** | Alertas implementadas via Tussam avisos (2026-03-21). Azure proxy (100% success, <5s). Ahora en `ALLOWED_RT_OPERATORS`. |
-| **Tranvía Zaragoza** | Basado en ETA (75s). Posición inferida de ETAs. Ahora en `ALLOWED_RT_OPERATORS` (2026-03-21). |
-
-### Lógica de departures (referencia del API doc)
-
-- **Hybrid boards**: TMB, Metro Madrid, ML, Metro Sevilla, Tram Sevilla, Tranvía Zaragoza — RT primero, estático rellena con buffer 120s
-- **Overlay**: Renfe, Euskotren, FGC, Metro Bilbao — retrasos/andenes RT sobre horario estático
-- **Headsign cascada**: Euskotren SIRI ET → DB → última parada → `route_short_name`
-- **Andén cascada**: RT directo → historial (stop, route, headsign) → historial (stop, route)
-- **CIVIS**: headsign descartado por el server, usa última parada. `is_express=true`, `express_name="CIVIS"`
-
-### Sin datos / No prioritarios
-
-- **Ocupación por vagón** — `GET /api/gtfs-rt/vehicles/{id}/occupancy/per-car` — FGC/Metro Madrid.
-- **Stop-time updates** — `GET /api/gtfs-rt/stop-time-updates` — duplica departures.
-- **Agencias** — `GET /api/gtfs/agencies` — uso interno.
-- **Equipment status bulk** — `GET /api/gtfs-rt/equipment-status/?operator_id=` — per-stop ya se usa.
-- **Líneas por provincia** — `GET /api/gtfs/province/{province}/lines` — no prioritario.
-- **Líneas por coordenadas** — `GET /api/gtfs/coordinates/lines` — no prioritario.
-- **Isócrona** — `GET /api/gtfs/journey/isochrone` — no prioritario.
-- **RT completo de parada** — `GET /api/gtfs-rt/stops/{id}/realtime` — legacy/debug.
-- **Children** — `GET /api/gtfs/stops/{id}/children` — ya implementado en fetch.
+### Contenido rico en alertas Metro Sevilla
+`content` (HTML) e `image_url` en alertas de noticias. Baja prioridad.
 
 ---
 
-## 4. FEATURES FUTURAS (v2+)
+## UI pendiente
 
-| Feature | Prioridad | Notas |
-|---------|-----------|-------|
-| Ticketing / Payment | Baja | Requiere acuerdos con operadores (Masabi JustRide SDK) |
-| Bike-share (BiciMAD, Bicing) | Baja | GBFS spec |
-| CarPlay | Baja | Complejidad alta |
-| Mapas Offline | Baja | MapLibre + vector tiles |
-| Reportar Incidencias | Baja | Open311 |
+- Selector de líneas del mapa — cambiar `Menu` por `Sheet`/`Popover` con logos y badges de color
+- Pathways en route planner — `signposted_as` como texto principal
+
+---
+
+## Pendiente replicar en Watch
+
+- Ocupación estación TMB
+- Búsqueda en rango horario
+- Interior de estaciones
+- Accesibilidad (badges, Acerca PMR)
+- Train code
+- Correspondencias navegables
+- Journey stops navegables
+
+---
+
+## Features futuras (v2+)
+
+| Feature | Notas |
+|---------|-------|
+| Ticketing / Payment | Requiere acuerdos con operadores (Masabi JustRide SDK) |
+| Bike-share (BiciMAD, Bicing) | GBFS spec |
+| CarPlay | Complejidad alta |
+| Mapas Offline | MapLibre + vector tiles |
+| Reportar Incidencias | Open311 |
