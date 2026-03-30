@@ -423,15 +423,7 @@ class DataService {
         isLoadingLinesTask = true
         defer { isLoadingLinesTask = false }
 
-        // Try to load from disk cache
-        if let cached = try? storage.load(forKey: "lines", as: [Line].self, maxAge: Self.cacheTTL) {
-            self.lines = cached
-            self.linesLoaded = true
-            saveLineColors()
-            DebugLog.log("📦 [Cache] Loaded \(cached.count) lines from cache")
-            await updateLocationWithNetworks()
-            return
-        }
+        // Network-first: always fetch from API, cache is offline fallback only
 
         // No cache, fetch from API with loading indicator
         isLoadingLines = true
@@ -567,7 +559,16 @@ class DataService {
 
         } catch {
             DebugLog.log("⚠️ [DataService] Failed to load lines: \(error)")
-            self.error = error
+            // Offline fallback: use cache if available
+            if let cached = try? storage.load(forKey: "lines", as: [Line].self, maxAge: .infinity) {
+                self.lines = cached
+                self.linesLoaded = true
+                saveLineColors()
+                DebugLog.log("📦 [Cache] Offline fallback: loaded \(cached.count) lines from cache")
+                await updateLocationWithNetworks()
+            } else {
+                self.error = error
+            }
         }
     }
 
