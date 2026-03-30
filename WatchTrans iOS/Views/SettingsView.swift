@@ -74,7 +74,14 @@ struct SettingsView: View {
         var credits: [CreditItem] = []
         let loadedTypes = Set(dataService.lines.map { $0.type })
         for network in dataService.networks {
-            let type = dataService.networkTransportType(network)
+            guard let tt = network.transportType else { continue }
+            let type: TransportType
+            switch tt {
+            case "metro", "metro_ligero": type = .metro
+            case "tram": type = .tram
+            case "bus": type = .bus
+            default: type = .tren
+            }
             guard loadedTypes.contains(type) else { continue }
             let icon: String
             let color: Color

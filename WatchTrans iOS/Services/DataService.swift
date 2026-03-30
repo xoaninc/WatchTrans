@@ -37,11 +37,6 @@ struct LocationContext: Codable {
         provinceName
     }
 
-    /// Check if this is a Rodalies de Catalunya network
-    var isRodalies: Bool {
-        primaryNetworkName?.lowercased().contains("rodalies") == true
-    }
-
     /// Check if this is a specific city
     func isCity(_ city: String) -> Bool {
         provinceName.lowercased() == city.lowercased()
@@ -481,34 +476,6 @@ class DataService {
     /// In-flight arrival requests to deduplicate concurrent fetches for the same stop
     private var inFlightArrivals: [String: Task<[Arrival], Never>] = [:]
 
-    // MARK: - Network Transport Types Cache
-
-    /// Cache of network code -> transport type (fetched from /networks endpoint)
-    /// Used to determine primary network without hardcoded ID lists
-    private var networkTransportTypes: [String: String] = [:]
-
-    /// Get display name for a transport type from loaded networks
-    func networkDisplayName(for transportType: TransportType) -> String? {
-        let matching = networks.filter { networkTransportType($0) == transportType }
-        return matching.first?.name
-    }
-
-    /// Get transport type from network — requires API to provide transport_type field
-    func networkTransportType(_ network: NetworkResponse) -> TransportType {
-        guard let tt = network.transportType else { return .tren }
-        switch tt {
-        case "cercanias", "fgc", "euskotren": return .tren
-        case "metro", "metro_ligero": return .metro
-        case "tram": return .tram
-        default: return .tren
-        }
-    }
-
-    /// Find network code for a given nucleo and transport type
-    func findNetworkCode(nucleo: String, type: TransportType) -> String? {
-        networks.first { networkTransportType($0) == type }?.code
-    }
-
     // MARK: - Route Shape Cache
 
     /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
@@ -803,18 +770,12 @@ class DataService {
         let totalStart = Date()
 
         do {
-            // Fetch networks for transport types if needed
-            if networkTransportTypes.isEmpty {
-                DebugLog.log("📍 [DataService] Fetching networks for transport types...")
+            // Fetch networks if not yet loaded
+            if networks.isEmpty {
+                DebugLog.log("📍 [DataService] Fetching networks...")
                 do {
-                    let fetchedNetworks = try await gtfsRealtimeService.fetchNetworks()
-                    self.networks = fetchedNetworks
-                    for network in fetchedNetworks {
-                        if let transportType = network.transportType {
-                            networkTransportTypes[network.code] = transportType
-                        }
-                    }
-                    DebugLog.log("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
+                    self.networks = try await gtfsRealtimeService.fetchNetworks()
+                    DebugLog.log("📍 [DataService] ✅ Loaded \(networks.count) networks")
                 } catch {
                     DebugLog.log("⚠️ [DataService] Failed to fetch networks: \(error)")
                 }
@@ -2093,15 +2054,8 @@ class DataService {
         return Set([province])
     }
 
-    /// Get trip details (skips synthetic RT trips that have no server-side detail)
-    private static let syntheticTripPrefixes = ["MSEV_RT_", "ZGZ_RT_", "TMB_METRO_", "TSEV_RT_"]
-
+    /// Get trip details
     func fetchTripDetails(tripId: String) async -> TripDetailResponse? {
-        // Synthetic RT trips don't exist in /trips/ — info is already in the departure
-        if Self.syntheticTripPrefixes.contains(where: { tripId.hasPrefix($0) }) {
-            DebugLog.log("ℹ️ [DataService] Skipping trip fetch for synthetic RT trip: \(tripId)")
-            return nil
-        }
         do {
             return try await gtfsRealtimeService.fetchTrip(tripId: tripId)
         } catch {
@@ -2972,9 +2926,8 @@ class DataService {
         
         for line in lines {
             for route in line.routes {
-                // Determine agency ID if available, otherwise guess based on line code
-                let agencyId = route.agencyId ?? guessAgencyId(lineCode: line.lineCode)
-                
+                let agencyId = route.agencyId ?? ""
+
                 routes.append(RouteResponse(
                     id: route.id,
                     shortName: line.lineCode,
@@ -2992,12 +2945,4 @@ class DataService {
         return routes
     }
     
-    private func guessAgencyId(lineCode: String) -> String {
-        // Fallback heuristics based on typical naming conventions in Spain
-        if lineCode.hasPrefix("C") { return "RENFE_CERCANIAS" }
-        if lineCode.hasPrefix("L") { return "METRO_SEVILLA" } // Generic guess
-        if lineCode.hasPrefix("T") { return "TRAM" }
-        return "UNKNOWN"
-    }
-
 }

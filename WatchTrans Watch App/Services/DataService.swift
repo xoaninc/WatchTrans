@@ -37,11 +37,6 @@ struct LocationContext: Codable {
         provinceName
     }
 
-    /// Check if this is a Rodalies de Catalunya network
-    var isRodalies: Bool {
-        primaryNetworkName?.lowercased().contains("rodalies") == true
-    }
-
     /// Check if this is a specific city
     func isCity(_ city: String) -> Bool {
         provinceName.lowercased() == city.lowercased()
@@ -480,12 +475,6 @@ class DataService {
     /// In-flight arrival requests to deduplicate concurrent fetches for the same stop
     private var inFlightArrivals: [String: Task<[Arrival], Never>] = [:]
 
-    // MARK: - Network Transport Types Cache
-
-    /// Cache of network code -> transport type (fetched from /networks endpoint)
-    /// Used to determine primary network without hardcoded ID lists
-    private var networkTransportTypes: [String: String] = [:]
-
     // MARK: - Route Shape Cache
 
     /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
@@ -765,22 +754,6 @@ class DataService {
         let totalStart = Date()
 
         do {
-            // Fetch networks for transport types if needed
-            if networkTransportTypes.isEmpty {
-                DebugLog.log("📍 [DataService] Fetching networks for transport types...")
-                do {
-                    let networks = try await gtfsRealtimeService.fetchNetworks()
-                    for network in networks {
-                        if let transportType = network.transportType {
-                            networkTransportTypes[network.code] = transportType
-                        }
-                    }
-                    DebugLog.log("📍 [DataService] ✅ Cached \(networkTransportTypes.count) network transport types")
-                } catch {
-                    DebugLog.log("⚠️ [DataService] Failed to fetch networks: \(error)")
-                }
-            }
-
             // NEW: Single API call to get province + ALL routes from ALL networks
             DebugLog.log("📍 [DataService] Fetching province with routes: (\(latitude), \(longitude))...")
             let fetchStart = Date()
@@ -2820,9 +2793,8 @@ class DataService {
         
         for line in lines {
             for route in line.routes {
-                // Determine agency ID if available, otherwise guess based on line code
-                let agencyId = route.agencyId ?? guessAgencyId(lineCode: line.lineCode)
-                
+                let agencyId = route.agencyId ?? ""
+
                 routes.append(RouteResponse(
                     id: route.id,
                     shortName: line.lineCode,
@@ -2840,12 +2812,4 @@ class DataService {
         return routes
     }
     
-    private func guessAgencyId(lineCode: String) -> String {
-        // Fallback heuristics based on typical naming conventions in Spain
-        if lineCode.hasPrefix("C") { return "RENFE_CERCANIAS" }
-        if lineCode.hasPrefix("L") { return "METRO_SEVILLA" } // Generic guess
-        if lineCode.hasPrefix("T") { return "TRAM" }
-        return "UNKNOWN"
-    }
-
 }

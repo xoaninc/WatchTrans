@@ -175,10 +175,6 @@ struct FullMapView: View {
         }
     }
 
-    private func networkDisplayName(type: TransportType, nucleo: String) -> String {
-        dataService.networkDisplayName(for: type) ?? type.rawValue
-    }
-
     private func transportIcon(_ type: TransportType) -> String {
         switch type {
         case .metro: return "MetroSymbol"

@@ -355,19 +355,18 @@ struct NetworkPlanView: View {
     /// Plan URL from the server — uses network code to build path
     /// The server serves plans at {baseURL}/{type}/{code}.pdf
     private var planInfo: (url: URL, isPDF: Bool)? {
-        let networkCode = dataService.findNetworkCode(nucleo: nucleo, type: lineType)
-        guard let code = networkCode else { return nil }
-        let codeLower = code.lowercased()
-
+        // Resolve the transport type string (matches API transport_type field) and URL path segment
+        let networkTypeString: String
         let typePath: String
         switch lineType {
-        case .metro: typePath = "metro"
-        case .tren: typePath = "cercanias"
-        case .tram: typePath = "tranvia"
+        case .metro: networkTypeString = "metro"; typePath = "metro"
+        case .tren: networkTypeString = "cercanias"; typePath = "cercanias"
+        case .tram: networkTypeString = "tram"; typePath = "tranvia"
         case .bus, .funicular: return nil
         }
-
-        let path = "\(typePath)/\(codeLower).pdf"
+        let networkCode = dataService.networks.first { $0.transportType == networkTypeString }?.code
+        guard let code = networkCode else { return nil }
+        let path = "\(typePath)/\(code.lowercased()).pdf"
         guard let url = URL(string: "\(baseURL)/\(path)") else { return nil }
         return (url, true)
     }
@@ -544,7 +543,15 @@ struct NetworkPlanView: View {
     }
 
     private var planTitle: String {
-        "Plano \(dataService.networkDisplayName(for: lineType) ?? lineType.rawValue)"
+        let typeString: String
+        switch lineType {
+        case .metro: typeString = "metro"
+        case .tren: typeString = "cercanias"
+        case .tram: typeString = "tram"
+        case .bus, .funicular: typeString = lineType.rawValue
+        }
+        let name = dataService.networks.first { $0.transportType == typeString }?.name
+        return "Plano \(name ?? lineType.rawValue)"
     }
 }
 
