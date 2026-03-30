@@ -103,6 +103,17 @@ Alertas de noticias de Metro Sevilla. La app solo muestra `headerText`/`descript
 
 ---
 
+## Normalización de IDs de Renfe en alertas
+
+`AlertFilterHelper` y `DataService` tienen lógica para normalizar IDs de Renfe que vienen en múltiples formatos del feed GTFS-RT de alertas (con/sin prefijo `RENFE_`, formatos legacy). Cuando la API normalice los IDs de alertas en el servidor, esta lógica del cliente se puede eliminar.
+
+Archivos afectados:
+- `WatchTrans iOS/Services/AlertFilterHelper.swift`
+- `WatchTrans iOS/Services/DataService.swift` (normalizeStopId, fallback por ID legacy)
+- `WatchTrans Watch App/Services/DataService.swift` (mismo)
+
+---
+
 ## No requiere cambio de API (bugs de la app)
 
 ### `corBus` — correspondencia bus sin badges

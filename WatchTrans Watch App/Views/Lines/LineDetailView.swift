@@ -328,7 +328,7 @@ struct AllConnectionBadges: View {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultCercaniasColor
-                badges.append((formatBadgeName(line, type: "Cercanías"), color))
+                badges.append((line, color))
             }
         }
 
@@ -338,7 +338,7 @@ struct AllConnectionBadges: View {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultMetroColor
-                badges.append((formatBadgeName(line, type: "Metro"), color))
+                badges.append((line, color))
             }
         }
 
@@ -348,20 +348,20 @@ struct AllConnectionBadges: View {
             let normalized = normalizeLineName(line)
             if line.lowercased() != excludeLower && !excludeIdsNormalized.contains(normalized) {
                 let color = dataService.getLine(by: line)?.colorHex ?? defaultTranviaColor
-                badges.append((formatBadgeName(line, type: "TRAM"), color))
+                badges.append((line, color))
             }
         }
-        
+
         // 5. Funicular
         let funicularLines = stop.correspondences?.funicular ?? parseLines(stop.corFunicular)
         for line in funicularLines {
-            badges.append((formatBadgeName(line, type: "Funicular"), defaultFunicularColor))
+            badges.append((line, defaultFunicularColor))
         }
 
         // 6. Bus
         let busLines = stop.correspondences?.bus ?? parseLines(stop.corBus)
         for line in busLines {
-            badges.append((formatBadgeName(line, type: "Bus"), "#E23131"))
+            badges.append((line, "#E23131"))
         }
 
         return badges
@@ -401,13 +401,6 @@ struct AllConnectionBadges: View {
             .filter { !$0.isEmpty }
     }
     
-    private func formatBadgeName(_ name: String, type: String) -> String {
-        if name.lowercased() == "true" {
-            return type
-        }
-        return name
-    }
-
     /// Normalize line name for comparison
     private func normalizeLineName(_ name: String) -> String {
         var normalized = name.lowercased().trimmingCharacters(in: .whitespaces)

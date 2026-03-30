@@ -693,11 +693,7 @@ struct LineStopRowView: View {
     private let defaultFunicularColor = "#000000"
 
     /// Format line name: "c4a" → "C4a", "l10b" → "L10b", "ml1" → "ML1"
-    private func formatLineName(_ name: String, type: String) -> String {
-        if name.lowercased() == "true" {
-            return type
-        }
-        
+    private func formatLineName(_ name: String) -> String {
         let lowercased = name.lowercased()
 
         // Handle ML prefix specially (2 chars)
@@ -732,27 +728,27 @@ struct LineStopRowView: View {
         let cercaniasLines = stop.correspondences?.tren ?? parseLines(stop.corTren)
         for line in cercaniasLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultCercaniasColor) ?? .blue
-            badges.append((formatLineName(line, type: "Cercanías"), color, false))
+            badges.append((formatLineName(line), color, false))
         }
 
         // 2. Metro connections
         let metroLines = stop.correspondences?.metro ?? parseLines(stop.corMetro)
         for line in metroLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultMetroColor) ?? .red
-            badges.append((formatLineName(line, type: "Metro"), color, false))
+            badges.append((formatLineName(line), color, false))
         }
 
         // 3. Tranvía connections
         let tramLines = stop.correspondences?.tranvia ?? parseLines(stop.corTranvia)
         for line in tramLines {
             let color = dataService.getLine(by: line)?.color ?? Color(hex: defaultTranviaColor) ?? .red
-            badges.append((formatLineName(line, type: "TRAM"), color, false))
+            badges.append((formatLineName(line), color, false))
         }
-        
+
         // 5. Funicular connections
         let funicularLines = stop.correspondences?.funicular ?? parseLines(stop.corFunicular)
         for line in funicularLines {
-            badges.append((formatLineName(line, type: "Funicular"), Color(hex: defaultFunicularColor) ?? .black, false))
+            badges.append((formatLineName(line), Color(hex: defaultFunicularColor) ?? .black, false))
         }
 
         return badges

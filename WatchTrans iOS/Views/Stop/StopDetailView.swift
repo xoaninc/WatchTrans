@@ -952,39 +952,32 @@ struct ConnectionsSectionView: View {
         // 1. Cercanías
         for line in stop.correspondences?.tren ?? parseLines(stop.corTren) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Cercanías"), colorHex: color, kind: .tren))
+            badges.append(ConnectionBadge(name: line, colorHex: color, kind: .tren))
         }
 
         // 2. Metro
         for line in stop.correspondences?.metro ?? parseLines(stop.corMetro) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Metro"), colorHex: color, kind: .metro))
+            badges.append(ConnectionBadge(name: line, colorHex: color, kind: .metro))
         }
 
         // 3. Tranvía
         for line in stop.correspondences?.tranvia ?? parseLines(stop.corTranvia) {
             let color = dataService.getLineColor(by: line) ?? ""
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "TRAM"), colorHex: color, kind: .tram))
+            badges.append(ConnectionBadge(name: line, colorHex: color, kind: .tram))
         }
 
         // 5. Funicular
         for line in stop.correspondences?.funicular ?? parseLines(stop.corFunicular) {
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Funicular"), colorHex: "#000000", kind: .funicular))
+            badges.append(ConnectionBadge(name: line, colorHex: "#000000", kind: .funicular))
         }
 
         // 6. Bus
         for line in stop.correspondences?.bus ?? parseLines(stop.corBus) {
-            badges.append(ConnectionBadge(name: formatBadgeName(line, type: "Bus"), colorHex: "#E23131", kind: .bus))
+            badges.append(ConnectionBadge(name: line, colorHex: "#E23131", kind: .bus))
         }
 
         return badges
-    }
-
-    private func formatBadgeName(_ name: String, type: String) -> String {
-        if name.lowercased() == "true" {
-            return type
-        }
-        return name
     }
 
     var body: some View {

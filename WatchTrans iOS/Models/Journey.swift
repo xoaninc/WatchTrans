@@ -150,6 +150,10 @@ enum TransportMode: String, CaseIterable {
         self != .walking
     }
 
+    /// Localized UI label for each transport mode.
+    /// These are UI-only display strings — they are NOT sent by the API.
+    /// The API sends the raw `mode` string (e.g. "metro", "cercanias") which maps to `rawValue`.
+    /// All mode labels are centralized here; do not add them in views or other models.
     var displayName: String {
         switch self {
         case .metro: return "Metro"
