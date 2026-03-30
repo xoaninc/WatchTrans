@@ -950,7 +950,7 @@ struct ConnectionsSectionView: View {
     @State private var linesLoaded = false
 
     private enum TransportKind: String {
-        case tren, metro, metroLigero, tram, funicular, bus
+        case tren, metro, tram, funicular, bus
     }
 
     private struct ConnectionBadge: Identifiable {
@@ -1071,37 +1071,31 @@ struct ConnectionsSectionView: View {
             )
     }
 
-    /// Find the corresponding stop for a badge.
-    /// First tries API correspondences (exact to_stop_id), then falls back to name+prefix match.
+    /// Find the corresponding stop for a badge using API correspondences and routeType.
     private func findCorrespondenceStop(for badge: ConnectionBadge) -> Stop? {
-        let prefixes: [String]
-        switch badge.kind {
-        case .tren: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_", "SFM_MALLORCA_"]
-        case .metro: prefixes = ["METRO_", "TMB_METRO_"]
-        case .metroLigero: prefixes = ["ML1_", "MLO_"]
-        case .tram: prefixes = ["TRAM_", "TRANVIA_"]
-        case .funicular: prefixes = ["TMB_METRO_", "FGC_"]
-        case .bus: prefixes = ["BUS_"]
+        let targetType: TransportType = switch badge.kind {
+        case .tren: .tren
+        case .metro: .metro
+        case .tram: .tram
+        case .funicular: .funicular
+        case .bus: .bus
         }
 
         // 1. Try API correspondences — they have the exact to_stop_id
         for corr in correspondences {
-            let toId = corr.toStopId
-            if toId != stop.id && prefixes.contains(where: { toId.hasPrefix($0) }) {
-                if let found = dataService.stops.first(where: { $0.id == toId }) {
-                    return found
-                }
-                // Stop not in cache — try fetching
-                // (can't async here, so just skip to fallback)
+            if corr.toStopId != stop.id,
+               let found = dataService.stops.first(where: { $0.id == corr.toStopId }),
+               found.transportType == targetType {
+                return found
             }
         }
 
-        // 2. Fallback: match by name + prefix in loaded stops
+        // 2. Fallback: match by name + transportType in loaded stops
         let stopName = stop.name.lowercased()
         return dataService.stops.first { candidate in
             candidate.id != stop.id &&
             candidate.name.lowercased() == stopName &&
-            prefixes.contains(where: { candidate.id.hasPrefix($0) })
+            candidate.transportType == targetType
         }
     }
 
