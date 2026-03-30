@@ -11,15 +11,40 @@ Features pendientes, bugs y mejoras.
 ### Bug MapKit: Polyline desaparece con rotación
 Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
 **Workaround actual:** Heading fijo a 0.
-**Posible solución:** Usar `suggested_heading` de API para transiciones suaves.
+**Posible solución:** Usar `suggested_heading` de la API (ya viene en journey segments).
+
+---
+
+## Endpoints disponibles sin consumir
+
+Endpoints que la API ya ofrece pero la app no usa:
+
+| Endpoint | Qué ofrece | Prioridad |
+|----------|-----------|-----------|
+| `GET /stops/{id}/facilities` | Facilities de estación (park & ride, atención al cliente, parking bici). Solo Metro Sevilla. | Media |
+| `GET /agencies/{id}/policies` | Políticas del operador (mascotas, comida, patinetes, fotos). Solo Metro Sevilla. | Baja |
+| `GET /interchanges` + `/{code}` | Hubs de intercambio con paradas agrupadas por código. | Media |
+| `GET /coordinates/lines` | Líneas agrupadas cerca de coordenadas (alternativa a routes). | Baja |
+| `GET /translations` | Nombres multilingüe GTFS (paradas, rutas). | Baja |
+| `GET /transfers` | Tiempos de transbordo entre paradas (para mostrar en correspondencias). | Media |
+| `GET /feed-info` | Frescura del feed por operador (para mostrar "datos de hace X"). | Baja |
+| `GET /vehicles/{id}/occupancy/per-car` | Ocupación por vagón. FGC y Metro Madrid. | Media |
+| `GET /journey/isochrone` | Paradas alcanzables en X minutos desde una parada. | Baja |
+| `?compact=true` en departures | Formato ligero para widgets/Siri. Modelo `CompactDepartureResponse` necesario. | Alta |
+
+### Campos disponibles sin consumir
+
+| Campo | Endpoint | Qué es |
+|-------|----------|--------|
+| `parking_coches` | stops | Parking de coches (Metro Sevilla) |
+| `description` | stops | Descripción de la parada (Euskotren, Metro Sevilla, Metro Málaga) |
+| `url` | stops | URL de la parada (Metro Tenerife, SFM Mallorca) |
+| `agency_name` | `/coordinates/routes`, `/networks/{code}/lines` | Nombre del operador — ya viene en la API, la app no lo consume |
+| `suggested_heading` | journey segments | Heading de cámara para animación 3D del journey |
 
 ---
 
 ## Features pendientes
-
-### Compact endpoint en Widgets/Siri
-`GET /api/gtfs/stops/{stop_id}/departures?compact=true&limit=10`
-Modelo `CompactDepartureResponse` necesario. Permite widgets más ligeros y Siri Shortcuts.
 
 ### Push Notifications para Alertas
 Notificar cuando una línea favorita tiene incidencias. Requiere APNs + servidor.
@@ -31,7 +56,7 @@ watchOS independiente con URLSession + sincronización de favoritos vía iCloud.
 `zone_id` disponible en Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante. Mostrar en StopDetailView.
 
 ### Mapa de vehículos en tiempo real
-`destination` campo en `/vehicles`. Pins en mapa RT con label "→ Luis de Morales". Requiere nueva vista.
+`destination` campo en `/vehicles`. Pins en mapa RT con label "→ destino". Requiere nueva vista.
 
 ### Detalles de transporte alternativo en alertas
 `alternative_transport[]` tiene `type`, `route`, `frequency_minutes`. App solo usa boolean, no muestra detalles.

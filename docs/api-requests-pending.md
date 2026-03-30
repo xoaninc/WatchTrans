@@ -4,11 +4,9 @@ Campos que la app necesita y la API no devuelve aún.
 
 ---
 
-## GET /api/gtfs/coordinates/routes — agency_name
+## GET /api/gtfs/coordinates/routes — agency_name ✅ YA EXISTE
 
-| Campo | Estado | Para qué lo necesita la app |
-|-------|--------|---------------------------|
-| `agency_name` | No existe | Nombre del operador/red (ej: "Metro de Madrid", "Renfe Cercanías Madrid"). La app cruza `agency_id` con `/networks` para obtener el nombre. Si viniera en la ruta directamente, se evita el cruce. |
+`agency_name` ya viene en `/coordinates/routes` y `/networks/{code}/lines`. La app aún no lo consume — usa cruce con `/networks` por `code`. Pendiente de integrar en el modelo `RouteResponse` del cliente.
 
 ---
 
