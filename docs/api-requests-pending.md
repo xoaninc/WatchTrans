@@ -4,6 +4,14 @@ Campos que la app necesita y la API no devuelve aún.
 
 ---
 
+## GET /api/gtfs/coordinates/routes — agency_name
+
+| Campo | Estado | Para qué lo necesita la app |
+|-------|--------|---------------------------|
+| `agency_name` | No existe | Nombre del operador/red (ej: "Metro de Madrid", "Renfe Cercanías Madrid"). La app cruza `agency_id` con `/networks` para obtener el nombre. Si viniera en la ruta directamente, se evita el cruce. |
+
+---
+
 ## GET /api/gtfs/networks
 
 | Campo | Estado | Para qué lo necesita la app |
