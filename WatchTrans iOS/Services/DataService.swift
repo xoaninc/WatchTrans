@@ -111,20 +111,14 @@ class DataService {
         let timestamp: Date
         let lastVerified: Date
         let coordinatesHash: String  // To detect location change
-        let version: Int?
+        let version: Int?  // Legacy, ignored — cache invalidates by decode failure or time expiry
     }
 
     /// Line colors cache metadata (simpler, no coordinates dependency)
     private struct LineColorsCacheMetadata: Codable {
         let timestamp: Date
         let lastVerified: Date
-        let version: Int?
-    }
-
-    private enum CacheVersion {
-        static let stops = 3  // v3: refresh for wheelchair_boarding + capitalization fixes
-        static let lines = 7  // v7: added agencyName field from API
-        static let lineColors = 4  // v4: invalidate old line color cache (API corrections)
+        let version: Int?  // Legacy, ignored
     }
 
     private var stopsCacheMetadata: CacheMetadata?
@@ -209,15 +203,12 @@ class DataService {
         if let data = try? Data(contentsOf: Self.stopsCacheURL),
            let cached = try? JSONDecoder().decode(StopsCache.self, from: data) {
             let age = Date().timeIntervalSince(cached.metadata.timestamp)
-            let cacheVersion = cached.metadata.version ?? 0
             if age >= Self.stopsCacheDuration {
                 DebugLog.log("📦 [Cache] Stops cache expired (age: \(Int(age/3600))h)")
-            } else if cacheVersion == CacheVersion.stops {
+            } else {
                 self.stops = cached.stops
                 self.stopsCacheMetadata = cached.metadata
                 DebugLog.log("📦 [Cache] Loaded \(stops.count) stops from cache (age: \(Int(age/60))min)")
-            } else {
-                DebugLog.log("📦 [Cache] ⚠️ Stops cache VERSION MISMATCH (found: v\(cacheVersion), need: v\(CacheVersion.stops)) - will reload from API")
             }
         }
 
@@ -232,8 +223,7 @@ class DataService {
         if let data = try? Data(contentsOf: Self.lineColorsCacheURL),
            let cached = try? JSONDecoder().decode(LineColorsCache.self, from: data) {
             let age = Date().timeIntervalSince(cached.metadata.timestamp)
-            let cacheVersion = cached.metadata.version ?? 0
-            if cacheVersion == CacheVersion.lineColors && age < Self.lineColorsCacheDuration {
+            if age < Self.lineColorsCacheDuration {
                 self.lineColorsCache = cached.colors
                 self.lineColorsCacheMetadata = cached.metadata
                 DebugLog.log("📦 [Cache] Loaded \(lineColorsCache.count) line colors from cache (age: \(Int(age/60))min)")
@@ -265,7 +255,7 @@ class DataService {
             timestamp: Date(),
             lastVerified: Date(),
             coordinatesHash: coordinatesHash,
-            version: CacheVersion.stops
+            version: nil
         )
         let cache = StopsCache(stops: stops, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -281,7 +271,7 @@ class DataService {
             timestamp: Date(),
             lastVerified: Date(),
             coordinatesHash: coordinatesHash,
-            version: CacheVersion.lines
+            version: nil
         )
         let cache = LinesCache(lines: lines, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -319,7 +309,7 @@ class DataService {
         let metadata = LineColorsCacheMetadata(
             timestamp: Date(),
             lastVerified: Date(),
-            version: CacheVersion.lineColors
+            version: nil
         )
         let cache = LineColorsCache(colors: lineColorsCache, metadata: metadata)
         if let data = try? JSONEncoder().encode(cache) {
@@ -362,13 +352,11 @@ class DataService {
 
         let age = Date().timeIntervalSince(cached.metadata.timestamp)
         guard age < Self.linesCacheDuration,
-              cached.metadata.coordinatesHash == coordinatesHash,
-              cached.metadata.version == CacheVersion.lines else {
-            let version = cached.metadata.version ?? -1
+              cached.metadata.coordinatesHash == coordinatesHash else {
             let locationChanged = cached.metadata.coordinatesHash != coordinatesHash
             DebugLog.log(
                 "📦 [Cache] Lines cache invalid (age: \(Int(age / 3600))h, " +
-                "location changed: \(locationChanged), version: \(version))"
+                "location changed: \(locationChanged))"
             )
             return false
         }
