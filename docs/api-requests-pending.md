@@ -8,7 +8,8 @@ Campos que la app necesita y la API no devuelve aún.
 
 | Campo | Estado | Para qué lo necesita la app |
 |-------|--------|---------------------------|
-| `transport_type` | Campo existe en modelo Swift pero API devuelve null | Agrupar líneas por sección (Cercanías/Metro/Tram). Sin este campo, `networkDisplayName(for:)` no funciona y las secciones muestran el fallback genérico. |
+| `transport_type` | Campo existe en modelo Swift pero API devuelve null | Agrupar líneas por sección (Cercanías/Metro/Tram). Sin este campo, `networkDisplayName(for:)` no funciona y las secciones muestran el fallback genérico del transportType. |
+| `logo` | No existe | URL o filename del logo del operador. Sin este campo la app solo muestra el icono genérico del transportType (MetroSymbol, TrenSymbol, etc.). |
 | `name` | Existe pero con nombres legales GTFS | Algunos nombres son ilegibles ("AJUNTAMENT DE BUNYOLA R4", "Consorcio Regional de Transportes de Madrid"). La app los muestra tal cual ahora — si se quieren nombres bonitos, hay que corregirlos en el servidor. |
 
 **Valores esperados de `transport_type`:**

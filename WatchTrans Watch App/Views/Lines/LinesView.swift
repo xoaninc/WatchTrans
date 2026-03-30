@@ -264,10 +264,7 @@ struct LinesView: View {
                 if !cercaniasLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(
-                                logoType: isRodalies ? .rodalies : .tren,
-                                height: 18
-                            )
+                            LogoImageView(type: .tren, height: 18)
 
                             Text(isRodalies ? "Rodalies" : "Cercanías")
                                 .font(.system(size: 15, weight: .semibold))
@@ -290,10 +287,7 @@ struct LinesView: View {
                 if !metroLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(
-                                logoType: .metro(nucleo: dataService.currentLocation?.provinceName ?? ""),
-                                height: 14  // Smaller height for diamond shape
-                            )
+                            LogoImageView(type: .metro, height: 14)
 
                             Text(metroSectionTitle)
                                 .font(.system(size: 15, weight: .semibold))
@@ -316,10 +310,7 @@ struct LinesView: View {
                 if !metroLigeroLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(
-                                logoType: .metro,
-                                height: 14  // Smaller height for diamond shape
-                            )
+                            LogoImageView(type: .tram, height: 14)
 
                             Text("Metro Ligero")
                                 .font(.system(size: 15, weight: .semibold))
@@ -342,10 +333,7 @@ struct LinesView: View {
                 if !tramLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(
-                                logoType: .tram(nucleo: dataService.currentLocation?.provinceName ?? ""),
-                                height: 14
-                            )
+                            LogoImageView(type: .tram, height: 14)
 
                             Text(tramSectionTitle)
                                 .font(.system(size: 15, weight: .semibold))
@@ -368,10 +356,7 @@ struct LinesView: View {
                 if !fgcLines.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(
-                                logoType: .fgc,
-                                height: 18
-                            )
+                            LogoImageView(type: .tren, height: 18)
 
                             Text("Ferrocarrils (FGC)")
                                 .font(.system(size: 15, weight: .semibold))
