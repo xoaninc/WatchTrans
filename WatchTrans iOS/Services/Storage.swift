@@ -3,7 +3,8 @@
 //  WatchTrans
 //
 //  Simple disk cache: save/load Codable objects as JSON files.
-//  Uses filesystem modificationDate for TTL — no metadata structs needed.
+//  Uses filesystem modificationDate for TTL.
+//  Detects model changes by comparing JSON key structure.
 //
 
 import Foundation
@@ -12,6 +13,12 @@ enum StorageError: Error {
     case notFound
     case expired
     case decodeFailed
+    case schemaChanged
+}
+
+private struct CacheWrapper<T: Codable>: Codable {
+    let schema: String
+    let payload: T
 }
 
 final class Storage {
@@ -27,9 +34,9 @@ final class Storage {
     }
 
     func save<T: Codable>(object: T, forKey key: String) throws {
-        let data = try encoder.encode(object)
-        let url = fileURL(forKey: key)
-        try data.write(to: url)
+        let wrapper = CacheWrapper(schema: schemaKey(for: object), payload: object)
+        let data = try encoder.encode(wrapper)
+        try data.write(to: fileURL(forKey: key))
     }
 
     func load<T: Codable>(forKey key: String, as type: T.Type, maxAge: TimeInterval) throws -> T {
@@ -39,7 +46,6 @@ final class Storage {
             throw StorageError.notFound
         }
 
-        // Check TTL using file modification date
         if maxAge != .infinity {
             let attributes = try fileManager.attributesOfItem(atPath: url.path)
             guard let modified = attributes[.modificationDate] as? Date else {
@@ -51,13 +57,19 @@ final class Storage {
         }
 
         let data = try Data(contentsOf: url)
-        do {
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            // Model changed — cache is stale
+
+        guard let wrapper = try? decoder.decode(CacheWrapper<T>.self, from: data) else {
             try? fileManager.removeItem(at: url)
             throw StorageError.decodeFailed
         }
+
+        let currentSchema = schemaKey(for: wrapper.payload)
+        guard wrapper.schema == currentSchema else {
+            try? fileManager.removeItem(at: url)
+            throw StorageError.schemaChanged
+        }
+
+        return wrapper.payload
     }
 
     func remove(forKey key: String) throws {
@@ -80,5 +92,26 @@ final class Storage {
 
     private func fileURL(forKey key: String) -> URL {
         folderURL.appendingPathComponent(key, isDirectory: false)
+    }
+
+    /// Build a string of all JSON keys in the object. If a field is added/removed, this changes.
+    private func schemaKey<T: Codable>(for object: T) -> String {
+        guard let data = try? encoder.encode(object),
+              let json = try? JSONSerialization.jsonObject(with: data) else {
+            return ""
+        }
+        return extractKeys(from: json).sorted().joined(separator: ",")
+    }
+
+    private func extractKeys(from json: Any, prefix: String = "") -> [String] {
+        var keys: [String] = []
+        if let dict = json as? [String: Any] {
+            for (key, _) in dict {
+                keys.append(prefix.isEmpty ? key : "\(prefix).\(key)")
+            }
+        } else if let array = json as? [Any], let first = array.first {
+            keys.append(contentsOf: extractKeys(from: first, prefix: prefix))
+        }
+        return keys
     }
 }
