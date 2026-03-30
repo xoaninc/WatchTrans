@@ -887,6 +887,7 @@ struct LineStopRowView: View {
                 type: .tren,
                 colorHex: "#813380",
                 nucleo: "madrid",
+                agencyId: "PREVIEW",
                 routeIds: ["RENFE_C3_34"],
                 isCircular: false,
                 serviceStatus: nil,

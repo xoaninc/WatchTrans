@@ -15,6 +15,7 @@ struct Line: Identifiable, Codable, Equatable, Hashable {
     let type: TransportType   // .metro, .tren, .tram
     let colorHex: String      // Store as hex string for Codable
     let nucleo: String        // Province/network name: "madrid", "sevilla", "barcelona", etc.
+    let agencyId: String      // Network code from API (e.g., "MMAD", "RENFE_C10", "CRTM_ML1")
     let routeIds: [String]    // Actual API route IDs (e.g., ["RENFE_C1_34"])
     let isCircular: Bool      // true for circular lines (L6, L12 MetroSur)
     var suspensionAlert: String? // Suspension message if service is suspended

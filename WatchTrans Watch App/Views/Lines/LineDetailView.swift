@@ -715,11 +715,13 @@ struct AlertsListView: View {
                 type: .tren,
                 colorHex: "#75B6E0",
                 nucleo: "madrid",
+                agencyId: "PREVIEW",
                 routeIds: ["RENFE_C1_34"],
                 isCircular: false,
                 serviceStatus: nil,
                 suspendedSince: nil,
-                isAlternativeService: nil
+                isAlternativeService: nil,
+                alternativeForShortName: nil
             ),
             dataService: DataService(),
             locationService: LocationService()

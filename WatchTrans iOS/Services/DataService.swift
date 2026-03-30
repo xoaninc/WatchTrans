@@ -1064,6 +1064,7 @@ class DataService {
                     type: transportType,
                     colorHex: color,
                     nucleo: provinceName,
+                    agencyId: route.agencyId,
                     routeIds: [route.id],
                     isCircular: route.isCircular ?? false,
                     serviceStatus: route.serviceStatus,
@@ -1089,6 +1090,7 @@ class DataService {
                 type: value.line.type,
                 colorHex: value.line.colorHex,
                 nucleo: value.line.nucleo,
+                agencyId: value.line.agencyId,
                 routeIds: value.routeIds,
                 isCircular: value.isCircular,
                 suspensionAlert: nil,  // Will be populated below
@@ -1252,6 +1254,7 @@ class DataService {
                         type: line.type,
                         colorHex: line.colorHex,
                         nucleo: line.nucleo,
+                        agencyId: line.agencyId,
                         routeIds: line.routeIds,
                         isCircular: line.isCircular,
                         serviceStatus: line.serviceStatus,
