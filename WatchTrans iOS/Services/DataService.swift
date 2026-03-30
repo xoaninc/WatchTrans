@@ -123,7 +123,7 @@ class DataService {
 
     private enum CacheVersion {
         static let stops = 3  // v3: refresh for wheelchair_boarding + capitalization fixes
-        static let lines = 6  // v6: refresh cached lines (API colors/long names may change)
+        static let lines = 7  // v7: added agencyName field from API
         static let lineColors = 4  // v4: invalidate old line color cache (API corrections)
     }
 
