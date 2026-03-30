@@ -4,7 +4,7 @@
 //
 //  Simple disk cache: save/load Codable objects as JSON files.
 //  Uses filesystem modificationDate for TTL.
-//  Detects model changes by comparing JSON key structure.
+//  Detects model changes using Swift Mirror to list all stored properties.
 //
 
 import Foundation
@@ -33,7 +33,7 @@ final class Storage {
     }
 
     func save<T: Codable>(object: T, forKey key: String) throws {
-        let wrapper = CacheWrapper(schema: schemaKey(for: object), payload: object)
+        let wrapper = CacheWrapper(schema: mirrorSchema(for: object), payload: object)
         let data = try encoder.encode(wrapper)
         try data.write(to: fileURL(forKey: key))
     }
@@ -62,8 +62,8 @@ final class Storage {
             throw StorageError.decodeFailed
         }
 
-        // Verify schema: extract keys from raw JSON payload to avoid re-encoding
-        let currentSchema = schemaKeyFromRawJSON(data)
+        // Compare saved schema against current model's schema
+        let currentSchema = mirrorSchema(for: wrapper.payload)
         guard wrapper.schema == currentSchema else {
             try? fileManager.removeItem(at: url)
             throw StorageError.schemaChanged
@@ -94,37 +94,24 @@ final class Storage {
         folderURL.appending(path: key, directoryHint: .notDirectory)
     }
 
-    // MARK: - Schema Detection
+    // MARK: - Schema Detection via Mirror
 
-    /// Build schema key from an object by encoding it to JSON and extracting keys.
-    private func schemaKey<T: Codable>(for object: T) -> String {
-        guard let data = try? encoder.encode(object),
-              let json = try? JSONSerialization.jsonObject(with: data) else {
-            return ""
+    /// Use Swift Mirror to get all property names and types of the stored object.
+    /// This is independent of JSON encoding — it sees ALL properties including nil optionals.
+    /// When a field is added/removed/renamed, the schema changes and cache auto-invalidates.
+    private func mirrorSchema<T>(for object: T) -> String {
+        let target: Any
+        // For arrays, mirror the first element's type
+        if let array = object as? [Any], let first = array.first {
+            target = first
+        } else {
+            target = object
         }
-        return extractKeys(from: json).sorted().joined(separator: ",")
-    }
-
-    /// Extract schema key from raw cached JSON data (avoids re-encoding the decoded payload).
-    private func schemaKeyFromRawJSON(_ data: Data) -> String {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let payload = json["payload"] else {
-            return ""
+        let mirror = Mirror(reflecting: target)
+        let fields = mirror.children.compactMap { child -> String? in
+            guard let label = child.label else { return nil }
+            return "\(label):\(type(of: child.value))"
         }
-        return extractKeys(from: payload).sorted().joined(separator: ",")
-    }
-
-    private func extractKeys(from json: Any, prefix: String = "") -> [String] {
-        var keys: [String] = []
-        if let dict = json as? [String: Any] {
-            for (key, value) in dict {
-                let path = prefix.isEmpty ? key : "\(prefix).\(key)"
-                let type = value is NSNull ? "null" : "\(Swift.type(of: value))"
-                keys.append("\(path):\(type)")
-            }
-        } else if let array = json as? [Any], let first = array.first {
-            keys.append(contentsOf: extractKeys(from: first, prefix: prefix))
-        }
-        return keys
+        return fields.sorted().joined(separator: ",")
     }
 }

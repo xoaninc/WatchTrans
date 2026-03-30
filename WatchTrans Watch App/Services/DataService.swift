@@ -652,7 +652,7 @@ class DataService {
                     colorHex: color,
                     nucleo: provinceName,
                     agencyId: route.agencyId,
-                    agencyName: route.agencyName,
+                    agencyName: route.agencyName ?? "",
                     routeIds: [route.id],
                     isCircular: route.isCircular ?? false,
                     serviceStatus: nil,

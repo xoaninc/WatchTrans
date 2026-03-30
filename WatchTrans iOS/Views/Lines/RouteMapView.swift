@@ -484,7 +484,7 @@ struct FullScreenMapView: View {
             colorHex: "#38A3DC",
             nucleo: "madrid",
             agencyId: "PREVIEW",
-            agencyName: nil,
+            agencyName: "",
             routeIds: ["METRO_1"],
             isCircular: false,
             serviceStatus: nil,

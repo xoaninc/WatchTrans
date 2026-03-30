@@ -675,7 +675,6 @@ class DataService {
                 )
                 let displayLongName = circularDisplayName(from: preferredLongName)
 
-                DebugLog.log("🔍 [DEBUG-ROUTE] \(route.shortName) agencyId=\(route.agencyId) agencyName=\(route.agencyName ?? "NIL")")
                 let line = Line(
                     id: lineId,
                     name: displayName,
@@ -684,7 +683,7 @@ class DataService {
                     colorHex: color,
                     nucleo: provinceName,
                     agencyId: route.agencyId,
-                    agencyName: route.agencyName,
+                    agencyName: route.agencyName ?? "",
                     routeIds: [route.id],
                     isCircular: route.isCircular ?? false,
                     serviceStatus: route.serviceStatus,
@@ -765,9 +764,6 @@ class DataService {
         // Debug: Show lines by type
         let byType = Dictionary(grouping: lines, by: { $0.type })
         DebugLog.log("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
-        for line in lines.prefix(3) {
-            DebugLog.log("🔍 [DEBUG] Line '\(line.name)' agencyId=\(line.agencyId) agencyName=\(line.agencyName ?? "NIL")")
-        }
         for (type, typeLines) in byType.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
             let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
             let suspended = typeLines.filter { $0.suspensionAlert != nil }.map { $0.name }
