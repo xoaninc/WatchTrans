@@ -8,7 +8,7 @@ Campos que la app necesita y la API no devuelve aún.
 
 | Campo | Estado | Para qué lo necesita la app |
 |-------|--------|---------------------------|
-| `transport_type` | Campo existe en modelo Swift pero API devuelve null | Agrupar líneas por sección (Cercanías/Metro/Tram). Sin este campo, `networkDisplayName(for:)` no funciona y las secciones muestran el fallback genérico del transportType. |
+| `transport_type` | Campo existe en modelo Swift pero API devuelve null | Ya no bloquea la app (las secciones agrupan por `agencyId`), pero serviría para ordenar redes por tipo sin depender del `routeType` de las rutas. |
 | `logo` | No existe | URL o filename del logo del operador. Sin este campo la app solo muestra el icono genérico del transportType (MetroSymbol, TrenSymbol, etc.). |
 | `name` | Existe pero con nombres legales GTFS | Algunos nombres son ilegibles ("AJUNTAMENT DE BUNYOLA R4", "Consorcio Regional de Transportes de Madrid"). La app los muestra tal cual ahora — si se quieren nombres bonitos, hay que corregirlos en el servidor. |
 
@@ -82,6 +82,24 @@ Alertas de noticias de Metro Sevilla. La app solo muestra `headerText`/`descript
 - Endpoint: `/stops/{id}/departures`
 - Campo: `wheelchair_accessible: Int?` (null=sin dato, 1=desconocido, 2=accesible, 3=no accesible)
 - La app ya lo consume con prioridad RT → fallback static.
+
+---
+
+## GET /api/gtfs/stops/{id} — campos de capabilities del operador
+
+| Campo | Estado | Para qué lo necesita la app |
+|-------|--------|---------------------------|
+| `has_occupancy` | No existe | Saber si la parada tiene datos de ocupación en tiempo real. Sin este campo la app hace fetch para todas las paradas y el endpoint devuelve vacío. |
+| `has_equipment_status` | No existe | Saber si la parada tiene estado de equipos (ascensores, escaleras). Sin este campo la app hace fetch para todas. |
+| `has_air_quality` | No existe | Saber si la parada tiene datos de calidad del aire. Sin este campo la app hace fetch para todas. |
+
+---
+
+## GET /api/gtfs/stops/{id}/departures — route_type
+
+| Campo | Estado | Para qué lo necesita la app |
+|-------|--------|---------------------------|
+| `route_type` | No existe | Tipo de transporte de la ruta (0=tram, 1=metro, 2=rail). La app lo necesita para decidir formato de hora (>30min). Actualmente lo saca del Line model via `transportType`. |
 
 ---
 
