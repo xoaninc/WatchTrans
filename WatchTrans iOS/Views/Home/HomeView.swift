@@ -355,8 +355,8 @@ struct FrequentStopCardView: View {
         hasLoadedOnce = true
         isLoading = false
 
-        // Fetch air quality for Metro Sevilla stops
-        if stop.id.hasPrefix("METRO_SEVILLA_") {
+        // Fetch air quality (endpoint returns empty for stops that don't support it)
+        if stop.transportType == .metro {
             airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
         }
     }
@@ -371,17 +371,9 @@ struct NearbyStopsSectionView: View {
     let refreshTrigger: UUID
 
 
-    /// Extract network type from stop ID (e.g., "RENFE_18000" -> "RENFE", "METRO_123" -> "METRO")
-    private func networkType(for stop: Stop) -> String {
-        if let underscore = stop.id.firstIndex(of: "_") {
-            return String(stop.id.prefix(upTo: underscore))
-        }
-        return "OTHER"
-    }
-
-    /// Create unique key for deduplication: name + network type
+    /// Create unique key for deduplication: name + transport type
     private func deduplicationKey(for stop: Stop) -> String {
-        return "\(stop.name)_\(networkType(for: stop))"
+        return "\(stop.name)_\(stop.transportType.rawValue)"
     }
 
     /// Check if stop matches any of the enabled transport types
@@ -389,32 +381,22 @@ struct NearbyStopsSectionView: View {
         // No filter = show all
         if enabledTypes.isEmpty { return true }
 
-        let network = networkType(for: stop).uppercased()
+        // Match by the stop's own transport type
+        if enabledTypes.contains(stop.transportType) { return true }
 
+        // Also match if the stop has correspondences for an enabled type
         for type in enabledTypes {
             switch type {
             case .metro:
-                if network == "METRO" || network == "ML" || network == "TMB_METRO"
-                    || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corMetro, !cor.isEmpty { return true }
             case .tren:
-                if network == "RENFE" || network == "FGC" || network == "EUSKOTREN"
-                    || (stop.corTren != nil && !stop.corTren!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corTren, !cor.isEmpty { return true }
             case .tram:
-                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corTranvia, !cor.isEmpty { return true }
             case .bus:
-                if network == "BUS" {
-                    return true
-                }
+                if let cor = stop.corBus, !cor.isEmpty { return true }
             case .funicular:
-                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corFunicular, !cor.isEmpty { return true }
             }
         }
         return false
@@ -422,7 +404,7 @@ struct NearbyStopsSectionView: View {
 
     var nearbyStops: [Stop] {
         var stops: [Stop] = []
-        var seenKeys: Set<String> = []  // Deduplicate by name + network type
+        var seenKeys: Set<String> = []  // Deduplicate by name + transport type
         let enabledTypes = DataService.getEnabledTransportTypes()
 
         // Sort by distance
@@ -634,8 +616,8 @@ struct StopCardView: View {
         hasLoadedOnce = true
         isLoading = false
 
-        // Fetch air quality for Metro Sevilla stops
-        if stop.id.hasPrefix("METRO_SEVILLA_") {
+        // Fetch air quality (endpoint returns empty for stops that don't support it)
+        if stop.transportType == .metro {
             airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
         }
     }

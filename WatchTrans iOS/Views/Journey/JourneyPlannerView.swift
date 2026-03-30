@@ -400,44 +400,26 @@ struct JourneyPlannerView: View {
 
     // MARK: - Transport Type Filter
 
-    /// Extract network type from stop ID
-    private func networkType(for stop: Stop) -> String {
-        if let underscore = stop.id.firstIndex(of: "_") {
-            return String(stop.id.prefix(upTo: underscore))
-        }
-        return "OTHER"
-    }
-
     /// Check if stop matches any of the enabled transport types
     private func stopMatchesEnabledTypes(_ stop: Stop, enabledTypes: Set<TransportType>) -> Bool {
         if enabledTypes.isEmpty { return true }
 
-        let network = networkType(for: stop).uppercased()
+        // Match by the stop's own transport type
+        if enabledTypes.contains(stop.transportType) { return true }
 
+        // Also match if the stop has correspondences for an enabled type
         for type in enabledTypes {
             switch type {
             case .metro:
-                if network == "METRO" || network == "ML" || network == "TMB_METRO"
-                    || (stop.corMetro != nil && !stop.corMetro!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corMetro, !cor.isEmpty { return true }
             case .tren:
-                if network == "RENFE" || network == "FGC" || network == "EUSKOTREN"
-                    || (stop.corTren != nil && !stop.corTren!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corTren, !cor.isEmpty { return true }
             case .tram:
-                if network == "TRAM" || (stop.corTranvia != nil && !stop.corTranvia!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corTranvia, !cor.isEmpty { return true }
             case .bus:
-                if network == "BUS" || (stop.corBus != nil && !stop.corBus!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corBus, !cor.isEmpty { return true }
             case .funicular:
-                if network == "FUNICULAR" || (stop.corFunicular != nil && !stop.corFunicular!.isEmpty) {
-                    return true
-                }
+                if let cor = stop.corFunicular, !cor.isEmpty { return true }
             }
         }
         return false

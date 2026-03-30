@@ -249,32 +249,12 @@ struct StopDetailView: View {
         isLoading = false
     }
 
-    /// Abbreviate long stop names for nav title
+    /// Truncate long stop names for nav title
     private func abbreviateStopName(_ name: String) -> String {
-        if name.count <= 15 {
+        if name.count <= 18 {
             return name
         }
-
-        var abbreviated = name
-        let replacements = [
-            "Chamartín-Clara Campoamor": "Chamrt.",
-            "Guadalajara": "Guadljr.",
-            "Aeropuerto": "Aerop.",
-            "San Sebastián de los Reyes": "S.S. Reyes",
-            "Alcobendas": "Alcob.",
-            "Universidad": "Univ.",
-            "Cercanías": "Cerc."
-        ]
-
-        for (long, short) in replacements {
-            abbreviated = abbreviated.replacingOccurrences(of: long, with: short)
-        }
-
-        if abbreviated.count > 18 {
-            return String(abbreviated.prefix(15)) + "..."
-        }
-
-        return abbreviated
+        return String(name.prefix(15)) + "..."
     }
 }
 
