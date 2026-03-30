@@ -387,10 +387,10 @@ struct StopDetailView: View {
         // Enrich departures with vehicle occupancy
         // Note: operatorId "fgc" is kept as-is; the endpoint returns empty for non-FGC stops
         let occupancy = (try? await dataService.gtfsRealtimeService.fetchVehicleOccupancy(operatorId: "fgc")) ?? []
-        let occByTrip = Dictionary(uniqueKeysWithValues: occupancy.compactMap { occ -> (String, Int)? in
+        let occByTrip = Dictionary(occupancy.compactMap { occ -> (String, Int)? in
             guard let tripId = occ.tripId else { return nil }
             return (tripId, occ.occupancyStatus)
-        })
+        }, uniquingKeysWith: { _, latest in latest })
         for i in departures.indices {
             if let status = occByTrip[departures[i].id] {
                 departures[i].vehicleOccupancyStatus = status

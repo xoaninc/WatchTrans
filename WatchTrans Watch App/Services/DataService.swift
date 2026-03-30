@@ -1447,10 +1447,10 @@ class DataService {
             }
         }
 
-        // For Metro branch lines: "7b" -> "L7B", "9b" -> "L9B", "10b" -> "L10B"
-        // Check if it ends with 'b' and starts with a number
-        if lowerId.hasSuffix("b") && lowerId.first?.isNumber == true {
-            let metroName = "l\(lowerId)"  // "7b" -> "l7b"
+        // For Metro branch lines: "7a" -> "L7a", "7b" -> "L7b", "9A" -> "L9A", "10b" -> "L10b"
+        // Check if it ends with a letter and starts with a number
+        if lowerId.count >= 2 && lowerId.last?.isLetter == true && lowerId.first?.isNumber == true {
+            let metroName = "l\(lowerId)"
             if let metro = lines.first(where: { $0.name.lowercased() == metroName && $0.type == .metro }) {
                 return metro
             }
