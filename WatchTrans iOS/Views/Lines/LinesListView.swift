@@ -96,10 +96,10 @@ struct LinesListView: View {
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
             return sortedNumerically(dataService.filteredLines
-                .filter { $0.id.hasPrefix("METRO_LIGERO_") || $0.id.hasPrefix("ML_") })
+                .filter { $0.id.hasPrefix("CRTM_ML") })
         }
         return sortedNumerically(dataService.filteredLines
-            .filter { ($0.id.hasPrefix("METRO_LIGERO_") || $0.id.hasPrefix("ML_")) && $0.nucleo.lowercased() == province })
+            .filter { $0.id.hasPrefix("CRTM_ML") && $0.nucleo.lowercased() == province })
     }
 
     // Get Tram lines for the current location
@@ -331,7 +331,7 @@ struct LineRowView: View {
 
     /// Metro Ligero and Ramal use inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        (line.id.hasPrefix("METRO_LIGERO_") || line.id.hasPrefix("ML_")) || line.name == "R"
+        line.id.hasPrefix("CRTM_ML") || line.name == "R"
     }
 
     var body: some View {

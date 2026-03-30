@@ -362,7 +362,7 @@ struct LineHeaderView: View {
 
     /// Metro Ligero and Ramal use inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        (line.id.hasPrefix("METRO_LIGERO_") || line.id.hasPrefix("ML_")) || line.name == "R"
+        line.id.hasPrefix("CRTM_ML") || line.name == "R"
     }
 
     var body: some View {

@@ -1078,7 +1078,7 @@ struct ConnectionsSectionView: View {
         switch badge.kind {
         case .tren: prefixes = ["RENFE_C_", "RENFE_FEVE_", "RENFE_PROX_", "EUSKOTREN_", "FGC_", "SFM_MALLORCA_"]
         case .metro: prefixes = ["METRO_", "TMB_METRO_"]
-        case .metroLigero: prefixes = ["ML_"]
+        case .metroLigero: prefixes = ["ML1_", "MLO_"]
         case .tram: prefixes = ["TRAM_", "TRANVIA_"]
         case .funicular: prefixes = ["TMB_METRO_", "FGC_"]
         case .bus: prefixes = ["BUS_"]
