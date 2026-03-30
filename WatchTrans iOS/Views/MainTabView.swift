@@ -221,9 +221,10 @@ struct MainTabView: View {
     }
 
     private func prefetchArrivalsForHomeView() async {
+        let loadedStopIds = Set(dataService.stops.map { $0.id })
         var stopIds = Set<String>()
         if let manager = favoritesManager {
-            for favorite in manager.favorites {
+            for favorite in manager.favorites where loadedStopIds.contains(favorite.stopId) {
                 stopIds.insert(favorite.stopId)
             }
         }

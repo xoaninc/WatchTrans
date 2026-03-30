@@ -112,7 +112,26 @@ class DataService {
     init() {
         self.networkService = NetworkService()
         self.gtfsRealtimeService = GTFSRealtimeService(networkService: networkService)
+        migrateFromLegacyCache()
         loadFromDisk()
+    }
+
+    /// One-time migration: delete legacy cache files and any stale new cache from before agencyName was added
+    private func migrateFromLegacyCache() {
+        let migrationKey = "cache_migrated_to_storage_v2"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let legacyFiles = ["stops_cache.json", "lines_cache.json", "line_colors_cache.json",
+                           "location_cache.json", "platforms_cache.json", "shape_cache.json"]
+        for file in legacyFiles {
+            try? FileManager.default.removeItem(at: caches.appendingPathComponent(file))
+        }
+        // Also clear the new Storage folder (may have been created without agencyName)
+        try? storage.removeAll()
+
+        UserDefaults.standard.set(true, forKey: migrationKey)
+        DebugLog.log("📦 [Cache] Migrated from legacy cache — all caches cleared")
     }
 
     // MARK: - Persistent Cache Methods
