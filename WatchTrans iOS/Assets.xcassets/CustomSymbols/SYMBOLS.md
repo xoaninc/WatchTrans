@@ -14,9 +14,9 @@ La app usa `TransportType` (5 cases) basado en el campo `route_type` GTFS de la 
 | `.bus` | 3 | `.red` | Buses |
 | `.funicular` | 7 | `.brown` | Funiculares |
 
-**Eliminados en esta sesión:** `.metroLigero` (fusionado con `.metro`), `.fgc` (fusionado con `.tren`), `.euskotren` (fusionado con `.tren`).
+Anteriormente existían `.metroLigero`, `.fgc`, `.euskotren` — fusionados en `.metro`/`.tren` respectivamente.
 
-**Nota:** `TransportMode` (Journey planner) y `LogoType` (LogoImageView) son enums internos separados que SÍ mantienen `.metroLigero`, `.fgc`, `.euskotren` para logos de operadores y modos de transporte de la API.
+`LogoImageView` ya no tiene enum `LogoType` — solo recibe `TransportType` y muestra el icono genérico. Cuando la API envíe `logo` en `/networks`, se añadirá carga remota.
 
 ## Assets custom
 
