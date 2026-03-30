@@ -360,9 +360,9 @@ struct LineHeaderView: View {
         Color(hex: line.colorHex) ?? .blue
     }
 
-    /// Metro Ligero uses inverted style: white background, colored border and text
+    /// Metro Ligero and Ramal use inverted style: white background, colored border and text
     var isMetroLigero: Bool {
-        line.type == .metro
+        (line.id.hasPrefix("METRO_LIGERO_") || line.id.hasPrefix("ML_")) || line.name == "R"
     }
 
     var body: some View {
