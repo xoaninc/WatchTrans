@@ -144,19 +144,21 @@ struct Arrival: Identifiable, Codable {
         return max(0, Int(interval / 60))
     }
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     /// Formatted scheduled time string (e.g., "18:54")
     var scheduledTimeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: scheduledTime)
+        Self.timeFormatter.string(from: scheduledTime)
     }
 
     /// Formatted expected time string (e.g., "18:54")
     /// Uses expectedTime which includes any delays
     var expectedTimeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: expectedTime)
+        Self.timeFormatter.string(from: expectedTime)
     }
 
     /// Check if this line has GTFS-RT (real-time data with precise schedules)

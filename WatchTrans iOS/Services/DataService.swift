@@ -158,9 +158,7 @@ class DataService {
 
     /// Save shape cache to disk
     private func saveShapeCache() {
-        shapeCacheQueue.sync {
-            try? storage.save(object: shapeCache, forKey: "shapes")
-        }
+        try? storage.save(object: shapeCache, forKey: "shapes")
     }
 
     /// Generate hash from coordinates for cache validation
@@ -178,17 +176,16 @@ class DataService {
         let timestamp: Date
 
         var isValid: Bool {
-            Date().timeIntervalSince(timestamp) < APIConfiguration.arrivalCacheTTL
+            Date.now.timeIntervalSince(timestamp) < APIConfiguration.arrivalCacheTTL
         }
 
         /// Cache entry is old but still within grace period (can be used as fallback)
         var isWithinGracePeriod: Bool {
-            Date().timeIntervalSince(timestamp) < APIConfiguration.staleCacheGracePeriod
+            Date.now.timeIntervalSince(timestamp) < APIConfiguration.staleCacheGracePeriod
         }
     }
 
     private var arrivalCache: [String: CacheEntry] = [:]
-    private let cacheLock = NSLock()
 
     /// In-flight arrival requests to deduplicate concurrent fetches for the same stop
     private var inFlightArrivals: [String: Task<[Arrival], Never>] = [:]
@@ -197,7 +194,6 @@ class DataService {
 
     /// Cache of route shapes - shapes don't change often, so cache indefinitely during session
     private var shapeCache: [String: [ShapePoint]] = [:]
-    private let shapeCacheQueue = DispatchQueue(label: "com.watchtrans.shapecache")
 
     // MARK: - Public Methods
 
@@ -208,8 +204,8 @@ class DataService {
 
     func fetchTransportData(latitude: Double? = nil, longitude: Double? = nil) async {
         // Debounce: skip if stops were loaded very recently
-        if let lastLoad = lastStopsLoadTime, Date().timeIntervalSince(lastLoad) < 10, !stops.isEmpty {
-            DebugLog.log("📍 [DataService] Skipping fetchTransportData (loaded \(Int(Date().timeIntervalSince(lastLoad)))s ago)")
+        if let lastLoad = lastStopsLoadTime, Date.now.timeIntervalSince(lastLoad) < 10, !stops.isEmpty {
+            DebugLog.log("📍 [DataService] Skipping fetchTransportData (loaded \(Int(Date.now.timeIntervalSince(lastLoad)))s ago)")
             return
         }
 
@@ -232,7 +228,7 @@ class DataService {
         DebugLog.log("📍 [DataService] ========== LOADING STOPS ==========")
         DebugLog.log("📍 [DataService] Coordinates provided (redacted) hash: \(coordHash)")
 
-        let totalStart = Date()
+        let totalStart = Date.now
 
         // Check if we have valid cached stops (loaded from disk on init)
         let cacheValid = !stops.isEmpty && storage.exists(forKey: "stops")
@@ -241,7 +237,7 @@ class DataService {
             DebugLog.log("📦 [DataService] Using cached stops (\(stops.count) stops)")
             await setLocationContextFromStops()
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE (cached) ==========")
-            lastStopsLoadTime = Date()
+            lastStopsLoadTime = Date.now
             // Eagerly load lines so Map and correspondences work without visiting Lines tab
             await fetchLinesIfNeeded(latitude: lat, longitude: lon)
             return
@@ -250,9 +246,9 @@ class DataService {
         // Need to fetch from API (no cache or expired)
         do {
             DebugLog.log("📍 [DataService] Fetching stops from API...")
-            let stopsStart = Date()
+            let stopsStart = Date.now
             let stopResponses = try await gtfsRealtimeService.fetchStopsByCoordinates(latitude: lat, longitude: lon)
-            let stopsTime = Date().timeIntervalSince(stopsStart)
+            let stopsTime = Date.now.timeIntervalSince(stopsStart)
             DebugLog.log("📍 [DataService] ✅ Got \(stopResponses.count) stops in \(String(format: "%.2f", stopsTime))s")
 
             // Map and save new stops
@@ -306,10 +302,10 @@ class DataService {
                 await fallbackFetchProvinceAndSetContext(latitude: lat, longitude: lon)
             }
 
-            let totalTime = Date().timeIntervalSince(totalStart)
+            let totalTime = Date.now.timeIntervalSince(totalStart)
             DebugLog.log("📍 [DataService] ========== LOAD COMPLETE ==========")
             DebugLog.log("⏱️ [DataService] Total: \(stops.count) stops in \(String(format: "%.2f", totalTime))s")
-            lastStopsLoadTime = Date()
+            lastStopsLoadTime = Date.now
 
             // Eagerly load lines so Map and correspondences work without visiting Lines tab
             await fetchLinesIfNeeded(latitude: lat, longitude: lon)
@@ -462,7 +458,7 @@ class DataService {
         defer { isLoadingLines = false }
 
         DebugLog.log("📍 [DataService] ========== LOADING LINES ==========")
-        let totalStart = Date()
+        let totalStart = Date.now
 
         do {
             // Fetch networks if not yet loaded
@@ -478,7 +474,7 @@ class DataService {
 
             // NEW: Single API call to get province + ALL routes from ALL networks
             DebugLog.log("📍 [DataService] Fetching province with routes: (\(latitude), \(longitude))...")
-            let fetchStart = Date()
+            let fetchStart = Date.now
             
             struct ProvinceWithRoutesResponse: Decodable {
                 let provinceName: String
@@ -578,13 +574,13 @@ class DataService {
                 allRoutes = tempRoutes
             }
             
-            let fetchTime = Date().timeIntervalSince(fetchStart)
+            let fetchTime = Date.now.timeIntervalSince(fetchStart)
             DebugLog.log("📍 [DataService] ✅ Got \(allRoutes.count) total routes in \(String(format: "%.2f", fetchTime))s")
 
             // Process routes
-            let processStart = Date()
+            let processStart = Date.now
             await processRoutes(allRoutes, provinceName: provinceInfo.provinceName)
-            let processTime = Date().timeIntervalSince(processStart)
+            let processTime = Date.now.timeIntervalSince(processStart)
             DebugLog.log("📍 [DataService] ✅ Processed \(lines.count) lines in \(String(format: "%.2f", processTime))s")
 
             // Save to cache
@@ -596,7 +592,7 @@ class DataService {
             // Update location with network info
             await updateLocationWithNetworks()
 
-            let totalTime = Date().timeIntervalSince(totalStart)
+            let totalTime = Date.now.timeIntervalSince(totalStart)
             DebugLog.log("📍 [DataService] ========== LINES LOADED ==========")
             DebugLog.log("⏱️ [DataService] Total: \(lines.count) lines in \(String(format: "%.2f", totalTime))s")
 
@@ -894,12 +890,10 @@ class DataService {
         }
 
         if didUpdate {
-            await MainActor.run {
-                lines = updatedLines
-                // Save improved names to cache so we don't have to re-calculate next time
-                try? storage.save(object: lines, forKey: "lines")
-                saveLineColors()
-            }
+            lines = updatedLines
+            // Save improved names to cache so we don't have to re-calculate next time
+            try? storage.save(object: lines, forKey: "lines")
+            saveLineColors()
         }
     }
 
@@ -909,7 +903,7 @@ class DataService {
         if line.longName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
 
         // Metro/Tram: if API doesn't provide A - B, derive from endpoints
-        if line.type == .metro || line.type == .tram || line.type == .metro {
+        if line.type == .metro || line.type == .tram {
             return true
         }
 
@@ -1010,7 +1004,7 @@ class DataService {
     func fetchOperatingHours(routeId: String) async -> OperatingHoursResult {
         // Determine current day type (weekday=L-J, friday=V, saturday=S, sunday=D)
         let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: Date())
+        let weekday = calendar.component(.weekday, from: Date.now)
         let dayType: String
         let dayName: String
         switch weekday {
@@ -1335,7 +1329,7 @@ class DataService {
 
     /// Map offline departures to Arrival model
     private func mapOfflineDeparturesToArrivals(_ departures: [OfflineDeparture], stopId: String) -> [Arrival] {
-        let now = Date()
+        let now = Date.now
         return departures.map { dep in
             let expectedTime = now.addingTimeInterval(TimeInterval(dep.minutesUntil * 60))
             return Arrival(
@@ -1400,9 +1394,6 @@ class DataService {
     // MARK: - Cache Helpers
 
     private func getCachedArrivals(for stopId: String) -> [Arrival]? {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-
         guard let entry = arrivalCache[stopId], entry.isValid else {
             return nil
         }
@@ -1410,17 +1401,11 @@ class DataService {
     }
 
     private func cacheArrivals(_ arrivals: [Arrival], for stopId: String) {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-
-        arrivalCache[stopId] = CacheEntry(arrivals: arrivals, timestamp: Date())
+        arrivalCache[stopId] = CacheEntry(arrivals: arrivals, timestamp: Date.now)
     }
 
     /// Get stale cached arrivals (within grace period) - useful for showing data immediately while refreshing
     func getStaleCachedArrivals(for stopId: String) -> [Arrival]? {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-
         guard let entry = arrivalCache[stopId], entry.isWithinGracePeriod else {
             return nil
         }
@@ -1429,12 +1414,9 @@ class DataService {
 
     /// Clear arrival cache (useful for pull-to-refresh)
     func clearArrivalCache() {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-
         arrivalCache.removeAll()
     }
-    
+
     /// Clear all persistent caches (stops, lines, colors, platforms, shapes)
     /// Call this from Settings when user wants to force refresh all data
     func clearAllPersistentCaches() {
@@ -1444,12 +1426,10 @@ class DataService {
         try? storage.removeAll()
 
         // Clear in-memory caches
-        cacheLock.lock()
         arrivalCache.removeAll()
         platformsCache.removeAll()
         shapeCache.removeAll()
         lineColorsCache.removeAll()
-        cacheLock.unlock()
 
         DebugLog.log("✅ [DataService] All caches cleared successfully")
     }
@@ -1892,7 +1872,7 @@ class DataService {
             
             for var corr in rawCorrespondences {
                 // 1. Try to resolve missing name from global cache
-                if corr.toStopName == nil || corr.toStopName!.isEmpty {
+                if (corr.toStopName ?? "").isEmpty {
                     if let cached = self.getStop(by: corr.toStopId) {
                         corr = corr.withResolvedName(cached.name)
                     }
@@ -1900,8 +1880,8 @@ class DataService {
                 
                 // 2. Filter out "junk" entries (no name AND no lines)
                 // These are usually internal nodes or platform definitions without useful info
-                if (corr.toStopName == nil || corr.toStopName!.isEmpty) && 
-                   (corr.toLines == nil || corr.toLines!.isEmpty) {
+                if (corr.toStopName ?? "").isEmpty && 
+                   (corr.toLines ?? "").isEmpty {
                     continue
                 }
                 
@@ -1984,10 +1964,10 @@ class DataService {
     /// - Parameter maxGap: If provided, normalizes coordinates to have no gaps > maxGap meters
     func fetchRouteShape(routeId: String, maxGap: Int? = nil) async -> [ShapePoint] {
         // Create cache key including maxGap to differentiate normalized vs raw shapes
-        let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
+        let cacheKey = maxGap.map { "\(routeId)_gap\($0)" } ?? routeId
 
         // Check cache first (thread-safe)
-        let cached: [ShapePoint]? = shapeCacheQueue.sync { shapeCache[cacheKey] }
+        let cached: [ShapePoint]? = shapeCache[cacheKey]
         if let cached = cached {
             DebugLog.log("🗺️ [DataService] ✅ Shape CACHE HIT for \(routeId) (\(cached.count) points)")
             return cached
@@ -1997,10 +1977,10 @@ class DataService {
         do {
             let response = try await gtfsRealtimeService.fetchRouteShape(routeId: routeId, maxGap: maxGap)
             let sorted = response.shape.sorted { $0.sequence < $1.sequence }
-            DebugLog.log("🗺️ [DataService] Fetched \(sorted.count) shape points for \(routeId)\(maxGap != nil ? " (normalized max_gap=\(maxGap!))" : "")")
+            DebugLog.log("🗺️ [DataService] Fetched \(sorted.count) shape points for \(routeId)\(maxGap.map { " (normalized max_gap=\($0))" } ?? "")")
 
             // Store in cache (thread-safe)
-            shapeCacheQueue.sync { shapeCache[cacheKey] = sorted }
+            shapeCache[cacheKey] = sorted
             
             // Save to disk (background)
             Task(priority: .background) {
@@ -2070,15 +2050,15 @@ class DataService {
                     fallbackStopCoords[stop.id] = CLLocationCoordinate2D(latitude: stop.lat, longitude: stop.lon)
                 }
 
-                let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
-                shapeCacheQueue.sync { shapeCache[cacheKey] = fallbackPoints }
+                let cacheKey = maxGap.map { "\(routeId)_gap\($0)" } ?? routeId
+                shapeCache[cacheKey] = fallbackPoints
                 Task(priority: .background) { saveShapeCache() }
                 return ShapeWithStops(shapePoints: fallbackPoints, stopCoordinates: fallbackStopCoords)
             }
 
             // Also cache the shape points for the regular fetchRouteShape function
-            let cacheKey = maxGap != nil ? "\(routeId)_gap\(maxGap!)" : routeId
-            shapeCacheQueue.sync { shapeCache[cacheKey] = sortedShape }
+            let cacheKey = maxGap.map { "\(routeId)_gap\($0)" } ?? routeId
+            shapeCache[cacheKey] = sortedShape
             Task(priority: .background) { saveShapeCache() }
 
             return ShapeWithStops(shapePoints: sortedShape, stopCoordinates: stopCoords)

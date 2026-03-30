@@ -145,6 +145,7 @@ struct RouteMapView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityLabel("Pantalla completa")
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
@@ -387,6 +388,7 @@ struct FullScreenMapView: View {
                         } label: {
                             Image(systemName: "map")
                         }
+                        .accessibilityLabel("Estilo de mapa")
                     }
                 }
         }

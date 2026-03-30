@@ -36,20 +36,22 @@ struct Journey: Identifiable {
         segments.last?.arrivalTime
     }
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     /// Formatted departure time (HH:mm)
     var departureTimeString: String? {
         guard let time = departureTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: time)
+        return Self.timeFormatter.string(from: time)
     }
 
     /// Formatted arrival time (HH:mm)
     var arrivalTimeString: String? {
         guard let time = arrivalTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: time)
+        return Self.timeFormatter.string(from: time)
     }
 
     /// Calculate total duration
@@ -100,20 +102,22 @@ struct JourneySegment: Identifiable {
         intermediateStops.count + 1
     }
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     /// Formatted departure time (HH:mm)
     var departureTimeString: String? {
         guard let time = departureTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: time)
+        return Self.timeFormatter.string(from: time)
     }
 
     /// Formatted arrival time (HH:mm)
     var arrivalTimeString: String? {
         guard let time = arrivalTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: time)
+        return Self.timeFormatter.string(from: time)
     }
 }
 

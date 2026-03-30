@@ -28,7 +28,7 @@ class GTFSRealtimeMapper {
         // Get current stop name to filter out terminus trains
         let currentStopName = dataService.getStop(by: stopId)?.name
 
-        let now = Date()
+        let now = Date.now
         var arrivals: [Arrival] = []
 
         DebugLog.log("🗺️ [Mapper] Processing \(departures.count) departures for stop \(stopId)")

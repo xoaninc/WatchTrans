@@ -156,6 +156,7 @@ struct FullMapView: View {
                         .clipShape(Circle())
                         .shadow(radius: 2)
                 }
+                .accessibilityLabel("Capas de líneas")
                 .padding()
             }
             Spacer()

@@ -426,9 +426,9 @@ struct NetworkPlanView: View {
                                         .scaleEffect(scale)
                                         .offset(offset)
                                         .gesture(
-                                            MagnificationGesture()
+                                            MagnifyGesture()
                                                 .onChanged { value in
-                                                    scale = lastScale * value
+                                                    scale = lastScale * value.magnification
                                                 }
                                                 .onEnded { _ in
                                                     lastScale = scale

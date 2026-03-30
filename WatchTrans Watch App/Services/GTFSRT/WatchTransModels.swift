@@ -317,7 +317,6 @@ struct StopResponse: Codable, Identifiable {
 
     // Additional fields from by-coordinates endpoint
     let province: String?
-    let lineas: String?  // Comma-separated line names: "C1,C10,C2,C3"
     let parkingBicis: String?
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
@@ -334,7 +333,7 @@ struct StopResponse: Codable, Identifiable {
     let suspendedSince: String?   // ISO8601 timestamp when service was suspended
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, sequence, code, province, accesibilidad, lineas, correspondences
+        case id, name, lat, lon, sequence, code, province, accesibilidad, correspondences
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
@@ -1174,7 +1173,6 @@ struct StopFullDetailResponse: Codable {
     let lat: Double
     let lon: Double
     let province: String?
-    let lineas: String?
     let locationType: Int?
     let parentStationId: String?
     let isHub: Bool?
@@ -1184,7 +1182,7 @@ struct StopFullDetailResponse: Codable {
     let accesses: [StationAccess]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, province, lineas
+        case id, name, lat, lon, province
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case isHub = "is_hub"

@@ -235,6 +235,7 @@ struct StopDetailView: View {
                         Image(systemName: "arrow.triangle.turn.up.right.diamond")
                             .foregroundStyle(.blue)
                     }
+                    .accessibilityLabel("Abrir en mapas")
 
                     // Favorite button
                     if let manager = favoritesManager {

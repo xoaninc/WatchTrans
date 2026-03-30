@@ -65,7 +65,7 @@ struct LineDetailView: View {
                             ProgressView()
                                 .scaleEffect(0.5)
                         } else {
-                            Text("\(stops.count) stops")
+                            Text("\(stops.count) paradas")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }

@@ -142,7 +142,7 @@ struct StopDetailView: View {
                 // Departures section
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Departures")
+                        Text("Próximas salidas")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
@@ -165,7 +165,7 @@ struct StopDetailView: View {
                         }
                         .padding(.vertical, 20)
                     } else if departures.isEmpty {
-                        Text("No departures available")
+                        Text("No hay salidas disponibles")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding()
