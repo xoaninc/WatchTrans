@@ -8,6 +8,14 @@
 
 import SwiftUI
 
+/// Represents a group of lines belonging to one operator/network
+struct LineSection: Identifiable {
+    let id: String           // agencyId
+    let name: String         // network name from API, fallback to agencyId
+    let type: TransportType
+    let lines: [Line]
+}
+
 struct LinesView: View {
     let dataService: DataService
     let locationService: LocationService
@@ -17,98 +25,49 @@ struct LinesView: View {
         dataService.currentLocation?.provinceName.lowercased()
     }
 
-    // Check if current location is Barcelona/Catalunya (for Rodalies branding)
-    // Uses LocationContext.isRodalies which checks network_id == "51T"
-    var isRodalies: Bool {
-        dataService.currentLocation?.isRodalies ?? false
-    }
+    // MARK: - Data-Driven Section Grouping
 
-    // Check if current location is Sevilla (for Metro Sevilla logo)
-    var isSevilla: Bool {
-        currentProvince == "sevilla"
-    }
+    /// Groups lines by agencyId and resolves display names from the networks API
+    private var lineSections: [LineSection] {
+        let province = currentProvince
+        let filtered: [Line]
+        if let province {
+            filtered = dataService.lines.filter { $0.nucleo.lowercased() == province }
+        } else {
+            filtered = dataService.lines
+        }
 
-    // Metro section title based on province
-    var metroSectionTitle: String {
-        guard let province = currentProvince else { return "Metro" }
-        switch province {
-        case "sevilla": return "Metro Sevilla"
-        case "vizcaya", "bilbao": return "Metro Bilbao"
-        case "valencia": return "Metrovalencia"
-        case "málaga", "malaga": return "Metro Málaga"
-        case "granada": return "Metro Granada"
-        case "santa cruz de tenerife", "tenerife": return "Tranvía Tenerife"
-        case "barcelona", "rodalies de catalunya": return "Metro Barcelona"
-        default: return "Metro"
+        let grouped = Dictionary(grouping: filtered) { $0.agencyId }
+        let networks = dataService.currentLocation?.networks ?? []
+
+        let sections = grouped.map { (agencyId, lines) -> LineSection in
+            let networkName = networks.first { $0.code == agencyId }?.name ?? agencyId
+            let type = lines.first?.type ?? .tren
+            return LineSection(
+                id: agencyId,
+                name: networkName,
+                type: type,
+                lines: lines.sorted { compareLineWithType($0, $1) }
+            )
+        }
+
+        return sections.sorted { a, b in
+            let aOrder = transportTypeOrder(a.type)
+            let bOrder = transportTypeOrder(b.type)
+            if aOrder != bOrder { return aOrder < bOrder }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
         }
     }
 
-    // Tram section title based on province
-    var tramSectionTitle: String {
-        guard let province = currentProvince else { return "Tranvía" }
-        switch province {
-        case "sevilla": return "MetroCentro"
-        case "zaragoza": return "Tranvía Zaragoza"
-        case "alicante": return "TRAM Alicante"
-        case "murcia": return "Tranvía Murcia"
-        case "barcelona", "rodalies de catalunya": return "Tram Barcelona"
-        default: return "Tranvía"
+    /// Sorting priority for transport types
+    private func transportTypeOrder(_ type: TransportType) -> Int {
+        switch type {
+        case .tren: return 0
+        case .metro: return 1
+        case .tram: return 2
+        case .bus: return 3
+        case .funicular: return 4
         }
-    }
-
-    // Get Cercanías/Rodalies lines for the current location
-    var cercaniasLines: [Line] {
-        guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .tren }.sorted { compareLineWithType($0, $1) }
-        }
-
-        return dataService.lines
-            .filter { $0.type == .tren && $0.nucleo.lowercased() == province }
-            .sorted { compareLineWithType($0, $1) }
-    }
-
-    // Get Metro lines for the current location
-    var metroLines: [Line] {
-        guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .metro }.sorted { compareLineWithType($0, $1) }
-        }
-
-        return dataService.lines
-            .filter { $0.type == .metro && $0.nucleo.lowercased() == province }
-            .sorted { compareLineWithType($0, $1) }
-    }
-
-    // Metro Ligero lines: agencies CRTM_ML1, CRTM_MLO, CRTM_MLT (all start with CRTM_ML)
-    var metroLigeroLines: [Line] {
-        guard let province = currentProvince else {
-            return dataService.lines.filter { $0.id.hasPrefix("CRTM_ML") }.sorted { compareLineWithType($0, $1) }
-        }
-
-        return dataService.lines
-            .filter { $0.id.hasPrefix("CRTM_ML") && $0.nucleo.lowercased() == province }
-            .sorted { compareLineWithType($0, $1) }
-    }
-
-    // Get Tram lines (excluding Metro Ligero)
-    var tramLines: [Line] {
-        guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .tram && !$0.id.hasPrefix("CRTM_ML") }.sorted { compareLineWithType($0, $1) }
-        }
-
-        return dataService.lines
-            .filter { $0.type == .tram && $0.nucleo.lowercased() == province && !$0.id.hasPrefix("CRTM_ML") }
-            .sorted { compareLineWithType($0, $1) }
-    }
-
-    // Get FGC (Ferrocarrils) lines for Barcelona
-    var fgcLines: [Line] {
-        guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .tren }.sorted { compareLineWithType($0, $1) }
-        }
-
-        return dataService.lines
-            .filter { $0.type == .tren && $0.nucleo.lowercased() == province }
-            .sorted { compareLineWithType($0, $1) }
     }
 
     // Extract sort key for line names
@@ -236,37 +195,18 @@ struct LinesView: View {
                     DebugLog.log("📋 [LinesView] currentProvince (lowercased): '\(currentProvince ?? "nil")'")
                     DebugLog.log("📋 [LinesView] Total lines in dataService: \(dataService.lines.count)")
 
-                    // Debug: Show all lines with their nucleo
-                    let byNucleo = Dictionary(grouping: dataService.lines, by: { $0.nucleo.lowercased() })
-                    DebugLog.log("📋 [LinesView] Lines grouped by nucleo:")
-                    for (nucleo, lines) in byNucleo.sorted(by: { $0.key < $1.key }) {
-                        DebugLog.log("📋 [LinesView]   '\(nucleo)': \(lines.count) lines")
-                    }
-
-                    DebugLog.log("📋 [LinesView] Filtered counts:")
-                    DebugLog.log("📋 [LinesView]   Cercanías: \(cercaniasLines.count)")
-                    DebugLog.log("📋 [LinesView]   Metro: \(metroLines.count)")
-                    DebugLog.log("📋 [LinesView]   Metro Ligero: \(metroLigeroLines.count)")
-                    DebugLog.log("📋 [LinesView]   Tram: \(tramLines.count)")
-                    DebugLog.log("📋 [LinesView]   FGC: \(fgcLines.count)")
-                    if !metroLines.isEmpty {
-                        DebugLog.log("📋 [LinesView] Metro lines: \(metroLines.map { $0.name }.joined(separator: ", "))")
-                    }
-                    if !tramLines.isEmpty {
-                        DebugLog.log("📋 [LinesView] Tram lines: \(tramLines.map { $0.name }.joined(separator: ", "))")
-                    }
-                    if !fgcLines.isEmpty {
-                        DebugLog.log("📋 [LinesView] FGC lines: \(fgcLines.map { $0.name }.joined(separator: ", "))")
+                    let sections = lineSections
+                    DebugLog.log("📋 [LinesView] Sections: \(sections.count)")
+                    for section in sections {
+                        DebugLog.log("📋 [LinesView]   \(section.name) (\(section.id)): \(section.lines.count) lines")
                     }
                 }
 
-                // 1. Cercanías/Rodalies Lines Section (first)
-                if !cercaniasLines.isEmpty {
+                ForEach(lineSections) { section in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 6) {
-                            LogoImageView(type: .tren, height: 18)
-
-                            Text(isRodalies ? "Rodalies" : "Cercanías")
+                            LogoImageView(type: section.type, height: 14)
+                            Text(section.name)
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -274,99 +214,7 @@ struct LinesView: View {
                         .padding(.horizontal, 12)
                         .padding(.top, 8)
 
-                        ForEach(cercaniasLines) { line in
-                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
-                                LineRowView(line: line)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                // 2. Metro Lines Section
-                if !metroLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 6) {
-                            LogoImageView(type: .metro, height: 14)
-
-                            Text(metroSectionTitle)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-
-                        ForEach(metroLines) { line in
-                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
-                                LineRowView(line: line)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                // 3. Metro Ligero Lines Section
-                if !metroLigeroLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 6) {
-                            LogoImageView(type: .tram, height: 14)
-
-                            Text("Metro Ligero")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-
-                        ForEach(metroLigeroLines) { line in
-                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
-                                LineRowView(line: line)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                // 4. Tram Lines Section
-                if !tramLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 6) {
-                            LogoImageView(type: .tram, height: 14)
-
-                            Text(tramSectionTitle)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-
-                        ForEach(tramLines) { line in
-                            NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
-                                LineRowView(line: line)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                // 5. FGC (Ferrocarrils) Lines Section - Barcelona only
-                if !fgcLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 6) {
-                            LogoImageView(type: .tren, height: 18)
-
-                            Text("Ferrocarrils (FGC)")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-
-                        ForEach(fgcLines) { line in
+                        ForEach(section.lines) { line in
                             NavigationLink(destination: LineDetailView(line: line, dataService: dataService, locationService: locationService)) {
                                 LineRowView(line: line)
                             }
@@ -376,7 +224,7 @@ struct LinesView: View {
                 }
 
                 // Show loading or empty state
-                if metroLines.isEmpty && metroLigeroLines.isEmpty && cercaniasLines.isEmpty && tramLines.isEmpty && fgcLines.isEmpty {
+                if lineSections.isEmpty {
                     if dataService.isLoading {
                         ProgressView("Cargando líneas...")
                             .padding()
