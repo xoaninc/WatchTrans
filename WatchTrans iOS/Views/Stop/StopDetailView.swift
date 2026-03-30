@@ -383,17 +383,16 @@ struct StopDetailView: View {
         // Process arrivals
         departures = dataService.filterArrivals(rawDepartures, for: display)
 
-        // Enrich FGC departures with vehicle occupancy
-        if stop.id.hasPrefix("FGC_") {
-            let occupancy = (try? await dataService.gtfsRealtimeService.fetchVehicleOccupancy(operatorId: "fgc")) ?? []
-            let occByTrip = Dictionary(uniqueKeysWithValues: occupancy.compactMap { occ -> (String, Int)? in
-                guard let tripId = occ.tripId else { return nil }
-                return (tripId, occ.occupancyStatus)
-            })
-            for i in departures.indices {
-                if let status = occByTrip[departures[i].id] {
-                    departures[i].vehicleOccupancyStatus = status
-                }
+        // Enrich departures with vehicle occupancy
+        // Note: operatorId "fgc" is kept as-is; the endpoint returns empty for non-FGC stops
+        let occupancy = (try? await dataService.gtfsRealtimeService.fetchVehicleOccupancy(operatorId: "fgc")) ?? []
+        let occByTrip = Dictionary(uniqueKeysWithValues: occupancy.compactMap { occ -> (String, Int)? in
+            guard let tripId = occ.tripId else { return nil }
+            return (tripId, occ.occupancyStatus)
+        })
+        for i in departures.indices {
+            if let status = occByTrip[departures[i].id] {
+                departures[i].vehicleOccupancyStatus = status
             }
         }
 
@@ -402,8 +401,9 @@ struct StopDetailView: View {
         if accesses.isEmpty, let corMetro = stop.corMetro, !corMetro.isEmpty {
             // Find Metro station with same name in loaded stops
             let metroStop = dataService.stops.first { otherStop in
-                otherStop.id.hasPrefix("METRO_") &&
-                otherStop.name.lowercased() == stop.name.lowercased()
+                otherStop.transportType == .metro &&
+                otherStop.name.lowercased() == stop.name.lowercased() &&
+                otherStop.id != stop.id
             }
             if let metroStop = metroStop {
                 DebugLog.log("🚪 [StopDetail] No accesses for \(stop.id), trying Metro station \(metroStop.id)")
@@ -419,28 +419,13 @@ struct StopDetailView: View {
         // Fetch station interior (levels + pathways for stations that support it)
         stationInterior = try? await dataService.gtfsRealtimeService.fetchStationInterior(stopId: stop.id)
 
-        // Fetch station occupancy for TMB Metro stops
-        if stop.id.hasPrefix("TMB_METRO_") {
-            stationOccupancy = (try? await dataService.gtfsRealtimeService.fetchStationOccupancy(stopIds: [stop.id])) ?? []
-        }
+        // Fetch station occupancy (endpoint returns empty for stops that don't support it)
+        stationOccupancy = (try? await dataService.gtfsRealtimeService.fetchStationOccupancy(stopIds: [stop.id])) ?? []
 
-        // Fetch equipment status and air quality for Metro Sevilla stops
-        if stop.id.hasPrefix("METRO_SEVILLA_") {
-            equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
-            airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
-
-            // Fetch operating hours for nightly shutdown detection
-            if let response = try? await dataService.gtfsRealtimeService.fetchRouteOperatingHours(routeId: "METRO_SEVILLA_L1-CE-OQ") {
-                let calendar = Calendar.current
-                let weekday = calendar.component(.weekday, from: Date())
-                switch weekday {
-                case 1: metroOperatingHours = response.sunday
-                case 7: metroOperatingHours = response.saturday
-                case 6: metroOperatingHours = response.friday
-                default: metroOperatingHours = response.weekday
-                }
-            }
-        }
+        // Fetch equipment status and air quality (endpoints return empty for stops that don't support it)
+        equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
+        airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
+        // TODO: Fetch operating hours per stop once the API supports it (previously hardcoded to METRO_SEVILLA_L1-CE-OQ)
 
         hasLoadedOnce = true
         isLoading = false
