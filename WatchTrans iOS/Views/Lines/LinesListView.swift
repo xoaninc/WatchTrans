@@ -84,7 +84,9 @@ struct LinesListView: View {
         let grouped = Dictionary(grouping: filtered) { $0.agencyId }
 
         let sections = grouped.map { (agencyId, lines) -> LineSection in
-            let networkName = dataService.networks.first { $0.code == agencyId }?.name ?? agencyId
+            let networkName = lines.first?.agencyName
+                ?? dataService.networks.first { $0.code == agencyId }?.name
+                ?? agencyId
             let type = lines.first?.type ?? .tren
             return LineSection(
                 id: agencyId,

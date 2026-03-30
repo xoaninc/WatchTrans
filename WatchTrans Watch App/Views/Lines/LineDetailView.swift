@@ -709,6 +709,7 @@ struct AlertsListView: View {
                 colorHex: "#75B6E0",
                 nucleo: "madrid",
                 agencyId: "PREVIEW",
+                agencyName: nil,
                 routeIds: ["RENFE_C1_34"],
                 isCircular: false,
                 serviceStatus: nil,

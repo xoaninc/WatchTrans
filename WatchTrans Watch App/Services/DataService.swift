@@ -833,6 +833,7 @@ class DataService {
                                                 color: route.color,
                                                 textColor: line.textColor,
                                                 agencyId: route.agencyId ?? "unknown",
+                                                agencyName: route.agencyName,
                                                 networkId: network.code,
                                                 description: nil,
                                                 isCircular: false
@@ -999,6 +1000,7 @@ class DataService {
                     colorHex: color,
                     nucleo: provinceName,
                     agencyId: route.agencyId,
+                    agencyName: route.agencyName,
                     routeIds: [route.id],
                     isCircular: route.isCircular ?? false,
                     serviceStatus: nil,
@@ -1025,6 +1027,7 @@ class DataService {
                 colorHex: value.line.colorHex,
                 nucleo: value.line.nucleo,
                 agencyId: value.line.agencyId,
+                agencyName: value.line.agencyName,
                 routeIds: value.routeIds,
                 isCircular: value.isCircular,
                 suspensionAlert: nil,  // Will be populated below
@@ -1189,6 +1192,7 @@ class DataService {
                         colorHex: line.colorHex,
                         nucleo: line.nucleo,
                         agencyId: line.agencyId,
+                        agencyName: line.agencyName,
                         routeIds: line.routeIds,
                         isCircular: line.isCircular,
                         serviceStatus: line.serviceStatus,
@@ -2803,6 +2807,7 @@ class DataService {
                     color: route.color ?? line.color,
                     textColor: line.textColor,
                     agencyId: agencyId,
+                    agencyName: route.agencyName,
                     networkId: networkId,
                     description: nil,
                     isCircular: false // Assume false for list view

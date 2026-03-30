@@ -225,12 +225,14 @@ struct LineRouteInfo: Codable {
     let longName: String
     let color: String?
     let agencyId: String?
+    let agencyName: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case color = "route_color"
         case longName = "long_name"
         case agencyId = "agency_id"
+        case agencyName = "agency_name"
     }
 }
 
@@ -245,6 +247,7 @@ struct RouteResponse: Identifiable {
     let color: String?
     let textColor: String?
     let agencyId: String
+    let agencyName: String?  // Human-readable agency name from API (e.g., "Cercanías Madrid")
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
     let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
@@ -253,6 +256,7 @@ struct RouteResponse: Identifiable {
 extension RouteResponse: Codable {
     private struct AgencyObject: Decodable {
         let id: String
+        let name: String?
     }
 
     private enum AgencyKeys: String, CodingKey {
@@ -267,6 +271,7 @@ extension RouteResponse: Codable {
         case color = "route_color"
         case textColor = "route_text_color"
         case agencyId = "agency_id"
+        case agencyName = "agency_name"
         case networkId = "network_id"
         case isCircular = "is_circular"
     }
@@ -283,13 +288,15 @@ extension RouteResponse: Codable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         isCircular = try container.decodeIfPresent(Bool.self, forKey: .isCircular)
 
-        // Handle both "agency_id" (flat string) and "agency" (nested object with .id)
+        // Handle both "agency_id" (flat string) and "agency" (nested object with .id/.name)
         if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
             agencyId = flatId
+            agencyName = try container.decodeIfPresent(String.self, forKey: .agencyName)
         } else {
             let agencyContainer = try decoder.container(keyedBy: AgencyKeys.self)
             let agency = try agencyContainer.decode(AgencyObject.self, forKey: .agency)
             agencyId = agency.id
+            agencyName = agency.name
         }
     }
 }
