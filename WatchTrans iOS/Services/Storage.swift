@@ -28,8 +28,7 @@ final class Storage {
     private let decoder = JSONDecoder()
 
     init(folder: String) {
-        let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        self.folderURL = caches.appendingPathComponent(folder, isDirectory: true)
+        self.folderURL = URL.cachesDirectory.appending(path: folder, directoryHint: .isDirectory)
         try? fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
     }
 
@@ -51,7 +50,7 @@ final class Storage {
             guard let modified = attributes[.modificationDate] as? Date else {
                 throw StorageError.notFound
             }
-            if Date().timeIntervalSince(modified) > maxAge {
+            if Date.now.timeIntervalSince(modified) > maxAge {
                 throw StorageError.expired
             }
         }
@@ -63,7 +62,8 @@ final class Storage {
             throw StorageError.decodeFailed
         }
 
-        let currentSchema = schemaKey(for: wrapper.payload)
+        // Verify schema: extract keys from raw JSON payload to avoid re-encoding
+        let currentSchema = schemaKeyFromRawJSON(data)
         guard wrapper.schema == currentSchema else {
             try? fileManager.removeItem(at: url)
             throw StorageError.schemaChanged
@@ -91,16 +91,27 @@ final class Storage {
     }
 
     private func fileURL(forKey key: String) -> URL {
-        folderURL.appendingPathComponent(key, isDirectory: false)
+        folderURL.appending(path: key, directoryHint: .notDirectory)
     }
 
-    /// Build a string of all JSON keys in the object. If a field is added/removed, this changes.
+    // MARK: - Schema Detection
+
+    /// Build schema key from an object by encoding it to JSON and extracting keys.
     private func schemaKey<T: Codable>(for object: T) -> String {
         guard let data = try? encoder.encode(object),
               let json = try? JSONSerialization.jsonObject(with: data) else {
             return ""
         }
         return extractKeys(from: json).sorted().joined(separator: ",")
+    }
+
+    /// Extract schema key from raw cached JSON data (avoids re-encoding the decoded payload).
+    private func schemaKeyFromRawJSON(_ data: Data) -> String {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let payload = json["payload"] else {
+            return ""
+        }
+        return extractKeys(from: payload).sorted().joined(separator: ",")
     }
 
     private func extractKeys(from json: Any, prefix: String = "") -> [String] {
