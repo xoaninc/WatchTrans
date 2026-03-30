@@ -764,10 +764,6 @@ class DataService {
         // Debug: Show lines by type
         let byType = Dictionary(grouping: lines, by: { $0.type })
         DebugLog.log("🚃 [ProcessRoutes] ✅ Created \(lines.count) lines:")
-        // DEBUG: Log agencyName per line to diagnose section title issue
-        for line in lines.prefix(5) {
-            DebugLog.log("🔍 [DEBUG] Line '\(line.name)' agencyId=\(line.agencyId) agencyName=\(line.agencyName ?? "NIL")")
-        }
         for (type, typeLines) in byType.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
             let names = typeLines.map { $0.name }.sorted().joined(separator: ", ")
             let suspended = typeLines.filter { $0.suspensionAlert != nil }.map { $0.name }

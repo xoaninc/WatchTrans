@@ -117,8 +117,10 @@ final class Storage {
     private func extractKeys(from json: Any, prefix: String = "") -> [String] {
         var keys: [String] = []
         if let dict = json as? [String: Any] {
-            for (key, _) in dict {
-                keys.append(prefix.isEmpty ? key : "\(prefix).\(key)")
+            for (key, value) in dict {
+                let path = prefix.isEmpty ? key : "\(prefix).\(key)"
+                let type = value is NSNull ? "null" : "\(Swift.type(of: value))"
+                keys.append("\(path):\(type)")
             }
         } else if let array = json as? [Any], let first = array.first {
             keys.append(contentsOf: extractKeys(from: first, prefix: prefix))
