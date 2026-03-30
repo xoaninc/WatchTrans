@@ -43,7 +43,7 @@ struct LinesView: View {
         let sections = grouped.map { (agencyId, lines) -> LineSection in
             let networkName = lines.first?.agencyName
                 ?? networks.first { $0.code == agencyId }?.name
-                ?? agencyId
+                ?? ""
             let type = lines.first?.type ?? .tren
             return LineSection(
                 id: agencyId,
