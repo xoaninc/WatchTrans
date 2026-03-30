@@ -450,7 +450,7 @@ struct TrainDetailView: View {
                                                 .font(.subheadline)
                                                 .fontWeight(.semibold)
                                         }
-                                        if let description = alert.descriptionText, !description.isEmpty {
+                                        if let description = alert.displayDescription, !description.isEmpty {
                                             Text(description)
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)

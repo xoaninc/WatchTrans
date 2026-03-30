@@ -828,13 +828,13 @@ struct AlertsSectionView: View {
                                     .fontWeight(.medium)
                                     .lineLimit(1)
                             }
-                            if let description = alert.descriptionText, !description.isEmpty {
+                            if let description = alert.displayDescription, !description.isEmpty {
                                 Text(description)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
                             }
-                            
+
                             // Show restoration time for suspensions
                             if let restoreTime = alert.estimatedRestorationTime {
                                 Text("Reanudación: \(restoreTime)")
@@ -861,7 +861,7 @@ struct AlertsSectionView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
-                        if let description = alert.descriptionText, !description.isEmpty {
+                        if let description = alert.displayDescription, !description.isEmpty {
                             Text(description)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

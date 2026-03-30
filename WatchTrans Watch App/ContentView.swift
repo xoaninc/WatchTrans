@@ -603,7 +603,7 @@ struct AlertBannerView: View {
             return header
         }
 
-        let description = alert.descriptionText ?? "Alerta de servicio"
+        let description = alert.displayDescription ?? "Alerta de servicio"
         if description.count > 60 {
             return String(description.prefix(57)) + "..."
         }

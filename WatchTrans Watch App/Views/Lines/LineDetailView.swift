@@ -255,7 +255,7 @@ struct LineAlertBannerView: View {
             return header
         }
         // Extract first line of description as header fallback
-        if let description = alert.descriptionText, !description.isEmpty {
+        if let description = alert.displayDescription, !description.isEmpty {
             let firstLine = description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
             return firstLine ?? description
         }
@@ -678,7 +678,7 @@ struct AlertsListView: View {
                                 .font(.caption)
                                 .fontWeight(.semibold)
                         }
-                        if let description = alert.descriptionText, !description.isEmpty {
+                        if let description = alert.displayDescription, !description.isEmpty {
                             Text(description)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

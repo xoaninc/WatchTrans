@@ -501,6 +501,11 @@ struct AlertResponse: Codable, Identifiable {
         case activePeriods = "active_periods"
     }
 
+    /// Prefer AI summary over raw GTFS description_text
+    var displayDescription: String? {
+        aiSummary ?? descriptionText
+    }
+
     /// Color based on GTFS-RT effect type
     var severityColor: Color {
         switch effect {

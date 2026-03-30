@@ -510,12 +510,12 @@ struct AlertBannerCompactView: View {
             return header
         }
         // Use first line of description as header if headerText is empty
-        if let description = alert.descriptionText, !description.isEmpty {
+        if let description = alert.displayDescription, !description.isEmpty {
             return description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
         }
         return nil
     }
-    
+
     private var shouldShowFullDescription: Bool {
         // Only show full description if we have a proper headerText
         alert.headerText != nil && !alert.headerText!.isEmpty
@@ -535,7 +535,7 @@ struct AlertBannerCompactView: View {
                         .fontWeight(.medium)
                         .lineLimit(2)
                 }
-                if shouldShowFullDescription, let description = alert.descriptionText, !description.isEmpty {
+                if shouldShowFullDescription, let description = alert.displayDescription, !description.isEmpty {
                     Text(description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -559,17 +559,17 @@ struct AlertBannerView: View {
             return header
         }
         // Use first line of description as header if headerText is empty
-        if let description = alert.descriptionText, !description.isEmpty {
+        if let description = alert.displayDescription, !description.isEmpty {
             return description.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces)
         }
         return nil
     }
-    
+
     private var effectiveDescription: String? {
         // Only show description if we have a proper headerText (not extracted from description)
         guard let header = alert.headerText, !header.isEmpty else {
             // If header is extracted from description, show remaining lines
-            if let description = alert.descriptionText, !description.isEmpty {
+            if let description = alert.displayDescription, !description.isEmpty {
                 let lines = description.components(separatedBy: .newlines)
                 if lines.count > 1 {
                     return lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -577,7 +577,7 @@ struct AlertBannerView: View {
             }
             return nil
         }
-        return alert.descriptionText
+        return alert.displayDescription
     }
 
     var body: some View {
