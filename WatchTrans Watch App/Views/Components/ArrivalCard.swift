@@ -44,14 +44,14 @@ struct ArrivalCard: View {
             // Metro/ML: line color (no real-time delay info)
             HStack {
                 ProgressView(value: arrival.progressValue)
-                    .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
+                    .tint(arrival.isDelayed ? .orange : .green)
                     .frame(height: 4)
 
                 // Show actual minutes until arrival for all lines
                 // For frequency-based (Metro/ML): show minutes + frequency indicator
                 // For Cercanías >= 30 min: show actual time
                 // For non-Cercanías > 30 min: show "+ 30 min"
-                if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
+                if arrival.minutesUntilArrival > 30 && arrival.transportType != .tren {
                     Text("+ 30 min")
                         .font(.caption)
                         .fontWeight(.semibold)

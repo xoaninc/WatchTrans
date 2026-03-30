@@ -50,8 +50,8 @@ struct TrainDetailView: View {
                                 Text(arrival.destination)
                                     .font(.title2)
                                     .fontWeight(.semibold)
-                                if arrival.routeId?.hasPrefix("METRO_SEVILLA") == true {
-                                    Text(arrival.isDoubleComposition ? "/Doble" : "/Simple")
+                                if arrival.isDoubleComposition {
+                                    Text("/Doble")
                                         .font(.title2)
                                         .foregroundStyle(.blue)
                                 }
@@ -165,7 +165,7 @@ struct TrainDetailView: View {
 
                     // Progress bar
                     ProgressView(value: arrival.progressValue)
-                        .tint(arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green))
+                        .tint(arrival.isDelayed ? .orange : .green)
                         .scaleEffect(y: 2)
                         .padding(.top, 4)
 

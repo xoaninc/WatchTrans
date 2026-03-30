@@ -225,43 +225,6 @@ struct Arrival: Identifiable, Codable {
         }
     }
 
-    /// Check if this is a Metro/ML line (static GTFS, no real-time delay info)
-    /// Uses lineId to distinguish Metro from FGC (both have L-prefixed lines)
-    var isMetroLine: Bool {
-        // If API says it's frequency-based, trust that
-        if frequencyBased { return true }
-
-        // Check by agency in lineId (e.g., "TMB_METRO_l1", "METRO_MADRID_l1")
-        let lowerLineId = lineId.lowercased()
-        if lowerLineId.contains("metro") { return true }
-        if lowerLineId.contains("11t") { return true }  // Metro Madrid network
-
-        // FGC lines should NOT be detected as Metro
-        if lowerLineId.contains("fgc") { return false }
-
-        // Fallback to name-based detection for ML (Metro Ligero)
-        return lineName.hasPrefix("ML")
-    }
-
-    /// Check if this is a frequency-based line (Metro, ML, Tranvía)
-    /// These lines don't have precise schedules, only frequency info
-    var isFrequencyBasedLine: Bool {
-        // If API explicitly says frequency-based, trust that
-        if frequencyBased { return true }
-
-        // Check by agency
-        let lowerLineId = lineId.lowercased()
-        if lowerLineId.contains("metro") { return true }
-        if lowerLineId.contains("tram") || lowerLineId.contains("tranvia") { return true }
-        if lowerLineId.contains("11t") || lowerLineId.contains("12t") { return true }  // Metro/ML Madrid
-
-        // FGC is NOT purely frequency-based (has scheduled times)
-        if lowerLineId.contains("fgc") { return false }
-
-        // Fallback for ML and T lines
-        return lineName.hasPrefix("ML") || lineName.hasPrefix("T")
-    }
-
     // MARK: - Occupancy
 
     /// Occupancy level for display (green/yellow/red/gray)
@@ -280,15 +243,6 @@ struct Arrival: Identifiable, Codable {
         occupancyStatus != nil && occupancyStatus != 7 && occupancyStatus != 8
     }
 
-    /// Check if this is a Cercanías/Rodalies line
-    /// These are the only lines that show exact times even for > 30 min
-    var isCercaniasLine: Bool {
-        let lowerLineId = lineId.lowercased()
-        if lowerLineId.contains("fgc") { return false }
-        if lowerLineId.contains("renfe") || lowerLineId.contains("sfm") || lowerLineId.contains("euskotren") { return true }
-        if lineName.hasPrefix("C") && !lowerLineId.contains("metro") { return true }
-        return false
-    }
 }
 
 // MARK: - Occupancy Level

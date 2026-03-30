@@ -199,43 +199,6 @@ struct Arrival: Identifiable, Codable {
         }
     }
 
-    /// Check if this is a Metro/ML line (static GTFS, no real-time delay info)
-    /// Uses lineId to distinguish Metro from FGC (both have L-prefixed lines)
-    var isMetroLine: Bool {
-        // If API says it's frequency-based, trust that
-        if frequencyBased { return true }
-
-        // Check by agency in lineId (e.g., "TMB_METRO_l1", "METRO_MADRID_l1")
-        let lowerLineId = lineId.lowercased()
-        if lowerLineId.contains("metro") { return true }
-        if lowerLineId.contains("11t") { return true }  // Metro Madrid network
-
-        // FGC lines should NOT be detected as Metro
-        if lowerLineId.contains("fgc") { return false }
-
-        // Fallback to name-based detection for ML (Metro Ligero)
-        return lineName.hasPrefix("ML")
-    }
-
-    /// Check if this is a frequency-based line (Metro, ML, Tranvía)
-    /// These lines don't have precise schedules, only frequency info
-    var isFrequencyBasedLine: Bool {
-        // If API explicitly says frequency-based, trust that
-        if frequencyBased { return true }
-
-        // Check by agency
-        let lowerLineId = lineId.lowercased()
-        if lowerLineId.contains("metro") { return true }
-        if lowerLineId.contains("tram") || lowerLineId.contains("tranvia") { return true }
-        if lowerLineId.contains("11t") || lowerLineId.contains("12t") { return true }  // Metro/ML Madrid
-
-        // FGC is NOT purely frequency-based (has scheduled times)
-        if lowerLineId.contains("fgc") { return false }
-
-        // Fallback for ML and T lines
-        return lineName.hasPrefix("ML") || lineName.hasPrefix("T")
-    }
-
     // MARK: - Occupancy
 
     /// Occupancy level for display (green/yellow/red/gray)
@@ -254,31 +217,6 @@ struct Arrival: Identifiable, Codable {
         occupancyStatus != nil && occupancyStatus != 7 && occupancyStatus != 8
     }
 
-    /// Check if this is a Cercanías/Rodalies line (C1, C2, R1, R2, etc.)
-    /// These are the only lines that show exact times even for > 30 min
-    /// Excludes FGC R-lines (R5, R6, R50, R60) which are regional but not Rodalies/Cercanías
-    var isCercaniasLine: Bool {
-        let lowerLineId = lineId.lowercased()
-
-        // FGC R-lines are NOT Cercanías/Rodalies
-        if lowerLineId.contains("fgc") { return false }
-
-        // Check by network ID in lineId
-        if lowerLineId.contains("51t") { return true }  // Rodalies de Catalunya
-        if lowerLineId.contains("10t") { return true }  // Cercanías Madrid
-        if lowerLineId.contains("30t") { return true }  // Cercanías Sevilla
-        if lowerLineId.contains("40t") { return true }  // Cercanías Valencia
-        if lowerLineId.contains("50t") { return true }  // Cercanías Málaga
-        if lowerLineId.contains("60t") { return true }  // Cercanías Bilbao
-        if lowerLineId.contains("20t") { return true }  // Cercanías Asturias
-        if lowerLineId.contains("70t") { return true }  // Cercanías Zaragoza
-
-        // Fallback: C-lines are always Cercanías, R-lines only if not FGC
-        if lineName.hasPrefix("C") { return true }
-        if lineName.hasPrefix("R") && !lowerLineId.contains("fgc") { return true }
-
-        return false
-    }
 }
 
 // MARK: - Occupancy Level

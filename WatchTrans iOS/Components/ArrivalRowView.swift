@@ -63,7 +63,7 @@ struct ArrivalRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Destination + train code + composition + icons
                 // Icons go to line 2 only when composition is shown (Metro Sevilla /Doble)
-                let showsComposition = arrival.isDoubleComposition && arrival.routeId?.hasPrefix("METRO_SEVILLA") == true
+                let showsComposition = arrival.isDoubleComposition
 
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.right")
@@ -120,7 +120,7 @@ struct ArrivalRowView: View {
 
                 // Progress bar
                 ProgressView(value: arrival.progressValue)
-                    .tint(arrival.isSuspended ? .red : (arrival.isMetroLine ? lineColor : (arrival.isDelayed ? .orange : .green)))
+                    .tint(arrival.isSuspended ? .red : (arrival.isDelayed ? .orange : .green))
             }
 
             Spacer()
@@ -128,7 +128,7 @@ struct ArrivalRowView: View {
             // Time and platform
             VStack(alignment: .trailing, spacing: 4) {
                 // Time display - show actual minutes for all lines
-                if arrival.minutesUntilArrival > 30 && !arrival.isCercaniasLine {
+                if arrival.minutesUntilArrival > 30 && arrival.transportType != .tren {
                     Text("+ 30 min")
                         .font(.headline)
                         .foregroundStyle(.secondary)
