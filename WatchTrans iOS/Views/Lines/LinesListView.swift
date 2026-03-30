@@ -92,7 +92,7 @@ struct LinesListView: View {
             .filter { $0.type == .metro && $0.nucleo.lowercased() == province })
     }
 
-    // Get Metro Ligero lines for the current location (filtered by ID prefix)
+    // Metro Ligero lines: agencies CRTM_ML1, CRTM_MLO, CRTM_MLT (all start with CRTM_ML)
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
             return sortedNumerically(dataService.filteredLines
@@ -102,13 +102,14 @@ struct LinesListView: View {
             .filter { $0.id.hasPrefix("CRTM_ML") && $0.nucleo.lowercased() == province })
     }
 
-    // Get Tram lines for the current location
+    // Get Tram lines (excluding Metro Ligero)
     var tramLines: [Line] {
         guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .tram })
+            return sortedNumerically(dataService.filteredLines
+                .filter { $0.type == .tram && !$0.id.hasPrefix("CRTM_ML") })
         }
         return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .tram && $0.nucleo.lowercased() == province })
+            .filter { $0.type == .tram && $0.nucleo.lowercased() == province && !$0.id.hasPrefix("CRTM_ML") })
     }
 
     // Get FGC lines for Barcelona (filtered by ID prefix)

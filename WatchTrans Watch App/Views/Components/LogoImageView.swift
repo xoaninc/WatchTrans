@@ -189,7 +189,7 @@ extension LogoImageView {
         self.height = height
 
         // Determine logo type from agency_id
-        if agencyId == "CRTM_ML1" || agencyId == "CRTM_MLO" {
+        if agencyId.hasPrefix("CRTM_ML") {
             self.logoType = .metroLigero
         } else if agencyId == "TMB_METRO" {
             self.logoType = .metro(nucleo: "Barcelona")

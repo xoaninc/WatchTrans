@@ -78,25 +78,25 @@ struct LinesView: View {
             .sorted { compareLineWithType($0, $1) }
     }
 
-    // Get Metro Ligero lines for the current location
+    // Metro Ligero lines: agencies CRTM_ML1, CRTM_MLO, CRTM_MLT (all start with CRTM_ML)
     var metroLigeroLines: [Line] {
         guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .metro }.sorted { compareLineWithType($0, $1) }
+            return dataService.lines.filter { $0.id.hasPrefix("CRTM_ML") }.sorted { compareLineWithType($0, $1) }
         }
 
         return dataService.lines
-            .filter { $0.type == .metro && $0.nucleo.lowercased() == province }
+            .filter { $0.id.hasPrefix("CRTM_ML") && $0.nucleo.lowercased() == province }
             .sorted { compareLineWithType($0, $1) }
     }
 
-    // Get Tram lines for the current location
+    // Get Tram lines (excluding Metro Ligero)
     var tramLines: [Line] {
         guard let province = currentProvince else {
-            return dataService.lines.filter { $0.type == .tram }.sorted { compareLineWithType($0, $1) }
+            return dataService.lines.filter { $0.type == .tram && !$0.id.hasPrefix("CRTM_ML") }.sorted { compareLineWithType($0, $1) }
         }
 
         return dataService.lines
-            .filter { $0.type == .tram && $0.nucleo.lowercased() == province }
+            .filter { $0.type == .tram && $0.nucleo.lowercased() == province && !$0.id.hasPrefix("CRTM_ML") }
             .sorted { compareLineWithType($0, $1) }
     }
 
