@@ -8,6 +8,13 @@
 import SwiftUI
 import PDFKit
 
+struct LineSection: Identifiable {
+    let id: String           // agencyId
+    let name: String         // network name from API, fallback to agencyId
+    let type: TransportType
+    let lines: [Line]
+}
+
 struct LinesListView: View {
     let dataService: DataService
     let locationService: LocationService
@@ -18,18 +25,6 @@ struct LinesListView: View {
     // Current province name helper
     private var currentProvince: String? {
         dataService.currentLocation?.provinceName.lowercased()
-    }
-
-    var isRodalies: Bool {
-        dataService.networks.contains { $0.name.lowercased().contains("rodalies") }
-    }
-
-    var metroSectionTitle: String {
-        dataService.networkDisplayName(for: .metro) ?? "Metro"
-    }
-
-    var tramSectionTitle: String {
-        dataService.networkDisplayName(for: .tram) ?? "Tranvía"
     }
 
     // MARK: - Numeric Line Sorting
@@ -74,196 +69,90 @@ struct LinesListView: View {
         lines.sorted { lineSortKey($0.name) < lineSortKey($1.name) }
     }
 
-    // Get Cercanias/Rodalies lines for the current location
-    var cercaniasLines: [Line] {
-        guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .tren })
+    // MARK: - Data-Driven Section Grouping
+
+    /// Groups lines by agencyId and resolves display names from the networks API
+    private var lineSections: [LineSection] {
+        let province = currentProvince
+        let filtered: [Line]
+        if let province {
+            filtered = dataService.filteredLines.filter { $0.nucleo.lowercased() == province }
+        } else {
+            filtered = dataService.filteredLines
         }
-        return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .tren && $0.nucleo.lowercased() == province })
+
+        let grouped = Dictionary(grouping: filtered) { $0.agencyId }
+
+        let sections = grouped.map { (agencyId, lines) -> LineSection in
+            let networkName = dataService.networks.first { $0.code == agencyId }?.name ?? agencyId
+            let type = lines.first?.type ?? .tren
+            return LineSection(
+                id: agencyId,
+                name: networkName,
+                type: type,
+                lines: sortedNumerically(lines)
+            )
+        }
+
+        return sections.sorted { a, b in
+            let aOrder = transportTypeOrder(a.type)
+            let bOrder = transportTypeOrder(b.type)
+            if aOrder != bOrder { return aOrder < bOrder }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
     }
 
-    // Get Metro lines for the current location
-    var metroLines: [Line] {
-        guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines.filter { $0.type == .metro })
+    private func transportTypeOrder(_ type: TransportType) -> Int {
+        switch type {
+        case .tren: return 0
+        case .metro: return 1
+        case .tram: return 2
+        case .bus: return 3
+        case .funicular: return 4
         }
-        return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .metro && $0.nucleo.lowercased() == province })
-    }
-
-    // Metro Ligero lines: agencies CRTM_ML1, CRTM_MLO, CRTM_MLT (all start with CRTM_ML)
-    var metroLigeroLines: [Line] {
-        guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines
-                .filter { $0.id.hasPrefix("CRTM_ML") })
-        }
-        return sortedNumerically(dataService.filteredLines
-            .filter { $0.id.hasPrefix("CRTM_ML") && $0.nucleo.lowercased() == province })
-    }
-
-    // Get Tram lines (excluding Metro Ligero)
-    var tramLines: [Line] {
-        guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines
-                .filter { $0.type == .tram && !$0.id.hasPrefix("CRTM_ML") })
-        }
-        return sortedNumerically(dataService.filteredLines
-            .filter { $0.type == .tram && $0.nucleo.lowercased() == province && !$0.id.hasPrefix("CRTM_ML") })
-    }
-
-    // Get FGC lines for Barcelona (filtered by ID prefix)
-    var fgcLines: [Line] {
-        guard let province = currentProvince else {
-            return sortedNumerically(dataService.filteredLines
-                .filter { $0.id.uppercased().hasPrefix("FGC") })
-        }
-        return sortedNumerically(dataService.filteredLines
-            .filter { $0.id.uppercased().hasPrefix("FGC") && $0.nucleo.lowercased() == province })
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 List {
-                    // Cercanias/Rodalies section
-                    if !cercaniasLines.isEmpty {
-                    Section {
-                        ForEach(cercaniasLines) { line in
-                            NavigationLink(destination: LineDetailView(
-                                line: line,
-                                dataService: dataService,
-                                locationService: locationService,
-                                favoritesManager: favoritesManager
-                            )) {
-                                LineRowView(line: line)
+                    ForEach(lineSections) { section in
+                        Section {
+                            ForEach(section.lines) { line in
+                                NavigationLink(destination: LineDetailView(
+                                    line: line,
+                                    dataService: dataService,
+                                    locationService: locationService,
+                                    favoritesManager: favoritesManager
+                                )) {
+                                    LineRowView(line: line)
+                                }
                             }
+                        } header: {
+                            SectionHeaderWithPlan(
+                                logo: LogoImageView(
+                                    type: section.type,
+                                    height: 18
+                                ),
+                                title: section.name,
+                                onShowPlan: { showingPlanFor = section.type }
+                            )
                         }
-                    } header: {
-                        SectionHeaderWithPlan(
-                            logo: LogoImageView(
-                                type: .tren,
-                                height: 22
-                            ),
-                            title: isRodalies ? "Rodalies" : "Cercanías",
-                            onShowPlan: { showingPlanFor = .tren }
-                        )
                     }
-                }
 
-                // Metro section
-                if !metroLines.isEmpty {
-                    Section {
-                        ForEach(metroLines) { line in
-                            NavigationLink(destination: LineDetailView(
-                                line: line,
-                                dataService: dataService,
-                                locationService: locationService,
-                                favoritesManager: favoritesManager
-                            )) {
-                                LineRowView(line: line)
+                    // Empty state
+                    if lineSections.isEmpty {
+                        if dataService.isLoading {
+                            HStack {
+                                Spacer()
+                                ProgressView("Cargando lineas...")
+                                Spacer()
                             }
+                        } else {
+                            Text("No hay lineas disponibles para tu ubicacion")
+                                .foregroundStyle(.secondary)
                         }
-                    } header: {
-                        SectionHeaderWithPlan(
-                            logo: LogoImageView(
-                                type: .metro,
-                                height: 18
-                            ),
-                            title: metroSectionTitle,
-                            onShowPlan: { showingPlanFor = .metro }
-                        )
                     }
-                }
-
-                // Metro Ligero section
-                if !metroLigeroLines.isEmpty {
-                    Section {
-                        ForEach(metroLigeroLines) { line in
-                            NavigationLink(destination: LineDetailView(
-                                line: line,
-                                dataService: dataService,
-                                locationService: locationService,
-                                favoritesManager: favoritesManager
-                            )) {
-                                LineRowView(line: line)
-                            }
-                        }
-                    } header: {
-                        SectionHeaderWithPlan(
-                            logo: LogoImageView(
-                                type: .metro,
-                                height: 18
-                            ),
-                            title: "Metro Ligero",
-                            onShowPlan: { showingPlanFor = .metro }
-                        )
-                    }
-                }
-
-                // Tram section
-                if !tramLines.isEmpty {
-                    Section {
-                        ForEach(tramLines) { line in
-                            NavigationLink(destination: LineDetailView(
-                                line: line,
-                                dataService: dataService,
-                                locationService: locationService,
-                                favoritesManager: favoritesManager
-                            )) {
-                                LineRowView(line: line)
-                            }
-                        }
-                    } header: {
-                        SectionHeaderWithPlan(
-                            logo: LogoImageView(
-                                type: .tram,
-                                height: 18
-                            ),
-                            title: tramSectionTitle,
-                            onShowPlan: { showingPlanFor = .tram }
-                        )
-                    }
-                }
-
-                // FGC section (Barcelona only)
-                if !fgcLines.isEmpty {
-                    Section {
-                        ForEach(fgcLines) { line in
-                            NavigationLink(destination: LineDetailView(
-                                line: line,
-                                dataService: dataService,
-                                locationService: locationService,
-                                favoritesManager: favoritesManager
-                            )) {
-                                LineRowView(line: line)
-                            }
-                        }
-                    } header: {
-                        SectionHeaderWithPlan(
-                            logo: LogoImageView(
-                                type: .tren,
-                                height: 22
-                            ),
-                            title: "Ferrocarrils (FGC)",
-                            onShowPlan: { showingPlanFor = .tren } // TODO: FGC-specific plan routing
-                        )
-                    }
-                }
-
-                // Empty state
-                if cercaniasLines.isEmpty && metroLines.isEmpty && metroLigeroLines.isEmpty && tramLines.isEmpty && fgcLines.isEmpty {
-                    if dataService.isLoading {
-                        HStack {
-                            Spacer()
-                            ProgressView("Cargando lineas...")
-                            Spacer()
-                        }
-                    } else {
-                        Text("No hay lineas disponibles para tu ubicacion")
-                            .foregroundStyle(.secondary)
-                    }
-                }
                 }
                 .listStyle(.insetGrouped)
                 .navigationTitle(dataService.currentLocation?.provinceName ?? "Lineas")
