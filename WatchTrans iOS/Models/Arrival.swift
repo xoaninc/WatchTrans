@@ -72,6 +72,7 @@ struct Arrival: Identifiable, Codable {
     var trainCode: String? = nil      // Operational train code (Renfe: "75106", Metro Bilbao: "510")
     var tripShortName: String? = nil
     var bikesAllowed: Int? = nil
+    var transportType: TransportType = .tren
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
@@ -116,7 +117,8 @@ struct Arrival: Identifiable, Codable {
             vehicleOccupancyStatus: vehicleOccupancyStatus,
             trainCode: trainCode,
             tripShortName: tripShortName,
-            bikesAllowed: bikesAllowed
+            bikesAllowed: bikesAllowed,
+            transportType: transportType
         )
     }
 

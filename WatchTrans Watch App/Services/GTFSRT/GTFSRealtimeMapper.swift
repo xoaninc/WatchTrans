@@ -111,7 +111,8 @@ class GTFSRealtimeMapper {
                 vehicleLat: departure.vehicleLat,
                 vehicleLon: departure.vehicleLon,
                 vehicleLabel: departure.vehicleLabel,
-                isDoubleComposition: isDoubleComposition
+                isDoubleComposition: isDoubleComposition,
+                transportType: line?.type ?? .tren
             )
 
             arrivals.append(arrival)

@@ -55,6 +55,7 @@ struct Arrival: Identifiable, Codable {
     let vehicleLon: Double?         // Direct vehicle longitude (outside train_position)
     var vehicleLabel: String? = nil
     var isDoubleComposition: Bool = false
+    var transportType: TransportType = .tren
 
     func withPlatform(_ platform: String?, estimated: Bool) -> Arrival {
         Arrival(
@@ -90,7 +91,8 @@ struct Arrival: Identifiable, Codable {
             vehicleLat: vehicleLat,
             vehicleLon: vehicleLon,
             vehicleLabel: vehicleLabel,
-            isDoubleComposition: isDoubleComposition
+            isDoubleComposition: isDoubleComposition,
+            transportType: transportType
         )
     }
 

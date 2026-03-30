@@ -114,7 +114,8 @@ class GTFSRealtimeMapper {
                 isAlternativeService: departure.alternativeServiceWarning ?? false,
                 trainCode: departure.trainCode,
                 tripShortName: departure.tripShortName,
-                bikesAllowed: departure.bikesAllowed
+                bikesAllowed: departure.bikesAllowed,
+                transportType: line?.type ?? .tren
             )
 
             arrivals.append(arrival)
