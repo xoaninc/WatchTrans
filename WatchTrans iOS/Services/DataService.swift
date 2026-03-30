@@ -433,12 +433,19 @@ class DataService {
     }
 
     /// Load lines on demand (lazy loading) - call when user enters Lines tab
+    private var isLoadingLinesTask = false
     func fetchLinesIfNeeded(latitude: Double, longitude: Double) async {
-        // Already loaded in this session
+        // Already loaded or in-flight
         if linesLoaded && !lines.isEmpty {
             DebugLog.log("📦 [DataService] Lines already loaded (\(lines.count) lines)")
             return
         }
+        if isLoadingLinesTask {
+            DebugLog.log("🔄 [DataService] Lines fetch already in progress, skipping")
+            return
+        }
+        isLoadingLinesTask = true
+        defer { isLoadingLinesTask = false }
 
         // Try to load from disk cache
         if let cached = try? storage.load(forKey: "lines", as: [Line].self, maxAge: Self.cacheTTL) {
@@ -1373,8 +1380,11 @@ class DataService {
             return
         }
 
-        let favorites = SharedStorage.shared.getFavorites().map { $0.stopId }
-        DebugLog.log("📦 [DataService] Caching offline schedules for \(favorites.count) favorites")
+        let allFavorites = SharedStorage.shared.getFavorites().map { $0.stopId }
+        // Only cache favorites that are in the current location's stops
+        let loadedStopIds = Set(stops.map { $0.id })
+        let favorites = allFavorites.filter { loadedStopIds.contains($0) }
+        DebugLog.log("📦 [DataService] Caching offline schedules for \(favorites.count)/\(allFavorites.count) favorites (current location)")
 
         for stopId in favorites {
             do {

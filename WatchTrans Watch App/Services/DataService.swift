@@ -413,12 +413,19 @@ class DataService {
     }
 
     /// Load lines on demand (lazy loading) - call when user enters Lines tab
+    private var isLoadingLinesTask = false
     func fetchLinesIfNeeded(latitude: Double, longitude: Double) async {
-        // Already loaded in this session
+        // Already loaded or in-flight
         if linesLoaded && !lines.isEmpty {
             DebugLog.log("📦 [DataService] Lines already loaded (\(lines.count) lines)")
             return
         }
+        if isLoadingLinesTask {
+            DebugLog.log("🔄 [DataService] Lines fetch already in progress, skipping")
+            return
+        }
+        isLoadingLinesTask = true
+        defer { isLoadingLinesTask = false }
 
         // Try to load from disk cache
         if let cached = try? storage.load(forKey: "lines", as: [Line].self, maxAge: Self.cacheTTL) {
