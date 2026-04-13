@@ -602,13 +602,33 @@ struct StopHeaderView: View {
     let stop: Stop
     let locationService: LocationService
     let favoritesManager: FavoritesManager?
+    @State private var showDescription = false
 
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(stop.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                HStack(spacing: 6) {
+                    Text(stop.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+
+                    if stop.stopDescription != nil {
+                        Button {
+                            showDescription.toggle()
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $showDescription) {
+                            Text(stop.stopDescription ?? "")
+                                .font(.body)
+                                .padding()
+                                .presentationCompactAdaptation(.popover)
+                        }
+                    }
+                }
 
                 // Province
                 if let province = stop.province, !province.isEmpty {
@@ -663,7 +683,7 @@ struct StopHeaderView: View {
                         .foregroundStyle(.brown)
                     }
 
-                    if stop.hasBusConnection {
+                    if let corBus = stop.corBus, !corBus.isEmpty {
                         HStack(spacing: 4) {
                             SymbolView(name: "BusSymbol", size: 12)
                             Text("Bus")
@@ -672,10 +692,15 @@ struct StopHeaderView: View {
                         .foregroundStyle(.orange)
                     }
 
-                    if stop.hasParking {
+                    if stop.bicycleParking >= 1 {
                         Label("Parking Bici", systemImage: "bicycle")
                             .font(.caption)
                             .foregroundStyle(.green)
+                    }
+                    if stop.carParking >= 1 {
+                        Label("Parking", systemImage: "p.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
                     }
 
                     if stop.wheelchairBoarding == 1 {
@@ -1350,9 +1375,8 @@ struct CorrespondenceRow: View {
                 longitude: -3.6893,
                 province: "Madrid",
                 accesibilidad: "Accesible",
-                hasParking: true,
-                hasBusConnection: true,
-                hasMetroConnection: true,
+                bicycleParking: 1,
+                carParking: 1,
                 corMetro: "L1",
                 corTren: "C1, C3, C4",
                 corTranvia: nil

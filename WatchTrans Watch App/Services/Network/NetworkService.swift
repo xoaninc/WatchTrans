@@ -25,6 +25,13 @@ class NetworkService {
         self.session = URLSession(configuration: configuration, delegate: URLSessionProxyDelegate(), delegateQueue: nil)
     }
 
+    /// Create a URLRequest with the API authorization header
+    private func authorizedRequest(for url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue(APIConfiguration.authHeader, forHTTPHeaderField: "Authorization")
+        return request
+    }
+
     /// Fetch and decode JSON data from a URL with automatic retry
     func fetch<T: Decodable>(_ url: URL) async throws -> T {
         return try await fetchWithRetry(url, attempt: 1)
@@ -57,7 +64,7 @@ class NetworkService {
     private func performFetch<T: Decodable>(_ url: URL) async throws -> T {
         do {
             DebugLog.log("🌐 [NetworkService] GET \(url.lastPathComponent)")
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await session.data(for: authorizedRequest(for: url))
 
             // Validate HTTP response
             guard let httpResponse = response as? HTTPURLResponse else {
@@ -135,7 +142,7 @@ class NetworkService {
     private func performFetchData(_ url: URL) async throws -> Data {
         do {
             DebugLog.log("🌐 [NetworkService] GET(data) \(url.lastPathComponent)")
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await session.data(for: authorizedRequest(for: url))
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NetworkError.badResponse
@@ -196,6 +203,7 @@ class NetworkService {
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.httpBody = body
+            request.setValue(APIConfiguration.authHeader, forHTTPHeaderField: "Authorization")
             headers.forEach { key, value in
                 request.setValue(value, forHTTPHeaderField: key)
             }

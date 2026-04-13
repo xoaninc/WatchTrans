@@ -236,6 +236,36 @@ struct LineRouteInfo: Codable {
     }
 }
 
+// MARK: - Branch Info
+
+struct BranchStopInfo: Codable, Identifiable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+    let sequence: Int
+    let wheelchairBoarding: Int?
+    let bicycleParking: Int?
+    let carParking: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, lat, lon, sequence
+        case wheelchairBoarding = "wheelchair_boarding"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+    }
+}
+
+struct BranchInfo: Codable {
+    let shapeId: String?
+    let stops: [BranchStopInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case shapeId = "shape_id"
+        case stops
+    }
+}
+
 // MARK: - Route Response
 
 /// Response from GET /api/gtfs/routes
@@ -255,6 +285,7 @@ struct RouteResponse: Identifiable {
     var suspendedSince: String? = nil // ISO date string when service was suspended
     var isAlternativeService: Bool? = nil // true if running an alternative/replacement service
     var alternativeForShortName: String? = nil // Name of the route being substituted (e.g., "C1")
+    var branches: [BranchInfo]? = nil // Non-null when route splits (obras, bifurcación). null = single route.
 }
 
 extension RouteResponse: Codable {
@@ -282,6 +313,7 @@ extension RouteResponse: Codable {
         case suspendedSince = "suspended_since"
         case isAlternativeService = "is_alternative_service"
         case alternativeForShortName = "alternative_for_short_name"
+        case branches
     }
 
     init(from decoder: Decoder) throws {
@@ -299,6 +331,7 @@ extension RouteResponse: Codable {
         suspendedSince = try container.decodeIfPresent(String.self, forKey: .suspendedSince)
         isAlternativeService = try container.decodeIfPresent(Bool.self, forKey: .isAlternativeService)
         alternativeForShortName = try container.decodeIfPresent(String.self, forKey: .alternativeForShortName)
+        branches = try container.decodeIfPresent([BranchInfo].self, forKey: .branches)
 
         // Handle both "agency_id" (flat string) and "agency" (nested object with .id/.name)
         if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
@@ -348,7 +381,9 @@ struct StopResponse: Codable, Identifiable {
 
     // Additional fields from by-coordinates endpoint
     let province: String?
-    let parkingBicis: String?
+    let bicycleParking: Int?
+    let carParking: Int?
+    let stopDescription: String?
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corTren: String?       // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
@@ -367,7 +402,9 @@ struct StopResponse: Codable, Identifiable {
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
-        case parkingBicis = "parking_bicis"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+        case stopDescription = "description"
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
         case corTren = "cor_tren"
@@ -1427,7 +1464,9 @@ struct StopFullDetailResponse: Codable {
     let lat: Double
     let lon: Double
     let province: String?
-    let parkingBicis: String?
+    let bicycleParking: Int?
+    let carParking: Int?
+    let stopDescription: String?
     let accesibilidad: String?
     let corMetro: String?
     let corTren: String?
@@ -1448,7 +1487,9 @@ struct StopFullDetailResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon, province, accesibilidad, correspondences
-        case parkingBicis = "parking_bicis"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+        case stopDescription = "description"
         case corMetro = "cor_metro"
         case corTren = "cor_tren"
         case corTranvia = "cor_tranvia"

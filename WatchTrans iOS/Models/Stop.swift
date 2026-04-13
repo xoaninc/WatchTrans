@@ -17,9 +17,10 @@ struct Stop: Identifiable, Equatable, Hashable {
     // Additional fields from API
     let province: String?
     let accesibilidad: String?
-    let hasParking: Bool
-    let hasBusConnection: Bool
-    let hasMetroConnection: Bool
+    let bicycleParking: Int    // 0=unknown, 1=available, 2=confirmed
+    let carParking: Int        // 0=unknown, 1=available, 2=confirmed
+    let stopDescription: String? // Station description/address from API
+    // let zoneId: String?     // TODO: Zona tarifaria — pending UI implementation
     let isHub: Bool           // true if station has 2+ different transport types
 
     // Connection details - Metro, Metro Ligero, Cercanías, and Tram line numbers
@@ -37,7 +38,7 @@ struct Stop: Identifiable, Equatable, Hashable {
 
     init(id: String, name: String, latitude: Double, longitude: Double,
          province: String? = nil, accesibilidad: String? = nil,
-         hasParking: Bool = false, hasBusConnection: Bool = false, hasMetroConnection: Bool = false,
+         bicycleParking: Int = 0, carParking: Int = 0, stopDescription: String? = nil,
          isHub: Bool = false,
          corMetro: String? = nil, corTren: String? = nil, corTranvia: String? = nil,
          corBus: String? = nil, corFunicular: String? = nil,
@@ -50,9 +51,9 @@ struct Stop: Identifiable, Equatable, Hashable {
         self.longitude = longitude
         self.province = province
         self.accesibilidad = accesibilidad
-        self.hasParking = hasParking
-        self.hasBusConnection = hasBusConnection
-        self.hasMetroConnection = hasMetroConnection
+        self.bicycleParking = bicycleParking
+        self.carParking = carParking
+        self.stopDescription = stopDescription
         self.isHub = isHub
         self.corMetro = corMetro
         self.corTren = corTren
@@ -160,9 +161,9 @@ extension Stop: Codable {
         case latitude = "lat"
         case longitude = "lon"
         case province, accesibilidad
-        case hasParking = "has_parking"
-        case hasBusConnection = "has_bus_connection"
-        case hasMetroConnection = "has_metro_connection"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+        case stopDescription = "description"
         case isHub = "is_hub"
         case corMetro = "cor_metro"
         case corTren = "cor_tren"
@@ -185,9 +186,9 @@ extension Stop: Codable {
         longitude = try container.decode(Double.self, forKey: .longitude)
         province = try container.decodeIfPresent(String.self, forKey: .province)
         accesibilidad = try container.decodeIfPresent(String.self, forKey: .accesibilidad)
-        hasParking = try container.decodeIfPresent(Bool.self, forKey: .hasParking) ?? false
-        hasBusConnection = try container.decodeIfPresent(Bool.self, forKey: .hasBusConnection) ?? false
-        hasMetroConnection = try container.decodeIfPresent(Bool.self, forKey: .hasMetroConnection) ?? false
+        bicycleParking = try container.decodeIfPresent(Int.self, forKey: .bicycleParking) ?? 0
+        carParking = try container.decodeIfPresent(Int.self, forKey: .carParking) ?? 0
+        stopDescription = try container.decodeIfPresent(String.self, forKey: .stopDescription)
         isHub = try container.decodeIfPresent(Bool.self, forKey: .isHub) ?? false
         corMetro = try container.decodeIfPresent(String.self, forKey: .corMetro)
         corTren = try container.decodeIfPresent(String.self, forKey: .corTren)

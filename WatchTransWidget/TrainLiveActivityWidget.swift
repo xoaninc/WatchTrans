@@ -1,7 +1,10 @@
 import WidgetKit
 import SwiftUI
+
+#if os(iOS)
 import ActivityKit
 
+@available(iOS 16.1, *)
 struct TrainLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TrainActivityAttributes.self) { context in
@@ -100,4 +103,5 @@ struct TrainLiveActivityWidget: Widget {
         }
     }
 }
+#endif
 // HE ELIMINADO LA EXTENSIÓN DUPLICADA DE COLOR PARA USAR LA QUE YA EXISTE EN EL PROYECTO

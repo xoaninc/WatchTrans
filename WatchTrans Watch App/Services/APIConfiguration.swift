@@ -34,6 +34,9 @@ struct APIConfiguration {
     /// Default resource timeout (seconds)
     static let resourceTimeout: TimeInterval = 20
 
+    // MARK: - Authentication
+    static let authHeader = "Bearer \(APISecrets.apiKey)"
+
     // MARK: - Limits
     /// Maximum favorites
     static let maxFavorites = 3

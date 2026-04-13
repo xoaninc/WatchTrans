@@ -49,3 +49,6 @@ Secrets/
 
 # AI tool configs
 .gemini/
+
+# API secrets
+APISecrets.swift

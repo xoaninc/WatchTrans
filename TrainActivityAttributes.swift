@@ -1,8 +1,11 @@
-import ActivityKit
 import SwiftUI
+
+#if os(iOS)
+import ActivityKit
 
 /// Atributos para la actividad en vivo de un trayecto de tren/metro.
 /// Estos datos se comparten entre la App principal y el Widget Extension.
+@available(iOS 16.1, *)
 struct TrainActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         // Datos dinámicos que cambian durante el trayecto
@@ -18,3 +21,4 @@ struct TrainActivityAttributes: ActivityAttributes {
     var lineColor: String // Representación Hexadecimal
     var destination: String
 }
+#endif

@@ -1,7 +1,7 @@
 # WatchTrans App — API Usage Map
 
 **Base URL:** `https://api.watch-trans.app`
-**Última actualización:** 2026-03-21
+**Última actualización:** 2026-04-04
 
 Referencia de qué endpoints consume la app y cuáles no.
 Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Server/docs/API_ENDPOINTS.md`
@@ -15,14 +15,14 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /stops/by-coordinates` | ✅ | `DataService.fetchTransportData` — carga principal al arrancar |
 | `GET /stops/{stop_id}` | ✅ | `DataService.fetchStopDetails` — detalle individual |
 | `GET /stops/{stop_id}/departures` | ✅ | `DataService.fetchArrivals` — endpoint principal de salidas |
-| `GET /stops/{stop_id}/full` | ✅ | `StopDetailView.loadData` — correspondencias, andenes, accesos, accesibilidad |
+| `GET /stops/{stop_id}/full` | ⚠️ Solo iOS | `StopDetailView.loadData` — correspondencias, andenes, accesos, accesibilidad |
 | `GET /stops/{stop_id}/platforms` | ✅ | `DataService.fetchPlatforms` — coordenadas de andenes |
-| `GET /stops/{stop_id}/accesses` | ✅ | `DataService.fetchAccesses` — bocas de metro (fallback si no hay station-interior) |
-| `GET /stops/{stop_id}/station-interior` | ✅ | `StopDetailView.loadData` — pathways, vestíbulos, niveles |
+| `GET /stops/{stop_id}/accesses` | ⚠️ Solo iOS | `DataService.fetchAccesses` — bocas de metro (fallback si no hay station-interior) |
+| `GET /stops/{stop_id}/station-interior` | ⚠️ Solo iOS | `StopDetailView.loadData` — pathways, vestíbulos, niveles |
 | `GET /stops/{stop_id}/correspondences` | ✅ | `DataService.fetchCorrespondences` — estaciones a pie |
-| `GET /stops/{stop_id}/children` | ✅ | `DataService.fetchChildren` — andenes hijos |
+| `GET /stops/{stop_id}/children` | ⚠️ Solo iOS | `DataService.fetchChildren` — andenes hijos |
 | `GET /stops?search=` | ✅ | `DataService.fetchStops` — búsqueda por nombre |
-| `GET /routes/{route_id}` | ✅ | `DataService.fetchRouteDetail` — detalle de ruta |
+| `GET /routes/{route_id}` | ✅ | `DataService.fetchRouteDetail` — detalle de ruta. ⚠️ Campo `branches` ignorado: el modelo Swift no lo declara, Swift descarta silenciosamente el campo JSON. La app muestra la ruta completa sin conciencia de ramas. |
 | `GET /routes/{route_id}/stops` | ✅ | `DataService.fetchStopsForRoute` — paradas de una línea |
 | `GET /routes/{route_id}/shape` | ✅ | `DataService.fetchRouteShape` — polyline para mapa |
 | `GET /routes/{route_id}/frequencies` | ✅ | `GTFSRealtimeService.fetchFrequencies` — frecuencias metro |
@@ -33,12 +33,16 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /province/{name}/routes` | ✅ | `DataService.fetchLinesIfNeeded` — rutas por provincia |
 | `GET /coordinates/routes` | ✅ | `GTFSRealtimeService.fetchNearbyRoutes` — rutas cercanas |
 | `GET /route-planner` | ✅ | `DataService.fetchRoutePlan` — RAPTOR journey |
-| `GET /route-planner/range` | ✅ | `DataService.fetchRoutePlanRange` — rRAPTOR por franja |
+| `GET /route-planner/range` | ⚠️ Solo iOS | `DataService.fetchRoutePlanRange` — rRAPTOR por franja |
 | `GET /trips/{trip_id}` | ✅ | `DataService.fetchTrip` — detalle de viaje |
+| `GET /stops/{stop_id}/facilities` | ❌ | Facilidades de estación (parking, patinetes, atención al cliente). No implementado. |
 | `GET /stops/{id}/departures?compact=true` | ❌ | Modelo `CompactDepartureResponse` no existe. Pendiente para Widgets. |
-| `GET /routes/{route_id}/fares` | ✅ | `LineDetailView` — tarifas por zona |
+| `GET /stops/{stop_id}/air-quality` | ❌ | Calidad del aire ambiente (ICA 1-5, contaminantes, estación Gencat XVPCA). Solo paradas Catalunya. No implementado. |
+| `GET /routes/{route_id}/fares` | ⚠️ Solo iOS | `LineDetailView` — tarifas por zona |
+| `GET /routes/{route_id}/patterns` | ❌ | Trip patterns agrupados en ramas jerárquicas. Relacionado con el campo `branches` ignorado en `/routes/{id}`. |
 | `GET /operators/{operator_id}/fares` | ❌ | CMS fares. No prioritario. |
 | `GET /agencies` | ❌ | Uso interno. |
+| `GET /agencies/{agency_id}/policies` | ❌ | Políticas del operador (mascotas, comida, fotografía). No implementado. |
 | `GET /coordinates/lines` | ❌ | No prioritario. |
 | `GET /province/{name}/lines` | ❌ | No prioritario. |
 | `GET /journey/isochrone` | ❌ | No prioritario. |
@@ -57,17 +61,20 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /alerts?stop_id=` | ✅ | `GTFSRealtimeService.fetchAlertsForStop` |
 | `GET /vehicles/{vehicle_id}` | ✅ | `GTFSRealtimeService.fetchVehicleById` |
 | `GET /platforms/predictions` | ✅ | `DataService.applyPlatformPredictions` — andén estimado |
-| `GET /station-occupancy` | ✅ | `StopDetailView.loadData` — ocupación TMB |
-| `GET /equipment-status/{stop_id}` | ✅ | `StopDetailView.loadData` — ascensores Metro Sevilla |
+| `GET /station-occupancy` | ⚠️ Solo iOS | `StopDetailView.loadData` — ocupación TMB |
+| `GET /equipment-status/{stop_id}` | ⚠️ Solo iOS | `StopDetailView.loadData` — ascensores Metro Sevilla |
 | `GET /stats` | ⚠️ Dead code | Fetch existe, nunca se llama |
 | `GET /trip-updates` | ✅ | `TrainDetailView` — delay preciso (min+seg) |
 | `GET /stops/{stop_id}/realtime` | ⚠️ Dead code | Fetch existe, nunca se llama. Legacy/debug. |
 | `GET /vehicles` | ✅ | `StopDetailView` — air quality Metro Sevilla |
-| `GET /occupancy` | ✅ | `StopDetailView` — ocupación vehículos FGC |
+| `GET /occupancy` | ⚠️ Solo iOS | `StopDetailView` — ocupación vehículos FGC |
 | `GET /air-quality/` | ❌ | Endpoint dedicado calidad aire Metro Sevilla. App usa `/vehicles?enrich=true`. ROADMAP 3.25. |
 | `GET /vehicles/{id}/occupancy/per-car` | ❌ | Sin datos consistentes. |
 | `GET /stop-time-updates` | ❌ | Duplica departures. |
 | `GET /equipment-status/?operator_id=` | ❌ | Bulk. Per-stop ya se usa. |
+| `GET /station-status/` | ❌ | Estado abierta/cerrada de estaciones (Metro Madrid). Bulk no implementado. |
+| `GET /station-status/{stop_id}` | ❌ | Estado de una estación específica (Metro Madrid). No implementado. |
+| `GET /access-status/{stop_id}` | ❌ | Estado de accesos de una estación (Metro Madrid). No implementado. |
 
 ## Admin
 
@@ -84,12 +91,12 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 ## Resumen
 
-| Categoría | ✅ Usados | ⚠️ Dead code | ❌ No usados |
-|-----------|-----------|--------------|-------------|
-| GTFS Static | 23 | 0 | 10 |
-| GTFS-RT | 9 | 1 | 5 |
-| Admin | 0 | 2 | 6 |
-| **Total** | **32** | **3** | **21** |
+| Categoría | ✅ iOS+Watch | ⚠️ Solo iOS | ⚠️ Dead code | ❌ No usados |
+|-----------|-------------|-------------|--------------|-------------|
+| GTFS Static | 17 | 6 | 0 | 15 |
+| GTFS-RT | 8 | 4 | 2 | 7 |
+| Admin | 0 | 0 | 2 | 6 |
+| **Total** | **25** | **10** | **4** | **28** |
 
 ## Notas de cambios del backend (2026-03-18)
 
@@ -112,6 +119,9 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 
 **En routes (implementados):**
 - `alternative_for_short_name` — "Sustituye C1" en LinesListView
+
+**En routes (no consumidos):**
+- `branches` — array de ramas precomputadas (calendar-aware desde 2026-04-04). El modelo Swift `RouteResponse` no declara este campo; Swift lo descarta silenciosamente. La app muestra siempre la ruta completa sin separar ramas A/B. Ver `/routes/{route_id}/patterns` para el endpoint complementario.
 
 ## Campos disponibles no consumidos (2026-03-21)
 

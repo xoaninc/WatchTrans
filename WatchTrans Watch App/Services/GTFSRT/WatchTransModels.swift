@@ -236,6 +236,36 @@ struct LineRouteInfo: Codable {
     }
 }
 
+// MARK: - Branch Info
+
+struct BranchStopInfo: Codable, Identifiable {
+    let id: String
+    let name: String
+    let lat: Double
+    let lon: Double
+    let sequence: Int
+    let wheelchairBoarding: Int?
+    let bicycleParking: Int?
+    let carParking: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, lat, lon, sequence
+        case wheelchairBoarding = "wheelchair_boarding"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+    }
+}
+
+struct BranchInfo: Codable {
+    let shapeId: String?
+    let stops: [BranchStopInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case shapeId = "shape_id"
+        case stops
+    }
+}
+
 // MARK: - Route Response
 
 /// Response from GET /api/gtfs/routes
@@ -251,6 +281,7 @@ struct RouteResponse: Identifiable {
     let networkId: String?  // Network ID (e.g., "51T", "TMB_METRO", "FGC")
     let description: String?  // e.g., "Andén 1: Sentido horario | Andén 2: Sentido antihorario"
     let isCircular: Bool?  // true for circular lines (L6, L12 MetroSur)
+    var branches: [BranchInfo]? = nil // Non-null when route splits (obras, bifurcación). null = single route.
 }
 
 extension RouteResponse: Codable {
@@ -274,6 +305,7 @@ extension RouteResponse: Codable {
         case agencyName = "agency_name"
         case networkId = "network_id"
         case isCircular = "is_circular"
+        case branches
     }
 
     init(from decoder: Decoder) throws {
@@ -287,6 +319,7 @@ extension RouteResponse: Codable {
         networkId = try container.decodeIfPresent(String.self, forKey: .networkId)
         description = try container.decodeIfPresent(String.self, forKey: .description)
         isCircular = try container.decodeIfPresent(Bool.self, forKey: .isCircular)
+        branches = try container.decodeIfPresent([BranchInfo].self, forKey: .branches)
 
         // Handle both "agency_id" (flat string) and "agency" (nested object with .id/.name)
         if let flatId = try container.decodeIfPresent(String.self, forKey: .agencyId) {
@@ -298,6 +331,24 @@ extension RouteResponse: Codable {
             agencyId = agency.id
             agencyName = agency.name
         }
+    }
+}
+
+// MARK: - Acerca Service
+
+struct AcercaService: Codable, Hashable {
+    let noticeTime: String?
+    let meetingPoint: String?
+    let parking: Bool?
+    let anden: Bool?
+    let aseos: Bool?
+    let vestibulo: Bool?
+    let source: String?
+
+    enum CodingKeys: String, CodingKey {
+        case parking, anden, aseos, vestibulo, source
+        case noticeTime = "notice_time"
+        case meetingPoint = "meeting_point"
     }
 }
 
@@ -317,7 +368,9 @@ struct StopResponse: Codable, Identifiable {
 
     // Additional fields from by-coordinates endpoint
     let province: String?
-    let parkingBicis: String?
+    let bicycleParking: Int?
+    let carParking: Int?
+    let stopDescription: String?
     let accesibilidad: String?
     let corMetro: String?      // Metro connections: "L1, L10" or "L6, L8, L10"
     let corTren: String?  // Train connections (Cercanías, FEVE, etc.): "C1, C10, C2" (for Metro/ML stops)
@@ -337,7 +390,9 @@ struct StopResponse: Codable, Identifiable {
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case zoneId = "zone_id"
-        case parkingBicis = "parking_bicis"
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+        case stopDescription = "description"
         case corBus = "cor_bus"
         case corMetro = "cor_metro"
         case corTren = "cor_tren"
@@ -1178,19 +1233,44 @@ struct StopFullDetailResponse: Codable {
     let lat: Double
     let lon: Double
     let province: String?
+    let bicycleParking: Int?
+    let carParking: Int?
+    let stopDescription: String?
+    let accesibilidad: String?
+    let corMetro: String?
+    let corTren: String?
+    let corTranvia: String?
+    let corFunicular: String?
+    let corBus: String?
+    let wheelchairBoarding: Int?
     let locationType: Int?
     let parentStationId: String?
     let isHub: Bool?
+    let serviceStatus: String?
+    let suspendedSince: String?
+    let acercaService: AcercaService?
     let routes: [RouteResponse]?
     let correspondences: [CorrespondenceInfo]?
     let platforms: [PlatformInfo]?
     let accesses: [StationAccess]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, lat, lon, province
+        case id, name, lat, lon, province, accesibilidad, correspondences
+        case bicycleParking = "bicycle_parking"
+        case carParking = "car_parking"
+        case stopDescription = "description"
+        case corMetro = "cor_metro"
+        case corTren = "cor_tren"
+        case corTranvia = "cor_tranvia"
+        case corFunicular = "cor_funicular"
+        case corBus = "cor_bus"
+        case wheelchairBoarding = "wheelchair_boarding"
         case locationType = "location_type"
         case parentStationId = "parent_station_id"
         case isHub = "is_hub"
-        case routes, correspondences, platforms, accesses
+        case serviceStatus = "service_status"
+        case suspendedSince = "suspended_since"
+        case acercaService = "acerca_service"
+        case routes, platforms, accesses
     }
 }

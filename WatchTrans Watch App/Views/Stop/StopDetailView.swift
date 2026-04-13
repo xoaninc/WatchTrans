@@ -269,9 +269,8 @@ struct StopDetailView: View {
                 connectionLineIds: [],
                 province: "Madrid",
                 accesibilidad: "Accesible",
-                hasParking: true,
-                hasBusConnection: true,
-                hasMetroConnection: true,
+                bicycleParking: 1,
+                carParking: 1,
                 corMetro: "6, 8, 10",
                 corTren: nil
             ),

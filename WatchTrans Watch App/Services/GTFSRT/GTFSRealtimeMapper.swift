@@ -145,20 +145,8 @@ class GTFSRealtimeMapper {
 
     // MARK: - Helpers
 
-    /// Find line in DataService by route name or ID
+    /// Find line in DataService by route ID
     private func findLine(routeShortName: String, routeId: String, stopId: String, dataService: DataService) -> Line? {
-        let normalizedName = routeShortName.uppercased()
-
-        // Match by name (case-insensitive)
-        if let match = dataService.lines.first(where: { $0.name.uppercased() == normalizedName }) {
-            return match
-        }
-
-        // Match by ID suffix (e.g., "C1" matches "madrid-c1")
-        if let match = dataService.lines.first(where: { $0.id.uppercased().hasSuffix(normalizedName) }) {
-            return match
-        }
-
-        return nil
+        return dataService.lines.first(where: { $0.routeIds.contains(routeId) })
     }
 }
