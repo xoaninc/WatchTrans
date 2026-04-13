@@ -426,7 +426,20 @@ struct StopDetailView: View {
         // Fetch equipment status and air quality (endpoints return empty for stops that don't support it)
         equipmentStatus = (try? await dataService.gtfsRealtimeService.fetchEquipmentStatus(stopId: stop.id)) ?? []
         airQualityData = (try? await dataService.gtfsRealtimeService.fetchMetroSevillaAirQuality()) ?? [:]
-        // TODO: Fetch operating hours per stop once the API supports it (previously hardcoded to METRO_SEVILLA_L1-CE-OQ)
+
+        // Fetch operating hours for nightly shutdown detection (only when equipment is present)
+        if !equipmentStatus.isEmpty, let routeId = departures.first?.routeId {
+            if let hours = try? await dataService.gtfsRealtimeService.fetchRouteOperatingHours(routeId: routeId) {
+                let calendar = Calendar.current
+                let weekday = calendar.component(.weekday, from: Date.now)
+                switch weekday {
+                case 1:  metroOperatingHours = hours.sunday ?? hours.weekday
+                case 6:  metroOperatingHours = hours.friday ?? hours.weekday
+                case 7:  metroOperatingHours = hours.saturday ?? hours.weekday
+                default: metroOperatingHours = hours.weekday
+                }
+            }
+        }
 
         hasLoadedOnce = true
         isLoading = false
