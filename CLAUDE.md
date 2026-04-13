@@ -37,7 +37,7 @@ atchTransWidgetiOSExtension/  # iOS widget (note: typo in directory name is inte
   - Stops/Lines: 24h disk cache with background silent verification
   - Arrivals: no persistent cache, 45s auto-refresh, 20s in-memory TTL
   - Route shapes: persistent disk cache
-- **NetworkService** handles HTTP with exponential backoff retry (max 3 attempts)
+- **NetworkService** handles HTTP with exponential backoff retry (max 3 attempts). All requests include `Authorization: Bearer` header from `APISecrets.swift` (gitignored)
 - Route calculation happens server-side, not in the client
 - **`makeStopDisplays`** creates ONE display per stop using `stop.transportType` (from ID prefix). `cor_*` fields are correspondences (walking connections), NOT lines at the stop.
 
@@ -57,12 +57,15 @@ atchTransWidgetiOSExtension/  # iOS widget (note: typo in directory name is inte
 Centralized in `APIConfiguration.swift` per target. Base URLs:
 - GTFS Static: `https://api.watch-trans.app/api/gtfs`
 - GTFS-RT: `https://api.watch-trans.app/api/gtfs-rt`
+- Auth: `Authorization: Bearer {key}` — key in `APISecrets.swift` (gitignored, not committed). Both targets share the same key.
 
-Key endpoints documented in `API_STATUS.md`.
+Key endpoints documented in `API_USAGE.md`.
 
 ### Stop Fields
 
-- `cor_metro`, `cor_tren`, `cor_tranvia`, `cor_funicular` — **correspondences** (walking connections to other stops), NOT lines at the stop. Used for badges only.
+- `cor_metro`, `cor_tren`, `cor_tranvia`, `cor_funicular`, `cor_bus` — **correspondences** (walking connections to other stops), NOT lines at the stop. Used for badges only.
+- `bicycleParking`, `carParking` — tri-state ints (0=unknown, 1=available, 2=confirmed). Replaced boolean `hasParking`.
+- `stopDescription` — station address/notes from API `description` field. Shown via info button popover in StopDetailView.
 - `lineas` field is **removed** — do not use. The server no longer sends it.
 - `transportType` is determined from stop ID prefix only (e.g., `METRO_SEVILLA_*` → `.metro`, `RENFE_C_*` → `.cercanias`).
 
@@ -96,7 +99,7 @@ Recent commits also use conventional format: `fix(scope):`, `feat(scope):`, `per
 ## Important Rules
 
 - **NEVER hardcode workarounds for API inconsistencies** without asking the user first. The user also maintains the backend — if the API sends unexpected field names or formats, ask before adding fallback logic in the app. The fix likely belongs on the server side.
-- **All URLs and API constants go in `APIConfiguration.swift`** — no hardcoded URLs in views, services, or widgets.
+- **All URLs and API constants go in `APIConfiguration.swift`** — no hardcoded URLs in views, services, or widgets. API key lives in `APISecrets.swift` (gitignored).
 - **Commit and push after every functional change** — never accumulate uncommitted work. Each feature, fix, or meaningful change gets its own commit + push immediately.
 - **Build after push** — after every `git push`, verify the project builds. SourceKit diagnostics are unreliable — only a real build confirms correctness. Use `/swift-concurrency` and `/swiftui-pro` skills when changing SwiftUI views or concurrency code.
 - **SF Symbols**: verify symbols exist with `NSImage(systemSymbolName:)` before using. `elevator`, `elevator.fill`, `escalator`, `escalator.fill` do NOT exist. Use custom AIGA imagesets instead.

@@ -1,7 +1,8 @@
 # WatchTrans App — API Usage Map
 
 **Base URL:** `https://api.watch-trans.app`
-**Última actualización:** 2026-04-04
+**Última actualización:** 2026-04-13
+**Autenticación:** `Authorization: Bearer {key}` requerido en todas las requests (desde 2026-04-13). Key en `APISecrets.swift` (gitignored).
 
 Referencia de qué endpoints consume la app y cuáles no.
 Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Server/docs/API_ENDPOINTS.md`
@@ -105,7 +106,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `wheelchair_boarding` arreglado en `/stops/{stop_id}` (antes era siempre null).
 - Alertas de accesibilidad ahora solo se asocian a rutas que pasan por la parada afectada.
 - `estimated_restoration_time` tipo string (texto humano), no datetime.
-- `parking_bicis` ≠ `acerca_service.parking`: el primero es aparcabicis, el segundo parking de coches (solo 56 estaciones).
+- ~~`parking_bicis`~~ Reemplazado por `bicycle_parking` (int tri-state 0/1/2) + `car_parking` (int tri-state 0/1/2) desde 2026-04-13. `acerca_service.parking` sigue siendo parking de coches Adif (solo 56 estaciones).
 - Operadores RT: `renfe`, `tmb`, `fgc`, `euskotren`, `metro_bilbao`, `metro_madrid`, `mlo`, `metro_sevilla`, `tram_sevilla`, `tranvia_zaragoza`.
 - Interior source `combined` nuevo para estaciones con datos mixtos.
 
@@ -121,7 +122,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `alternative_for_short_name` — "Sustituye C1" en LinesListView
 
 **En routes (no consumidos):**
-- `branches` — array de ramas precomputadas (calendar-aware desde 2026-04-04). El modelo Swift `RouteResponse` no declara este campo; Swift lo descarta silenciosamente. La app muestra siempre la ruta completa sin separar ramas A/B. Ver `/routes/{route_id}/patterns` para el endpoint complementario.
+- `branches` — array de ramas precomputadas (calendar-aware desde 2026-04-04). El modelo Swift `RouteResponse` declara el campo `branches: [BranchInfo]?`. Se decodifica pero la UI aún no lo consume — la app muestra la ruta completa sin separar ramas A/B. Ver `/routes/{route_id}/patterns` para el endpoint complementario.
 
 ## Campos disponibles no consumidos (2026-03-21)
 
@@ -133,7 +134,7 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - `content` + `image_url` — contenido rico en alertas Metro Sevilla news. ROADMAP 3.27.
 
 **En stops:**
-- `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante). ROADMAP 3.21.
+- `zone_id` — zona tarifaria (Euskotren, FGC, TMB, Metro Sevilla, Metro Valencia, Tram Alicante). Campo añadido al modelo pero comentado — pendiente UI.
 
 **En routes:**
 - `route_url` — URL de la página del operador
@@ -165,3 +166,11 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - **train_position.current_stop_name/id**: ahora poblados con la parada más cercana al GPS del vehículo. Antes null para operadores híbridos.
 - **train_code en train_position**: disponible dentro del objeto train_position (además de en el departure raíz).
 - App ya decodifica todos estos campos — no requiere cambios de código.
+
+## Notas de cambios (2026-04-13)
+
+- **API autenticada**: Todos los endpoints ahora requieren `Authorization: Bearer {key}`. Key almacenada en `APISecrets.swift` (gitignored), expuesta como `APIConfiguration.authHeader`.
+- **`parking_bicis` → `bicycle_parking` + `car_parking`**: Campos tri-state (0=sin info, 1=disponible, 2=confirmado). Reemplazan el booleano `hasParking`. UI muestra iconos separados de bici (verde) y parking coches (azul) en StopHeaderView.
+- **`description` en stops**: Nuevo campo `stopDescription` con dirección/notas de la estación. Se muestra como botón info (ℹ️) al lado del nombre que abre un popover.
+- **`findLine` mejorado**: Busca por `routeId` en `routeIds` directamente, sin hardcoded name matching. Arregla líneas RT mostrando `MMAD_L12` en vez de `L12`.
+- **`branches` decodificado**: `RouteResponse.branches: [BranchInfo]?` ahora se decodifica correctamente. Solo L6 Madrid tiene 2 ramas activas (sentidos circular). UI pendiente.
