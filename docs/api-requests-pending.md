@@ -2,6 +2,8 @@
 
 Campos que la app necesita y la API no devuelve aún.
 
+> **Nota (2026-04-13):** La API ahora requiere `Authorization: Bearer {key}`. Key en `APISecrets.swift` (gitignored). Campos `parking_bicis` reemplazados por `bicycle_parking`/`car_parking` (tri-state int). `description` nuevo campo en stops.
+
 ---
 
 ## GET /api/gtfs/coordinates/routes — agency_name ✅ YA EXISTE
@@ -122,9 +124,8 @@ Archivos afectados:
 
 ## No requiere cambio de API (bugs de la app)
 
-### `corBus` — correspondencia bus sin badges
-- El campo `cor_bus` se envía en stops pero la app no muestra badges de correspondencia bus.
-- Falta implementar en `StopDetailView` allBadges.
+### ~~`corBus` — correspondencia bus sin badges~~ ✅ IMPLEMENTADO
+- `cor_bus` ahora se consume en `StopDetailView` ConnectionsSectionView para mostrar badges de correspondencia bus.
 
 ### Pathway modes incompletos
 - `/stops/{id}/station-interior` solo devuelve `walkway` y `stairs`.

@@ -119,6 +119,26 @@ Agrega las siguientes claves al `Info.plist` del target iOS:
    - **AccentColor** (azul #007AFF o similar)
    - Logos de operadores (opcional, se cargan desde API)
 
+## 5.5 Crear APISecrets.swift
+
+La API requiere autenticación. Este fichero está gitignored y no se commitea:
+
+1. Crea el fichero `WatchTrans iOS/Services/APISecrets.swift`
+2. Añádelo a **ambos targets** (iOS y Watch App)
+3. Contenido:
+
+```swift
+import Foundation
+
+enum APISecrets {
+    static let apiKey = "TU_API_KEY_AQUI"
+}
+```
+
+Sin este fichero el proyecto no compila (`APIConfiguration.authHeader` referencia `APISecrets.apiKey`).
+
+---
+
 ## 6. Compilar y Probar
 
 1. Selecciona el scheme **WatchTrans iOS**
