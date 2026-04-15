@@ -63,8 +63,7 @@ struct ArrivalCard: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
 
-                        // Show frequency indicator for Metro/ML/Tranvía
-                        if arrival.frequencyBased, let headway = arrival.headwayMinutes {
+                        if let headway = arrival.headwayMinutes {
                             Text("(freq. \(headway))")
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)
@@ -152,7 +151,8 @@ struct ArrivalCard: View {
         routeId: "RENFE_C3_36",
         isSuspended: false,
         wheelchairAccessible: false,
-        frequencyBased: false,
+        wheelchairInaccessible: false,
+        routeType: 2,
         headwayMinutes: nil,
         isOfflineData: false,
         occupancyStatus: nil,

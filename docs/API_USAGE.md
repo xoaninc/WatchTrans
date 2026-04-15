@@ -167,6 +167,15 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 - **train_code en train_position**: disponible dentro del objeto train_position (además de en el departure raíz).
 - App ya decodifica todos estos campos — no requiere cambios de código.
 
+## Notas de cambios del backend (2026-04-13)
+
+- **`frequency_based` eliminado de departures**. Reemplazado por `route_type` (int, GTFS standard: 0=tram, 1=metro, 2=rail, 3=bus, 7=funicular). La app ahora usa `route_type == 2` donde antes usaba `frequency_based == false`. Lógica de display:
+  - `route_type == 2` (rail) + ≥30 min → hora absoluta ("18:54")
+  - `route_type != 2` + >30 min → "+ 30 min"
+  - <30 min → "X min" para todos
+- **`has_realtime`** nuevo campo bool en departures. No consumido por la app (la lógica de display usa `route_type`).
+- `headway_secs` sigue presente (null para operadores con horarios exactos).
+
 ## Notas de cambios (2026-04-13)
 
 - **API autenticada**: Todos los endpoints ahora requieren `Authorization: Bearer {key}`. Key almacenada en `APISecrets.swift` (gitignored), expuesta como `APIConfiguration.authHeader`.

@@ -77,6 +77,15 @@ Some operators (Metro Sevilla, Tranvía Zaragoza, TMB Metro, Tram Sevilla) gener
 - For journey display, use route stops as fallback (`/routes/{route_id}/stops`)
 - Double composition in Metro Sevilla: detected by comma in trip_id (e.g., `MSEV_RT_111,116_d0`)
 
+### Arrival Time Display
+
+Time formatting is driven by `route_type` from the API (GTFS standard int in each departure):
+- `route_type == 2` (rail) → `Arrival.hasGTFSRT = true` → shows exact time ("18:54") when ≥30 min away
+- `route_type != 2` (metro, tram, bus, funicular) → `Arrival.frequencyBased = true` → shows "+ 30 min" when >30 min away
+- Under 30 min → "X min" for all types
+
+`Arrival.frequencyBased` is a computed property (`routeType != 2`), not a stored field. The old API field `frequency_based` was removed.
+
 ### Alert Filtering
 
 When an alert has both route-level and stop-level entities, only show it for stops explicitly listed in stop-level entities. Route-level-only alerts show for all stops on the route.
