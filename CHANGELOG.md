@@ -24,11 +24,12 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 ### Changed
 - Migracion de calculo de rutas del cliente a la API (eliminado RoutingService.swift)
 - GTFSRealtimeService.fetchRoutePlan ahora soporta parametro `compact: Bool`
-- Documentacion reorganizada y consolidada
+- **Documentacion centralizada en `docs/`** — `ROADMAP.md` + `KNOWN_ISSUES.md` + `docs/api-requests-pending.md` fusionados en `docs/pending.md`. `API_USAGE.md` renombrado a `docs/api.md`. `SETUP_GUIDE.md` renombrado a `docs/setup.md`. README.md con tabla de documentacion actualizada.
 
 ### Removed
 - RoutingService.swift (~530 lineas) - routing ahora se hace en servidor
-- API_CHANGES_v2.md (contenido movido a ROADMAP.md)
+- API_CHANGES_v2.md (contenido movido a `docs/pending.md`)
+- ROADMAP.md, KNOWN_ISSUES.md, docs/api-requests-pending.md (fusionados en `docs/pending.md`)
 
 ## [1.1.1] - 2026-01-28
 

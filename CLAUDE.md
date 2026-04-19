@@ -59,7 +59,7 @@ Centralized in `APIConfiguration.swift` per target. Base URLs:
 - GTFS-RT: `https://api.watch-trans.app/api/gtfs-rt`
 - Auth: `Authorization: Bearer {key}` — key in `APISecrets.swift` (gitignored, not committed). Both targets share the same key.
 
-Key endpoints documented in `API_USAGE.md`.
+Key endpoints documented in `docs/api.md`. Pending features, bugs and backend requirements in `docs/pending.md`.
 
 ### Stop Fields
 

@@ -132,7 +132,7 @@ Set completo de ~50 pictogramas + variantes descargados como SVG de https://comm
 
 **No se usan para transporte** (se eligió ISO 7001 para metro/tren/tram/bus). Sí se usan para equipamiento (elevator, escalator, stairs).
 
-**Licencia**: Dominio público (US Government work, 1974). **Marco legal pendiente de verificar** — ver KNOWN_ISSUES.md.
+**Licencia**: Dominio público (US Government work, 1974). **Marco legal pendiente de verificar** — ver `docs/pending.md#marco-legal-de-símbolos`.
 
 ### ISO 7001 (Wikimedia Commons)
 
@@ -161,7 +161,7 @@ Símbolos de transporte relevantes (PI TF):
 | `ISO_7001_PI_TF_040.svg` | Embarque bus |
 | `ISO_7001_PI_TF_044.svg` | Carga vehículo eléctrico |
 
-**Licencia**: Cada SVG tiene su propia licencia en Wikimedia (generalmente CC0 o CC BY-SA). Los originales ISO 7001 son copyright ISO. **Marco legal pendiente** — ver KNOWN_ISSUES.md.
+**Licencia**: Cada SVG tiene su propia licencia en Wikimedia (generalmente CC0 o CC BY-SA). Los originales ISO 7001 son copyright ISO. **Marco legal pendiente** — ver `docs/pending.md#marco-legal-de-símbolos`.
 
 ### Otras fuentes pendientes de evaluar
 
@@ -219,7 +219,7 @@ Los siguientes pathway modes están mapeados a iconos en `PathwayRow` pero **nin
 
 El campo `corBus` existe en el modelo `Stop` y se decodifica de la API, pero en `StopDetailView` los badges de correspondencia bus **nunca se añaden** a `allBadges`. Necesita implementación.
 
-## Pendiente (KNOWN_ISSUES.md)
+## Pendiente (docs/pending.md)
 
 - Marco legal AIGA y ISO 7001 Wikimedia
 - Revisar licencia de StairClimbingSymbol
