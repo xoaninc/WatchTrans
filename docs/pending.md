@@ -49,14 +49,20 @@ RAPTOR devuelve `"No se encontró servicio en las próximas 24 horas"` (journeys
 ### Performance: /province/{name}/routes lento
 `GET /api/gtfs/province/Madrid/routes` tardó 7.3s (auditoría 2026-04-20, 42 rutas). El resto de endpoints responden en <1s. Candidato a optimización/cache en backend.
 
-### Backend: Equipment status solo Metro Sevilla
-`equipment-status` solo tiene datos RT para Metro Sevilla (fuente TCE). Cuando otros operadores tengan feed RT de equipos, el endpoint los expondrá automáticamente. No requiere cambios en la app.
+### Backend: Equipment status ahora también Metro Madrid
+`equipment-status` ahora cubre Metro Sevilla (fuente TCE) **y Metro Madrid (desde 2026-04-01, fetcher ctmulti)**. La app tiene código para ambos pero falta verificar UI con stops de Metro Madrid. Cuando otros operadores tengan feed RT de equipos, el endpoint los expondrá automáticamente.
 
 ### CompactDepartureResponse: no existe modelo
 La API tiene `?compact=true` para departures con esquema reducido. No hay modelo en la app. Necesario para Widgets iOS y Siri Shortcuts.
 
 ### Platform confidence sin UI
-Campo decodificado, sin UI. Deferred.
+Campo `platform_confidence` (0-1) decodificado, sin UI. Deferred.
+
+### `status_estimated` disponible, sin consumir
+Campo nuevo en `/stops/{id}/departures` (2026-04-19). Marca si `current_status` viene de GPS real (false) o inferido vía dead-reckoning con schedule+delay (true). Útil para reducir "fantasmas" en la UI (mostrar tren como IN_TRANSIT aunque el feed VP esté obsoleto). Ligado a KI #304 del servidor. App no lo consume aún.
+
+### `current_stop_sequence` null para 7 operadores hybrid
+Documentado oficialmente por el servidor: `current_stop_sequence` en `/gtfs-rt/vehicles` permanece `null` para **tmb, metro_madrid, mlo, tranvia_zaragoza, tram_sevilla, metro_sevilla, metro_tenerife**. Sub-issue KI #304 pendiente en backend. Sin este campo, la posición precisa del tren en el recorrido (antes/después de la siguiente parada) no es fiable para estos operadores.
 
 ### route-planner: parámetros parcialmente usados
 `departure_time` con DatePicker ya funciona (rango horario). Pendientes: `arrive_by` (llegar A las X), `travel_date` (otro día), `compact` (respuesta ligera).
@@ -116,16 +122,18 @@ Endpoints que la API ya ofrece pero la app no usa:
 | `GET /stops/{id}/facilities` | Facilities de estación (park & ride, atención al cliente, parking bici). Solo Metro Sevilla. | Media |
 | `GET /interchanges` + `/{code}` | Hubs de intercambio con paradas agrupadas por código. | Media |
 | `GET /transfers` | Tiempos de transbordo entre paradas (para mostrar en correspondencias). | Media |
-| `GET /vehicles/{id}/occupancy/per-car` | Ocupación por vagón. FGC y Metro Madrid. | Media |
+| `GET /vehicles/{id}/occupancy/per-car` | Ocupación por vagón. Backend listo (FGC y Metro Madrid). | Media |
+| `GET /routes/{route_id}/patterns` | Trip patterns agrupados jerárquicamente (trunk + short-turns/expresos), calendar-aware con cache 24h. Complementa `branches` de `/routes/{id}`. UI podría separar ramas durante obras. | Media |
+| `GET /station-status/` + `/{stop_id}` | Estado abierto/cerrado de estaciones. Backend listo (Metro Madrid). | Baja |
+| `GET /access-status/{stop_id}` | Estado de accesos abiertos/cerrados. Backend listo (Metro Madrid: ej. 6 accesos cerrados 2026-04-01). | Baja |
+| `GET /air-quality/` (dedicado) | Metro Sevilla, CO2 + humedad + temperatura. App usa `/vehicles?enrich=true` como atajo. | Baja |
+| `GET /equipment-status/?operator_id=` | Bulk por operador. Per-stop ya se usa. | Baja |
 | `GET /agencies/{id}/policies` | Políticas del operador (mascotas, comida, patinetes, fotos). Solo Metro Sevilla. | Baja |
 | `GET /coordinates/lines` | Líneas agrupadas cerca de coordenadas (alternativa a routes). | Baja |
 | `GET /translations` | Nombres multilingüe GTFS (paradas, rutas). | Baja |
 | `GET /feed-info` | Frescura del feed por operador (para mostrar "datos de hace X"). | Baja |
 | `GET /journey/isochrone` | Paradas alcanzables en X minutos desde una parada. | Baja |
-| `GET /routes/{route_id}/patterns` | Trip patterns agrupados en ramas jerárquicas. Relacionado con `branches` en `/routes/{id}`. | Baja |
-| `GET /station-status/` + `/{stop_id}` | Estado abierta/cerrada de estaciones (Metro Madrid). | Baja |
-| `GET /access-status/{stop_id}` | Estado de accesos de una estación (Metro Madrid). | Baja |
-| `GET /air-quality/` (RT dedicado) | Endpoint dedicado calidad aire Metro Sevilla. App usa `/vehicles?enrich=true` como atajo. | Baja |
+| `GET /stop-time-updates` | Predicciones RT arrival/departure. Duplica departures. | Baja |
 
 ---
 
@@ -207,7 +215,11 @@ Campo existe en el modelo Swift y la UI está implementada. Pero la API siempre 
 
 ### GET /api/gtfs-rt/alerts — `content` + `image_url`
 
-Alertas de noticias de Metro Sevilla. La app solo muestra `headerText`/`descriptionText`. Si estos campos se populan, la app podría mostrar contenido rico e imágenes.
+Alertas de noticias de Metro Sevilla. Servidor documenta ambos campos como disponibles (API_REALTIME.md:292-293). La app solo muestra `headerText`/`descriptionText`. Pendiente implementar UI con contenido rico e imágenes.
+
+### GET /api/gtfs-rt/alerts — `ai_summary` + `ai_affected_segments`
+
+Campos nuevos documentados por el servidor (no verificados en live): `ai_summary` (str) cuando description > 400 chars, `ai_affected_segments` (obj) con segmentos identificados por IA. App no los consume. Útiles para resúmenes de alertas largas.
 
 ### GET /api/gtfs/stops/{id} — campos de capabilities del operador
 
@@ -217,11 +229,6 @@ Alertas de noticias de Metro Sevilla. La app solo muestra `headerText`/`descript
 | `has_equipment_status` | No existe | Saber si la parada tiene estado de equipos (ascensores, escaleras). Sin este campo la app hace fetch para todas. |
 | `has_air_quality` | No existe | Saber si la parada tiene datos de calidad del aire. Sin este campo la app hace fetch para todas. |
 
-### GET /api/gtfs/stops/{id}/departures — `route_type`
-
-| Campo | Estado | Para qué lo necesita la app |
-|-------|--------|---------------------------|
-| `route_type` | ✅ YA EXISTE (desde 2026-04-13) | Tipo de transporte de la ruta (0=tram, 1=metro, 2=rail, 3=bus, 7=funicular). La app lo consume para decidir formato de hora. |
 
 ### Normalización de IDs de Renfe en alertas
 
@@ -317,5 +324,15 @@ Fuentes: [SEGD](https://segd.org/resources/aiga-dot-symbols-for-transportation/)
 - ~~Mapa de accesos door.left.hand.open~~ ✅
 - ~~Pathway modes sin datos~~ ✅
 - ~~`route_type` en stops~~ ✅ — desde 2026-04-13, `/stops?search=`, `/stops/by-coordinates`, `/stops/{id}`
+- ~~`route_type` en departures~~ ✅ — desde 2026-04-13, reemplaza `frequency_based`
 - ~~`wheelchair_accessible` como Int~~ ✅ — `/stops/{id}/departures`, null/1/2/3
 - ~~`agency_name` en `/coordinates/routes`~~ ✅ YA EXISTE — pendiente integrar en `RouteResponse` del cliente
+- ~~Prefijo `RENFE_FEVE_*`~~ ✅ ELIMINADO (2026-03-28) — núcleos 45/46/47 fusionados en `RENFE_C_*`
+- ~~`description` en stops~~ ✅ — Euskotren, Metro Sevilla, Metro Málaga. App muestra ℹ️ popover.
+- ~~Endpoint `/air-quality/` dedicado~~ ✅ YA EXISTE — Metro Sevilla. App usa atajo vía `/vehicles?enrich=true`.
+- ~~`branches` precomputado calendar-aware~~ ✅ YA EXISTE — desde 2026-04-04. UI sigue pendiente (L6 Madrid 2 ramas).
+- ~~`vehicle_composition` single/double~~ ✅ — Metro Sevilla.
+- ~~Equipment status Metro Madrid~~ ✅ — desde 2026-04-01, fetcher ctmulti. App tiene código; falta verificar UI con Metro Madrid.
+- ~~`/vehicles/{id}/occupancy/per-car`~~ ✅ YA EXISTE — FGC + Metro Madrid. App no lo consume.
+- ~~Tram Sevilla RT (vehicles + alerts)~~ ✅ — 2026-03-21. GPS + Tussam avisos via Azure proxy.
+- ~~`platform_confidence` en departures~~ ✅ — score 0-1 para predicciones estadísticas de andén.

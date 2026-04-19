@@ -63,19 +63,19 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | `GET /vehicles/{vehicle_id}` | ✅ | `GTFSRealtimeService.fetchVehicleById` |
 | `GET /platforms/predictions` | ✅ | `DataService.applyPlatformPredictions` — andén estimado |
 | `GET /station-occupancy` | ⚠️ Solo iOS | `StopDetailView.loadData` — ocupación TMB |
-| `GET /equipment-status/{stop_id}` | ⚠️ Solo iOS | `StopDetailView.loadData` — ascensores Metro Sevilla |
+| `GET /equipment-status/{stop_id}` | ⚠️ Solo iOS | `StopDetailView.loadData` — ascensores Metro Sevilla **+ Metro Madrid (desde 2026-04-01)** |
 | `GET /stats` | ⚠️ Dead code | Fetch existe, nunca se llama |
 | `GET /trip-updates` | ✅ | `TrainDetailView` — delay preciso (min+seg) |
 | `GET /stops/{stop_id}/realtime` | ⚠️ Dead code | Fetch existe, nunca se llama. Legacy/debug. |
 | `GET /vehicles` | ✅ | `StopDetailView` — air quality Metro Sevilla |
 | `GET /occupancy` | ⚠️ Solo iOS | `StopDetailView` — ocupación vehículos FGC |
-| `GET /air-quality/` | ❌ | Endpoint dedicado calidad aire Metro Sevilla. App usa `/vehicles?enrich=true`. ROADMAP 3.25. |
-| `GET /vehicles/{id}/occupancy/per-car` | ❌ | Sin datos consistentes. |
+| `GET /air-quality/` | ❌ | Endpoint dedicado calidad aire Metro Sevilla (CO2, humedad, temp). App usa `/vehicles?enrich=true` como atajo. |
+| `GET /vehicles/{id}/occupancy/per-car` | ❌ | Ocupación por vagón. Backend listo para FGC y Metro Madrid. |
 | `GET /stop-time-updates` | ❌ | Duplica departures. |
 | `GET /equipment-status/?operator_id=` | ❌ | Bulk. Per-stop ya se usa. |
 | `GET /station-status/` | ❌ | Estado abierta/cerrada de estaciones (Metro Madrid). Bulk no implementado. |
 | `GET /station-status/{stop_id}` | ❌ | Estado de una estación específica (Metro Madrid). No implementado. |
-| `GET /access-status/{stop_id}` | ❌ | Estado de accesos de una estación (Metro Madrid). No implementado. |
+| `GET /access-status/{stop_id}` | ❌ | Estado de accesos de una estación (Metro Madrid). Backend listo (ej: 6 accesos cerrados 2026-04-01). |
 
 ## Admin
 
@@ -197,3 +197,57 @@ Resultados de probar todos los endpoints marcados ✅ contra `https://api.watch-
 - **`description` en stops**: Nuevo campo `stopDescription` con dirección/notas de la estación. Se muestra como botón info (ℹ️) al lado del nombre que abre un popover.
 - **`findLine` mejorado**: Busca por `routeId` en `routeIds` directamente, sin hardcoded name matching. Arregla líneas RT mostrando `MMAD_L12` en vez de `L12`.
 - **`branches` decodificado**: `RouteResponse.branches: [BranchInfo]?` ahora se decodifica correctamente. Solo L6 Madrid tiene 2 ramas activas (sentidos circular). UI pendiente.
+
+## Cruce con docs del servidor (2026-04-20)
+
+Revisados los 6 ficheros en `WatchTrans_Server/docs/reference/api/` (API_ENDPOINTS, API_STOPS, API_ROUTES, API_JOURNEY, API_REALTIME, API_ADMIN — 4650 líneas). Resumen de deltas respecto a esta tabla:
+
+### Campos nuevos en endpoints que usamos
+
+- `/stops/{id}/departures`:
+  - `has_realtime: bool` (2026-04-13) — indica si el operador tiene feed RT. App no lo consume (usa `route_type`).
+  - `status_estimated: bool` (2026-04-19) — marca si `current_status` viene inferido de schedule+delay (dead-reckoning) o de GPS real. Ligado a KI #304. **App no lo consume aún.**
+  - `platform_confidence: float` (0-1) — score de confianza de la predicción de andén estadística. **App ya lo consume.**
+- `/gtfs-rt/vehicles`:
+  - **⚠️ BREAKING (2026-03-28)**: `current_status` cambió de `string?` ("STOPPED_AT") a `int?` (0=INCOMING_AT, 1=STOPPED_AT, 2=IN_TRANSIT_TO). App ya lo maneja como int.
+  - `current_stop_sequence: int?` — null para los 7 operadores hybrid (tmb, metro_madrid, mlo, tranvia_zaragoza, tram_sevilla, metro_sevilla, metro_tenerife). Sub-issue KI #304 pendiente en backend.
+  - `is_synthetic: bool` — true si el VP fue sintetizado por el VP Synthesizer (operadores hybrid).
+- `/gtfs-rt/alerts`:
+  - `ai_summary: str?` — resumen IA cuando description > 400 chars.
+  - `ai_affected_segments: obj?` — segmentos afectados identificados por IA.
+- `/gtfs-rt/trip-updates`:
+  - `train_code: str?` — solo no-null cuando el feed incluye `vehicle_id` (TMB, Metro Bilbao). Renfe/FGC null.
+
+### Query params documentados en servidor no usados en la app
+
+- `/gtfs-rt/occupancy?min_occupancy=N` — filtra ocupación ≥ umbral.
+- `/gtfs-rt/vehicles?enrich=true` — la app ya lo usa para Metro Sevilla, pero también sirve para poblar `route_short_name/color/headsign/trip_info/stop_info` en cualquier operador.
+- `/gtfs-rt/trip-updates?enrich=true` — mismo patrón, no consumido.
+- `/gtfs/route-planner?compact=true` — omite coordenadas de shape. No consumido (modelo `CompactDepartureResponse` no existe para journeys tampoco).
+
+### Deprecation oficial del servidor
+
+- Prefijo `RENFE_FEVE_*` eliminado (2026-03-28). Núcleos 45/46/47 fusionados en `RENFE_C_*`. Cualquier lógica client-side que asumiera FEVE por separado es obsoleta.
+
+### Cache TTLs del backend (informativo)
+
+- `/networks` — 1h
+- `/route-planner` — 5 min
+- `/routes/{id}/patterns` — 24h
+- No hay endpoint de pagination estandarizado; `limit` por endpoint varía (20-100).
+
+### Cosas que creíamos pendientes y el servidor YA entrega
+
+- ✅ `route_type` en `/stops/{id}/departures` — 2026-04-13. App lo consume.
+- ✅ Equipment status Metro Madrid — desde 2026-04-01 vía fetcher ctmulti.
+- ✅ Endpoint `/air-quality/` dedicado (Metro Sevilla).
+- ✅ `/vehicles/{id}/occupancy/per-car` (FGC + Metro Madrid).
+- ✅ `branches` precomputado calendar-aware (2026-04-04).
+- ✅ Tram Sevilla GPS + alerts via Tussam avisos API.
+- ✅ `description` en stops (Euskotren, Metro Sevilla, Metro Málaga).
+
+### Cosas que siguen pendientes en el servidor
+
+- ❌ `transport_type` + `logo` en `/networks` — no documentados (solo `has_realtime`).
+- ❌ `has_occupancy` / `has_equipment_status` / `has_air_quality` capability flags en stops.
+- ❌ `alternative_transport` expuesto en `/alerts` — Groq lo extrae pero no lo pobla al campo.
