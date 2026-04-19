@@ -163,11 +163,12 @@ Campos/endpoints que la app necesita y la API no devuelve aún.
 
 La app NO necesita transport_type a nivel network — deriva el tipo de transporte per-route vía `TransportType.from(routeType:)` usando el int GTFS `route_type`, y agrupa por `agencyId`. Una agency puede tener varios route_types (ej: Euskotren con tren + tranvía + funicular).
 
-Nice-to-haves:
+Nice-to-have:
 - **`logo`:** URL/filename del logo del operador. Sin él, la app cae a icono genérico del transport type derivado.
-- **Nombres `name` legibles:** algunos son ilegibles tipo "AJUNTAMENT DE BUNYOLA R4" o "Consorcio Regional de Transportes de Madrid". Requiere corrección en GTFS fuente.
 
-El campo Swift `NetworkResponse.transportType: String?` existe pero está muerto — candidato a borrar del modelo.
+El campo Swift `NetworkResponse.transportType: String?` existe pero está muerto — candidato a borrar del modelo cliente.
+
+**Nombres de red verificados 2026-04-20:** todos legibles. Los ejemplos antiguos ("AJUNTAMENT DE BUNYOLA R4", "Consorcio Regional de Transportes de Madrid") ya no existen — ahora son "SFM R4" y "Metro de Madrid" respectivamente. Quedan algunos con razón social oficial (`Transportes Urbanos de Sevilla S.A.M.`, `Tranvias Urbanos de Zaragoza S.L.`) pero son reconocibles. **No es petición al backend.**
 
 ### Planos (PDFs)
 
