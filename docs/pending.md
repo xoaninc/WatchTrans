@@ -160,38 +160,18 @@ Campos/endpoints que la app necesita y la API no devuelve aún.
 
 > **Nota (2026-04-13):** La API ahora requiere `Authorization: Bearer {key}`. Key en `APISecrets.swift` (gitignored). Campos `parking_bicis` reemplazados por `bicycle_parking`/`car_parking` (tri-state int). `description` nuevo campo en stops.
 
-### GET /api/gtfs/networks — `transport_type` y `logo`
+### GET /api/gtfs/networks — response actual
 
-| Campo | Estado | Para qué lo necesita la app |
-|-------|--------|---------------------------|
-| `transport_type` | Campo existe en modelo Swift pero API devuelve null | Ya no bloquea la app (las secciones agrupan por `agencyId`), pero serviría para ordenar redes por tipo sin depender del `routeType` de las rutas. |
-| `logo` | No existe | URL o filename del logo del operador. Sin este campo la app solo muestra el icono genérico del transportType (MetroSymbol, TrenSymbol, etc.). |
-| `name` | Existe pero con nombres legales GTFS | Algunos nombres son ilegibles ("AJUNTAMENT DE BUNYOLA R4", "Consorcio Regional de Transportes de Madrid"). La app los muestra tal cual ahora — si se quieren nombres bonitos, hay que corregirlos en el servidor. |
+**Respuesta live (auditoría 2026-04-20):**
+```json
+{"code": "FGC", "name": "FGC", "has_realtime": true}
+```
 
-**Valores esperados de `transport_type`:**
+Solo tres campos. El Swift model tiene `transportType: String?` (valores tipo "cercanias"/"metro"/...) heredado de una iteración vieja del diseño — el backend confirma que **si algún día se añade `transport_type` al endpoint, será un int (GTFS route_type 0-7), no strings**. Cuando se añada, la app tendrá que cambiar el tipo del campo y su lógica de agrupación.
 
-| code | transport_type |
-|------|---------------|
-| RENFE_C* | `"cercanias"` |
-| RENFE_FEVE | `"cercanias"` |
-| RENFE_PROX_* | `"cercanias"` |
-| SFM_MALLORCA | `"cercanias"` |
-| TMB_METRO | `"metro"` |
-| METRO_MAD | `"metro"` |
-| METRO_SEVILLA | `"metro"` |
-| METRO_BILBAO | `"metro"` |
-| METROVALENCIA | `"metro"` |
-| METRO_MALAGA | `"metro"` |
-| METRO_GRANADA | `"metro"` |
-| METRO_TENERIFE | `"metro"` |
-| METRO_L_MAD | `"metro_ligero"` |
-| TUSSAM | `"tram"` |
-| TRAM_BCN, TRAM_BCN_BESOS | `"tram"` |
-| TRAM_ALICANTE | `"tram"` |
-| TRANVIA_ZARAGOZA | `"tram"` |
-| TRANVIA_MURCIA | `"tram"` |
-| FGC | `"fgc"` |
-| EUSKOTREN | `"euskotren"` |
+Campos que podrían añadirse sin bloquear nada (nice-to-have):
+- `logo`: URL/filename del logo del operador. Sin él, la app cae a icono genérico del transport type.
+- Nombres de `name` más legibles: actualmente algunos son ilegibles tipo "AJUNTAMENT DE BUNYOLA R4" o "Consorcio Regional de Transportes de Madrid". Corrección en GTFS fuente.
 
 ### GET /api/gtfs/networks — campo `city` a borrar
 
