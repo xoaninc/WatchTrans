@@ -169,10 +169,6 @@ Nice-to-haves:
 
 El campo Swift `NetworkResponse.transportType: String?` existe pero está muerto — candidato a borrar del modelo.
 
-### GET /api/gtfs/networks — campo `city` a borrar
-
-`city` siempre es null. La app ya lo borró del modelo. El servidor puede dejar de mandarlo.
-
 ### Planos (PDFs)
 
 La app construye la URL del plano como `{baseURL}/{type}/{network_code}.pdf`. Para que funcione, los PDFs en el servidor deben seguir esta convención de naming:
@@ -189,13 +185,20 @@ Actualmente los PDFs en el servidor usan nombres como `metro/sevilla_metro.pdf`,
 
 Campo existe en el modelo Swift y la UI está implementada. Pero la API siempre devuelve `null`. Groq extrae la info del texto pero no la expone en el campo. Cuando se popule, la app mostrará automáticamente ruta del bus, frecuencia, estaciones de inicio/fin.
 
-### GET /api/gtfs-rt/alerts — `content` + `image_url`
+### GET /api/gtfs-rt/alerts — `content` + `image_url` + `ai_summary` nunca populados
 
-Alertas de noticias de Metro Sevilla. Servidor documenta ambos campos como disponibles (API_REALTIME.md:292-293). La app solo muestra `headerText`/`descriptionText`. Pendiente implementar UI con contenido rico e imágenes.
+Auditoría 2026-04-20 sobre 50 alerts live:
+- `content: null` en 50/50
+- `image_url: null` en 50/50
+- `ai_summary: null` en 50/50
+- `ai_affected_segments`: populado en 50/50 ✅
 
-### GET /api/gtfs-rt/alerts — `ai_summary` + `ai_affected_segments`
+Server docs (`API_REALTIME.md:285-293`) documentan los 3 primeros como disponibles, pero **live no se populan nunca**. Contradicción con documentación server. Pendiente aclarar con backend si:
+(a) están implementados pero ningún feed actualmente tiene contenido que los dispare,
+(b) documentados pero no wired up en todos los paths,
+(c) solo para Metro Sevilla news y no había ninguna en la muestra.
 
-Campos nuevos documentados por el servidor (no verificados en live): `ai_summary` (str) cuando description > 400 chars, `ai_affected_segments` (obj) con segmentos identificados por IA. App no los consume. Útiles para resúmenes de alertas largas.
+Cuando se populen, la app los mostrará automáticamente (modelo Swift los decodifica).
 
 ### GET /api/gtfs/stops/{id} — campos de capabilities del operador
 
@@ -206,14 +209,14 @@ Campos nuevos documentados por el servidor (no verificados en live): `ai_summary
 | `has_air_quality` | No existe | Saber si la parada tiene datos de calidad del aire. Sin este campo la app hace fetch para todas. |
 
 
-### Normalización de IDs de Renfe en alertas
+### Cleanup cliente: normalización de IDs Renfe en alertas (ya innecesario en backend)
 
-`AlertFilterHelper` y `DataService` tienen lógica para normalizar IDs de Renfe que vienen en múltiples formatos del feed GTFS-RT de alertas (con/sin prefijo `RENFE_`, formatos legacy). Cuando la API normalice los IDs de alertas en el servidor, esta lógica del cliente se puede eliminar.
-
-Archivos afectados:
+Verificación 2026-04-20: los 50 alerts live ya devuelven IDs Renfe normalizados como `RENFE_C_XXXXX`. La normalización está hecha en servidor. **La lógica defensiva del cliente se puede eliminar:**
 - `WatchTrans iOS/Services/AlertFilterHelper.swift`
 - `WatchTrans iOS/Services/DataService.swift` (normalizeStopId, fallback por ID legacy)
 - `WatchTrans Watch App/Services/DataService.swift` (mismo)
+
+No es petición a la API — es trabajo del cliente.
 
 ### No requiere cambio de API (bugs de la app)
 
