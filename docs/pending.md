@@ -223,6 +223,12 @@ No es petición a la API — es trabajo del cliente.
 
 - **Pathway modes incompletos**: `/stops/{id}/station-interior` solo devuelve `walkway` y `stairs`. La app tiene código defensivo para `escalator`, `elevator`, `moving_sidewalk`, `fare_gate` pero ninguna estación los devuelve.
 
+- **`NetworkResponse` CodingKey roto** (`WatchTrans iOS/Services/GTFSRT/WatchTransModels.swift:184`): el modelo declara `case code = "id"` pero la API `/networks` devuelve el campo como `"code"` (verificado live 2026-04-20, response `{code, name, has_realtime}`). Consecuencia: `NetworkResponse.code` es siempre `""` porque el decode falla silenciosamente (`try?` + fallback). El array `dataService.networks` queda cargado pero sin `code` utilizable. Fix: cambiar CodingKey a `case code`. Revisar si la API cambió el nombre del campo o si fue error desde el principio.
+
+- **`NetworkResponse` con campos que la API no envía**: el modelo declara `color`, `textColor`, `routeCount`, `transportType` pero la API live solo devuelve `{code, name, has_realtime}`. Todos esos campos quedan `nil`/`""`. Consecuencia directa: los lookups de `LinesListView.swift:370` y `:556` (que filtran por `transportType`) **siempre devuelven nil**, así que la búsqueda de planos PDF por tipo falla aunque los PDFs existieran con el naming correcto. Fix: limpiar los campos muertos del modelo, reescribir la lógica de PDF para no depender de `transportType`.
+
+- **`NetworkResponse` no decodifica `has_realtime`**: la API lo envía en los 43 networks live pero el modelo no lo declara. La app no usa lista manual de operadores RT — `mapNetworkToOperator()` convierte genéricamente a `operator_id` y pega al endpoint RT a ciegas (vacío si no aplica). Si en el futuro se quiere filtrar fetches por `has_realtime`, añadir el campo al modelo.
+
 ---
 
 ## UI pendiente
