@@ -79,9 +79,6 @@ Alertas de noticias de Metro Sevilla tienen `content` (HTML) e `image_url`. La a
 ### /stops/by-coordinates: param `route_types` no usado
 Filtrar paradas por tipo de transporte. Pendiente decidir ubicación en la UI.
 
-### transport_type en /networks pendiente backend
-La app usa `dataService.networkDisplayName(for:)` y `networkTransportType(_:)` que dependen de `transport_type` en `/networks`. El backend aún no lo manda — sin este campo las secciones de líneas no agrupan correctamente. Ver sección [Requisitos pendientes del backend](#requisitos-pendientes-del-backend).
-
 ### PDFs de planos: naming por network code pendiente backend
 La app construye URLs de planos como `{baseURL}/{type}/{network_code}.pdf`. Los PDFs en el servidor usan nombres legacy (`metro/sevilla_metro.pdf`). Hay que renombrarlos o añadir `plan_url` a `/networks`.
 
@@ -160,18 +157,17 @@ Campos/endpoints que la app necesita y la API no devuelve aún.
 
 > **Nota (2026-04-13):** La API ahora requiere `Authorization: Bearer {key}`. Key en `APISecrets.swift` (gitignored). Campos `parking_bicis` reemplazados por `bicycle_parking`/`car_parking` (tri-state int). `description` nuevo campo en stops.
 
-### GET /api/gtfs/networks — response actual
+### GET /api/gtfs/networks — nice-to-haves (NO bloqueantes)
 
-**Respuesta live (auditoría 2026-04-20):**
-```json
-{"code": "FGC", "name": "FGC", "has_realtime": true}
-```
+**Respuesta live (auditoría 2026-04-20):** `{code, name, has_realtime}`.
 
-Solo tres campos. El Swift model tiene `transportType: String?` (valores tipo "cercanias"/"metro"/...) heredado de una iteración vieja del diseño — el backend confirma que **si algún día se añade `transport_type` al endpoint, será un int (GTFS route_type 0-7), no strings**. Cuando se añada, la app tendrá que cambiar el tipo del campo y su lógica de agrupación.
+La app NO necesita transport_type a nivel network — deriva el tipo de transporte per-route vía `TransportType.from(routeType:)` usando el int GTFS `route_type`, y agrupa por `agencyId`. Una agency puede tener varios route_types (ej: Euskotren con tren + tranvía + funicular).
 
-Campos que podrían añadirse sin bloquear nada (nice-to-have):
-- `logo`: URL/filename del logo del operador. Sin él, la app cae a icono genérico del transport type.
-- Nombres de `name` más legibles: actualmente algunos son ilegibles tipo "AJUNTAMENT DE BUNYOLA R4" o "Consorcio Regional de Transportes de Madrid". Corrección en GTFS fuente.
+Nice-to-haves:
+- **`logo`:** URL/filename del logo del operador. Sin él, la app cae a icono genérico del transport type derivado.
+- **Nombres `name` legibles:** algunos son ilegibles tipo "AJUNTAMENT DE BUNYOLA R4" o "Consorcio Regional de Transportes de Madrid". Requiere corrección en GTFS fuente.
+
+El campo Swift `NetworkResponse.transportType: String?` existe pero está muerto — candidato a borrar del modelo.
 
 ### GET /api/gtfs/networks — campo `city` a borrar
 
