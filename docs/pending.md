@@ -3,7 +3,7 @@
 Unifica bugs activos, features pendientes, UI pendiente y requisitos de backend.
 Sustituye a los antiguos `ROADMAP.md`, `KNOWN_ISSUES.md` y `docs/api-requests-pending.md`.
 
-**Última actualización:** 2026-04-20
+**Última actualización:** 2026-04-20 (tras auditoría de endpoints en vivo)
 
 ---
 
@@ -29,8 +29,25 @@ Al rotar cámara (heading) en animación 3D, MapKit deja de renderizar polyline.
 **Workaround actual:** Heading fijo a 0.
 **Posible solución:** Usar `suggested_heading` de la API (ya viene en journey segments).
 
-### Backend: Metro Madrid Route Planner no funciona
-RAPTOR devuelve "No journeys found" para estaciones de Metro Madrid. Hipótesis: el backend no ha cargado stop_times o transfers para Metro Madrid. Cercanías sí funciona.
+### Backend: Route Planner roto en Madrid (Metro + Cercanías)
+RAPTOR devuelve `"No se encontró servicio en las próximas 24 horas"` (journeys: []) para **todos** los pares probados en Madrid, tanto Metro (MMAD_*) como Cercanías (RENFE_C_*). Probado 2026-04-20:
+- `RENFE_C_18000` (Atocha) → `RENFE_C_17000` (Chamartín) → vacío
+- `RENFE_C_18000` → `RENFE_C_10204` (Recoletos) → vacío
+- `RENFE_C_18000` → `RENFE_C_18002` (Nuevos Ministerios) → vacío
+- `MMAD_48_STATION` (Sol) → `MMAD_189_STATION` (Chamartín metro) → vacío
+
+**FGC Barcelona sí funciona** (`FGC_PC` → `FGC_SC` devuelve journeys). Previamente se creía que solo Metro Madrid estaba roto y Cercanías funcionaba — auditoría del 2026-04-20 muestra que Cercanías Madrid también falla. Hipótesis: backend no ha cargado stop_times/transfers para las redes de Madrid.
+
+### Backend: /station-occupancy con feed congelado (~1 mes)
+`GET /api/gtfs-rt/station-occupancy` devuelve 254 entradas TMB, **todas con `updated_at: 2026-03-21T11:12:26Z`** (auditoría 2026-04-20). El ingest del feed lleva 30 días sin actualizarse. La app muestra ocupación stale sin señalarlo al usuario.
+- Workaround app: añadir filtro por antigüedad (`updated_at` > ahora - N min) antes de mostrar.
+- Fix real: arreglar ingest del feed TMB en backend.
+
+### Backend: /vehicles sin `agency_id`
+`GET /api/gtfs-rt/vehicles` devuelve `agency_id: null` en los 71 vehículos (FGC, TMB, Renfe, Tranvía Zaragoza, Metro Tenerife). `operator_id` sí está poblado. **No afecta a la app** — `fetchVehicleById` usa `operator_id`. Queda documentado por si algún caller futuro espera `agency_id`.
+
+### Performance: /province/{name}/routes lento
+`GET /api/gtfs/province/Madrid/routes` tardó 7.3s (auditoría 2026-04-20, 42 rutas). El resto de endpoints responden en <1s. Candidato a optimización/cache en backend.
 
 ### Backend: Equipment status solo Metro Sevilla
 `equipment-status` solo tiene datos RT para Metro Sevilla (fuente TCE). Cuando otros operadores tengan feed RT de equipos, el endpoint los expondrá automáticamente. No requiere cambios en la app.

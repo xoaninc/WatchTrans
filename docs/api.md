@@ -99,6 +99,20 @@ Fuente de verdad del servidor: `/Users/juanmaciasgomez/Projects/WatchTrans_Serve
 | Admin | 0 | 0 | 2 | 6 |
 | **Total** | **25** | **10** | **4** | **28** |
 
+## Auditoría en vivo (2026-04-20, ~00:30h)
+
+Resultados de probar todos los endpoints marcados ✅ contra `https://api.watch-trans.app` con el key de producción:
+
+**OK (22/22 probados):** `/networks`, `/networks/{code}/lines`, `/stops?search`, `/stops/by-coordinates`, `/stops/{id}`, `/stops/{id}/departures` (incluyendo `?compact=true`), `/full`, `/platforms`, `/correspondences`, `/children`, `/accesses`, `/station-interior`, `/province-by-coordinates`, `/province/{name}/routes`, `/coordinates/routes`, `/routes/{id}` (+ `/stops`, `/shape`, `/operating-hours`), `/trips/{id}`, `/platforms/predictions?stop_id=`, `/vehicles`, `/vehicles/{id}?operator_id=`, `/trip-updates?stop_id=`, `/alerts` (global/stop/route), `/occupancy?operator_id=`.
+
+**Vacíos legítimos (cierre nocturno):** `/vehicles?operator_id=metro_sevilla`, `/equipment-status/{sevilla_stop}`, `/alerts?route_id=MMAD_L1`, `/routes/MMAD_L1/frequencies`. `/stops/{id}/facilities` vacío para stop Cercanías (solo Metro Sevilla tiene datos).
+
+**Problemas detectados — ver `docs/pending.md#bugs-activos`:**
+- 🚨 `/station-occupancy` devuelve 254 entradas TMB con timestamp de hace 30 días (feed congelado).
+- 🚨 `/route-planner` roto para **todo** Madrid (Metro + Cercanías). FGC Barcelona sí funciona.
+- ⚠️ `/vehicles` tiene `agency_id: null` (pero `operator_id` sí — la app usa el último).
+- ⚠️ `/province/{name}/routes` tardó 7.3s (el resto <1s).
+
 ## Notas de cambios del backend (2026-03-18)
 
 - `alternative_service_warning` ahora es per-ruta, no per-stop. Solo true cuando hay transporte alternativo REAL.
