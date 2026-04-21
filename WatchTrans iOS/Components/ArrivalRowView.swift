@@ -138,8 +138,7 @@ struct ArrivalRowView: View {
                             .font(.headline)
                             .fontWeight(.bold)
 
-                        // Show frequency indicator for Metro/ML/Tranvía
-                        if arrival.frequencyBased, let headway = arrival.headwayMinutes {
+                        if let headway = arrival.headwayMinutes {
                             Text("freq. \(headway) min")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -377,7 +376,7 @@ struct AirQualityBadgeView: View {
                 isSuspended: false,
                 wheelchairAccessible: true,
                 wheelchairInaccessible: false,
-                frequencyBased: false,
+                routeType: 2,
                 headwayMinutes: nil,
                 isOfflineData: false,
                 occupancyStatus: nil,
@@ -414,7 +413,7 @@ struct AirQualityBadgeView: View {
                 isSuspended: false,
                 wheelchairAccessible: false,
                 wheelchairInaccessible: false,
-                frequencyBased: true,
+                routeType: 1,
                 headwayMinutes: 5,
                 isOfflineData: false,
                 occupancyStatus: 2,  // FEW_SEATS_AVAILABLE

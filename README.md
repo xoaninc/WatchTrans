@@ -112,16 +112,18 @@ La app muestra un banner rojo de "Servicio suspendido" cuando `is_suspended: tru
 3. Seleccionar el target deseado (iOS o Watch)
 4. Build & Run
 
-## Changelog reciente
+## Documentación
 
-### 2026-01-21
-- Añadido soporte para servicios suspendidos (`is_suspended`, `suspension_message`)
-- Banner rojo de "Servicio suspendido" en LineDetailView
-- Struct `OperatingHoursResult` para manejar horarios y suspensión
-- Alertas expandibles en iOS
-- Página de alertas separada en Watch
-- Colores correctos en badges de líneas
-- Formato correcto de nombres de línea (C4a, L10b, ML1)
+| Archivo | Contenido |
+|---------|-----------|
+| [`CLAUDE.md`](CLAUDE.md) | Guía de arquitectura y convenciones del proyecto (para Claude Code y humanos) |
+| [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones |
+| [`docs/setup.md`](docs/setup.md) | Guía paso a paso de configuración en Xcode |
+| [`docs/api.md`](docs/api.md) | Mapa completo de endpoints consumidos y disponibles |
+| [`docs/pending.md`](docs/pending.md) | Bugs activos, features pendientes y requisitos del backend |
+| [`docs/swift-resources.md`](docs/swift-resources.md) | Recursos y herramientas útiles (hot reloading, etc.) |
+| [`docs/maps/MAPAS_RED.md`](docs/maps/MAPAS_RED.md) | Estado de los PDFs de planos por red |
+| [`docs/app-store/`](docs/app-store/) | Submission y privacy policy |
 
 ## Licencia
 

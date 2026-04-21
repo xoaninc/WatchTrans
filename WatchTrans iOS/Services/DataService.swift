@@ -1354,7 +1354,7 @@ class DataService {
                 isSuspended: false,  // Offline data doesn't have suspension info
                 wheelchairAccessible: false,  // Offline data doesn't have accessibility info
                 wheelchairInaccessible: false,
-                frequencyBased: false,
+                routeType: 2,
                 headwayMinutes: nil,
                 isOfflineData: true,  // Mark as offline data
                 occupancyStatus: nil,

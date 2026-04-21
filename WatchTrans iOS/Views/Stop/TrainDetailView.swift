@@ -57,12 +57,6 @@ struct TrainDetailView: View {
                                 }
                             }
 
-                            if arrival.frequencyBased {
-                                Text("Servicio por frecuencia")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
                             if let trainNumber = arrival.tripShortName, !trainNumber.isEmpty {
                                 Text("Tren \(trainNumber)")
                                     .font(.caption)
@@ -170,7 +164,7 @@ struct TrainDetailView: View {
                         .padding(.top, 4)
 
                     // Frequency info
-                    if arrival.frequencyBased, let headway = arrival.headwayMinutes {
+                    if let headway = arrival.headwayMinutes {
                         HStack {
                             Image(systemName: "repeat")
                                 .foregroundStyle(.secondary)
@@ -390,18 +384,16 @@ struct TrainDetailView: View {
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
 
                 // Journey section (recorrido completo)
-                if !arrival.frequencyBased {
-                    JourneySectionView(
-                        tripDetail: tripDetail,
-                        isLoading: isLoadingTrip,
-                        isExpanded: $isJourneyExpanded,
-                        currentStopName: arrival.trainCurrentStop,
-                        lineColor: lineColor,
-                        dataService: dataService,
-                        locationService: locationService,
-                        favoritesManager: favoritesManager
-                    )
-                }
+                JourneySectionView(
+                    tripDetail: tripDetail,
+                    isLoading: isLoadingTrip,
+                    isExpanded: $isJourneyExpanded,
+                    currentStopName: arrival.trainCurrentStop,
+                    lineColor: lineColor,
+                    dataService: dataService,
+                    locationService: locationService,
+                    favoritesManager: favoritesManager
+                )
 
                 // Alerts section
                 if isLoadingAlerts {
@@ -504,8 +496,7 @@ struct TrainDetailView: View {
     }
 
     private func loadTripDetails() async {
-        guard let dataService = dataService,
-              !arrival.frequencyBased else { return }
+        guard let dataService = dataService else { return }
         isLoadingTrip = true
         tripDetail = await dataService.fetchTripDetails(tripId: arrival.id)
 
@@ -847,7 +838,7 @@ struct JourneyStopsListView: View {
                 isSuspended: false,
                 wheelchairAccessible: true,
                 wheelchairInaccessible: false,
-                frequencyBased: false,
+                routeType: 2,
                 headwayMinutes: nil,
                 isOfflineData: false,
                 occupancyStatus: nil,

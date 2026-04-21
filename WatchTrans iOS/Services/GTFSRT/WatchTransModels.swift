@@ -36,8 +36,8 @@ struct DepartureResponse: Codable, Identifiable {
     let isSuspended: Bool?         // true if line has FULL_SUSPENSION alert
     let wheelchairAccessible: Int?  // null=no data, 1=unknown, 2=accessible, 3=not accessible
 
-    // Frequency-based departures (Metro)
-    let frequencyBased: Bool?
+    // Route classification
+    let routeType: Int?
     let headwaySecs: Int?
 
     // Occupancy data (GTFS-RT standard)
@@ -116,7 +116,7 @@ struct DepartureResponse: Codable, Identifiable {
         case trainPosition = "train_position"
         case isSuspended = "is_suspended"
         case wheelchairAccessible = "wheelchair_accessible"
-        case frequencyBased = "frequency_based"
+        case routeType = "route_type"
         case headwaySecs = "headway_secs"
         case occupancyStatus = "occupancy_status"
         case occupancyPercentage = "occupancy_percentage"

@@ -96,7 +96,7 @@ class GTFSRealtimeMapper {
                 isSuspended: departure.isSuspended ?? false,
                 wheelchairAccessible: Self.wheelchairValue(rt: departure.wheelchairAccessible, static: departure.wheelchairAccessibleStatic) == 2,
                 wheelchairInaccessible: Self.wheelchairValue(rt: departure.wheelchairAccessible, static: departure.wheelchairAccessibleStatic) == 3,
-                frequencyBased: departure.frequencyBased ?? false,
+                routeType: departure.routeType ?? 0,
                 headwayMinutes: departure.headwayMinutes,
                 isOfflineData: false,
                 occupancyStatus: departure.occupancyStatus,

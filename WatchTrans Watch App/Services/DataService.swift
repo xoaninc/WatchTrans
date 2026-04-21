@@ -1320,7 +1320,7 @@ class DataService {
                 isSuspended: false,
                 wheelchairAccessible: false,
                 wheelchairInaccessible: false,
-                frequencyBased: false,
+                routeType: 2,
                 headwayMinutes: nil,
                 isOfflineData: true,  // Mark as offline data
                 occupancyStatus: nil,

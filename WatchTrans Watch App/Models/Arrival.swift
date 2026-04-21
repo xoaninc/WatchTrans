@@ -37,9 +37,10 @@ struct Arrival: Identifiable, Codable {
     let wheelchairAccessible: Bool  // true if wheelchair accessible (RT==2 or static==2)
     let wheelchairInaccessible: Bool  // true if not wheelchair accessible (RT==3 or static==3)
 
-    // Frequency-based (Metro)
-    let frequencyBased: Bool
+    // Route classification (GTFS route_type from API)
+    let routeType: Int
     let headwayMinutes: Int?
+
 
     // Offline mode flag
     let isOfflineData: Bool
@@ -81,7 +82,7 @@ struct Arrival: Identifiable, Codable {
             isSuspended: isSuspended,
             wheelchairAccessible: wheelchairAccessible,
             wheelchairInaccessible: wheelchairInaccessible,
-            frequencyBased: frequencyBased,
+            routeType: routeType,
             headwayMinutes: headwayMinutes,
             isOfflineData: isOfflineData,
             occupancyStatus: occupancyStatus,
@@ -135,11 +136,9 @@ struct Arrival: Identifiable, Codable {
         Self.timeFormatter.string(from: expectedTime)
     }
 
-    /// Check if this line has GTFS-RT (real-time data with precise schedules)
-    /// Lines with GTFS-RT: Cercanías, Rodalies, Euskotren, FGC, Metro Bilbao, etc.
-    /// Lines WITHOUT GTFS-RT: Metro Madrid, Metro Sevilla, Tranvía (frequency-based only)
+    /// Rail services (route_type == 2) show exact times; others show "+ 30 min"
     var hasGTFSRT: Bool {
-        !frequencyBased
+        routeType == 2
     }
 
     // Display string for arrival time

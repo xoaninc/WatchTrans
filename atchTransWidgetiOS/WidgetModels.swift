@@ -30,8 +30,8 @@ struct DepartureResponse: Codable, Identifiable {
     let isDelayed: Bool
     let trainPosition: TrainPositionResponse?
 
-    // Frequency-based departures (Metro)
-    let frequencyBased: Bool?
+    // Route classification
+    let routeType: Int?
     let headwaySecs: Int?
 
     // Occupancy data (GTFS-RT standard)
@@ -74,7 +74,7 @@ struct DepartureResponse: Codable, Identifiable {
         case realtimeMinutesUntil = "realtime_minutes_until"
         case isDelayed = "is_delayed"
         case trainPosition = "train_position"
-        case frequencyBased = "frequency_based"
+        case routeType = "route_type"
         case headwaySecs = "headway_secs"
         case occupancyStatus = "occupancy_status"
         case occupancyPercentage = "occupancy_percentage"

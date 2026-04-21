@@ -59,7 +59,7 @@ Centralized in `APIConfiguration.swift` per target. Base URLs:
 - GTFS-RT: `https://api.watch-trans.app/api/gtfs-rt`
 - Auth: `Authorization: Bearer {key}` — key in `APISecrets.swift` (gitignored, not committed). Both targets share the same key.
 
-Key endpoints documented in `API_USAGE.md`.
+Key endpoints documented in `docs/api.md`. Pending features, bugs and backend requirements in `docs/pending.md`.
 
 ### Stop Fields
 
@@ -76,6 +76,15 @@ Some operators (Metro Sevilla, Tranvía Zaragoza, TMB Metro, Tram Sevilla) gener
 - These do NOT exist in `/trips/` endpoint — skip the fetch
 - For journey display, use route stops as fallback (`/routes/{route_id}/stops`)
 - Double composition in Metro Sevilla: detected by comma in trip_id (e.g., `MSEV_RT_111,116_d0`)
+
+### Arrival Time Display
+
+Time formatting is driven by `route_type` from the API (GTFS standard int in each departure):
+- `route_type == 2` (rail) → `Arrival.hasGTFSRT = true` → shows exact time ("18:54") when ≥30 min away
+- `route_type != 2` (metro, tram, bus, funicular) → `Arrival.frequencyBased = true` → shows "+ 30 min" when >30 min away
+- Under 30 min → "X min" for all types
+
+`Arrival.frequencyBased` is a computed property (`routeType != 2`), not a stored field. The old API field `frequency_based` was removed.
 
 ### Alert Filtering
 
